@@ -667,6 +667,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-runner",
  "nvmod-stage",
  "roxmltree",
  "serde",
@@ -680,6 +681,14 @@ name = "nvmod-pe"
 version = "0.3.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "nvmod-runner"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "sha2",
 ]
 
 [[package]]
@@ -703,9 +712,9 @@ version = "0.3.0"
 dependencies = [
  "jsonschema",
  "nvmod-core",
+ "nvmod-runner",
  "serde",
  "serde_json",
- "sha2",
  "toml",
 ]
 
