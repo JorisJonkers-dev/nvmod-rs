@@ -17,6 +17,7 @@ mod stage;
 mod target;
 mod tools;
 mod ttw;
+mod verify;
 
 use std::io::Write;
 
@@ -83,6 +84,12 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               nv-rs, TTW, each --mod, stage, `sort --apply`, then the Doctor. A failing step
                               removes what the run made and exits with its code; --dry-run lists the steps and
                               writes nothing; --json prints one event per line (plan, step, finished)
+  nvmod verify --instance <dir> [--profile <name>] [--masterlist <file>] [--catalog <file>] [--proton <program>]
+                [--fail-on <severity>] [--json]
+                              confirm an install (read only): the Doctor on the Instance, the installed nv-rs
+                              against its install record, and the launch plan of the vanilla plus xNVSE path
+                              (a Linux entry that invokes Proton, a Windows entry that runs the game executable
+                              directly); exit 3 when verification fails
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
   nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
@@ -120,6 +127,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("profile") => profile::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("setup") => setup::run(&args[1..], out, err),
+        Some("verify") => verify::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
         Some("ttw") => ttw::run(&args[1..], out, err),
