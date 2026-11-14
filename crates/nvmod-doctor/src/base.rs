@@ -4,6 +4,7 @@
 //! docs/DECISIONS.md); an executable that is not the supported build is reported as unknown.
 
 use crate::SUPPORTED_GAME_VERSION;
+use nvmod_catalog::Catalog;
 use nvmod_core::{Finding, Severity};
 use nvmod_instance::{NvmodInstance, Storefront, find_ci};
 use nvmod_pe::{Version4, inspect_file};
@@ -130,13 +131,16 @@ pub fn check_base(dir: &Path) -> Result<BaseReport, String> {
 }
 
 /// Check an nvmod Instance: its base copy and, when it has profiles, the Staging tree of `profile` (or of the
-/// only profile).
+/// only profile), its Load order (missing masters; the order loot-rs would give, from `masterlist` when one is
+/// given, else from the plugin headers only; file times) and its NVSE plugins against `catalog`.
 ///
 /// # Errors
 /// The reason, when the base copy is refused or `profile` names no profile of the Instance.
 pub fn check_instance(
     instance: &NvmodInstance,
     profile: Option<&str>,
+    masterlist: Option<&Path>,
+    catalog: &Catalog,
 ) -> Result<BaseReport, String> {
     let mut report = check_base(&instance.config.base)?;
     let profile = match (profile, instance.profiles().is_empty()) {
@@ -148,6 +152,17 @@ pub fn check_instance(
     report
         .findings
         .extend(nvmod_stage::doctor_findings(instance, &profile));
+    let game = report.exe.as_ref().and_then(|e| e.file_version);
+    crate::order::check(
+        instance,
+        &profile,
+        &crate::order::Inputs {
+            masterlist,
+            game,
+            catalog,
+        },
+        &mut report.findings,
+    );
     report.recount();
     Ok(report)
 }

@@ -14,7 +14,15 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let parsed = Args::parse(
         args,
         &["json"],
-        &["base", "instance", "profile", "game", "fail-on"],
+        &[
+            "base",
+            "instance",
+            "profile",
+            "game",
+            "fail-on",
+            "masterlist",
+            "catalog",
+        ],
     );
     let args = match parsed {
         Ok(args)
@@ -26,7 +34,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Ok(_) => {
             let _ = writeln!(
                 err,
-                "usage: nvmod doctor (--base <dir> | --instance <dir> [--profile <name>] [--game <dir>]) [--json] [--fail-on <severity>]"
+                "usage: nvmod doctor (--base <dir> | --instance <dir> [--profile <name>] [--game <dir>] [--masterlist <file>] [--catalog <file>]) [--json] [--fail-on <severity>]"
             );
             return USAGE;
         }
@@ -60,13 +68,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let instance_dir = Path::new(args.option("instance").unwrap_or_default());
     if NvmodInstance::is_instance(instance_dir) {
         return match NvmodInstance::open(instance_dir) {
-            Ok(instance) => finish(
-                nvmod_doctor::check_instance(&instance, args.option("profile")),
-                json,
-                fail_on,
-                out,
-                err,
-            ),
+            Ok(instance) => nvmod_instance_doctor(&instance, &args, json, fail_on, out, err),
             Err(why) => fail(why.to_string(), out, err),
         };
     }
@@ -109,6 +111,39 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     } else {
         OK
     }
+}
+
+/// The Doctor on an nvmod Instance, with the catalogue of `--catalog` when one is given.
+fn nvmod_instance_doctor(
+    instance: &NvmodInstance,
+    args: &Args,
+    json: bool,
+    fail_on: Severity,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let catalog = match args.option("catalog") {
+        None => Catalog::builtin(),
+        Some(file) => match std::fs::read_to_string(file)
+            .map_err(|e| format!("{file}: {e}"))
+            .and_then(|text| Catalog::parse(&text).map_err(|e| e.to_string()))
+        {
+            Ok(catalog) => catalog,
+            Err(reason) => return finish(Err(reason), json, fail_on, out, err),
+        },
+    };
+    finish(
+        nvmod_doctor::check_instance(
+            instance,
+            args.option("profile"),
+            args.option("masterlist").map(Path::new),
+            &catalog,
+        ),
+        json,
+        fail_on,
+        out,
+        err,
+    )
 }
 
 /// The Doctor on a base copy; a refused storefront exits 2 with the reason.

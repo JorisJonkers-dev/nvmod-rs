@@ -182,6 +182,12 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
         Ok(report) => {
             if args.flag("json") {
                 print_json(out, &report);
+            } else if report.kind == "sort" {
+                let _ = writeln!(
+                    out,
+                    "nvmod rollback: undid the Load order sort of profile `{}`",
+                    report.profile
+                );
             } else {
                 let _ = writeln!(
                     out,

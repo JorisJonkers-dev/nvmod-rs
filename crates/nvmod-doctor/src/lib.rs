@@ -8,6 +8,7 @@
 
 mod base;
 mod game;
+mod order;
 mod plugins;
 mod profile;
 mod report;

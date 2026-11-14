@@ -26,6 +26,8 @@ nvmod-stage = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
+nvmod-loadorder = { workspace = true }
+loot-rs = { workspace = true }
 nvmod-pe = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

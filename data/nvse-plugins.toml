@@ -4,7 +4,8 @@
 # JIP LN, JohnnyGuitar and ShowOff), name (the mod's folder name in the owner's instance), dll (the file in
 # NVSE/Plugins, compared without case), ini (files next to it that the plugin reads), nexus_mod_id (only where a
 # document says so), requires / conflicts (plugin ids), replaced_by (plugin id), nv_rs (built-in | partial |
-# unsupported | inert | unknown), and [plugin.provenance] with source, verified_on, verified, note.
+# unsupported | inert | unknown), game_version and min_xnvse (the game executable version the plugin requires and
+# the lowest xNVSE it needs, `a.b.c.d`; left out where nobody has recorded them: the Doctor then says unknown), and [plugin.provenance] with source, verified_on, verified, note.
 #
 # `verified = true` means the file names were seen in a real instance. Nothing else is claimed: minimum xNVSE,
 # requirements and conflicts are empty until someone checks them, and nv_rs is `unknown` until the fork's own

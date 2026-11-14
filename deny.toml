@@ -49,4 +49,5 @@ deny = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# loot-rs is linked as a library, pinned to a release tag (see Cargo.toml and ADR-0003 of nv-linux).
+allow-git = ["https://github.com/JorisJonkers-dev/loot-rs"]
