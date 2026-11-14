@@ -260,7 +260,18 @@ fn changes_lists(args: &[String]) -> bool {
         Some("install") => true,
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
-            Some("enable" | "disable" | "reorder")
+            Some(
+                "enable"
+                    | "disable"
+                    | "reorder"
+                    | "remove"
+                    | "rename"
+                    | "create"
+                    | "clone"
+                    | "hide"
+                    | "unhide"
+                    | "note"
+            )
         ),
         Some("plugins") => matches!(
             args.get(1).map(String::as_str),

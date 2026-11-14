@@ -22,6 +22,11 @@ pub const KIND_MODS: &str = "mods";
 /// `lockedorder.txt` and the Staging tree, and never touches a Mod folder or `modlist.txt`.
 pub const KIND_PLUGINS: &str = "plugins";
 
+/// The kind of journal that the Mod lifecycle commands (`mods remove|rename|create|clone|hide|unhide|note`,
+/// `mods separator ...`, `mods category set`) write: it restores the four profile files and undoes the recorded
+/// file operations (moves, created folders, rewritten files) in reverse, and never removes a Mod by name.
+pub const KIND_LIFECYCLE: &str = "lifecycle";
+
 const FILES: [&str; 4] = [
     "modlist.txt",
     "plugins.txt",
@@ -36,6 +41,7 @@ fn restores(kind: &str, index: usize) -> bool {
         KIND_SORT => index == 1 || index == 2,
         KIND_MODS => index == 0,
         KIND_PLUGINS => index >= 1,
+        KIND_LIFECYCLE => true,
         _ => index < 3,
     }
 }
@@ -53,6 +59,34 @@ struct Journal {
     /// Which of the profile files existed before (an older journal has three entries).
     existed: Vec<bool>,
     staging_existed: bool,
+    /// File operations recorded since the journal began, oldest first (lifecycle journals only).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    ops: Vec<Op>,
+}
+
+/// One file operation of a lifecycle change, with paths relative to the Instance folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case")]
+pub enum Op {
+    /// `from` was renamed to `to` (undone by renaming back).
+    Move {
+        /// The old place.
+        from: String,
+        /// The new place.
+        to: String,
+    },
+    /// A file or folder was created at this place (undone by removing it).
+    Create {
+        /// The new file or folder.
+        path: String,
+    },
+    /// A file was rewritten; `saved` names the copy of the old one in the journal (`None`: it did not exist).
+    Restore {
+        /// The rewritten file.
+        path: String,
+        /// The saved copy, a name under the journal's `files` folder.
+        saved: Option<String>,
+    },
 }
 
 fn install_kind() -> String {
@@ -179,9 +213,111 @@ pub fn begin_kind(
         kind: kind.to_owned(),
         existed,
         staging_existed: staging_exists(instance, profile),
+        ops: Vec::new(),
     };
     save(&root, &journal)?;
     Ok(Entry { id, journal })
+}
+
+impl Entry {
+    /// Record that `from` is about to be renamed to `to` (paths relative to the Instance folder); the journal is
+    /// saved before the caller does it, so a stop half way is still undone.
+    ///
+    /// # Errors
+    /// The journal could not be written.
+    pub fn record_move(
+        &mut self,
+        instance: &NvmodInstance,
+        from: &str,
+        to: &str,
+    ) -> Result<(), String> {
+        self.record(
+            instance,
+            Op::Move {
+                from: from.to_owned(),
+                to: to.to_owned(),
+            },
+        )
+    }
+
+    /// Record that a file or folder is about to be created at `path` (relative to the Instance folder).
+    ///
+    /// # Errors
+    /// The journal could not be written.
+    pub fn record_create(&mut self, instance: &NvmodInstance, path: &str) -> Result<(), String> {
+        self.record(
+            instance,
+            Op::Create {
+                path: path.to_owned(),
+            },
+        )
+    }
+
+    /// Save the file at `path` (relative to the Instance folder; it may not exist) and record that it is about
+    /// to be rewritten.
+    ///
+    /// # Errors
+    /// The copy or the journal could not be written.
+    pub fn record_file(&mut self, instance: &NvmodInstance, path: &str) -> Result<(), String> {
+        let source = instance.root.join(path);
+        let saved = if source.is_file() {
+            let name = format!("{}", self.journal.ops.len());
+            let dir = journal_root(instance).join(&self.id).join("files");
+            fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+            fs::copy(&source, dir.join(&name)).map_err(|e| format!("backup of {path}: {e}"))?;
+            Some(name)
+        } else {
+            None
+        };
+        self.record(
+            instance,
+            Op::Restore {
+                path: path.to_owned(),
+                saved,
+            },
+        )
+    }
+
+    fn record(&mut self, instance: &NvmodInstance, op: Op) -> Result<(), String> {
+        self.journal.ops.push(op);
+        save(&journal_root(instance).join(&self.id), &self.journal)
+    }
+}
+
+fn undo_ops(instance: &NvmodInstance, journal: &Journal, root: &Path) -> Result<(), String> {
+    for op in journal.ops.iter().rev() {
+        let io = |p: &Path, e: std::io::Error| format!("{}: {e}", p.display());
+        match op {
+            Op::Move { from, to } => {
+                let (from, to) = (instance.root.join(from), instance.root.join(to));
+                if to.exists() && !from.exists() {
+                    if let Some(parent) = from.parent() {
+                        fs::create_dir_all(parent).map_err(|e| io(parent, e))?;
+                    }
+                    fs::rename(&to, &from).map_err(|e| io(&to, e))?;
+                }
+            }
+            Op::Create { path } => {
+                let at = instance.root.join(path);
+                if at.is_dir() {
+                    fs::remove_dir_all(&at).map_err(|e| io(&at, e))?;
+                } else if at.exists() {
+                    fs::remove_file(&at).map_err(|e| io(&at, e))?;
+                }
+            }
+            Op::Restore { path, saved } => {
+                let at = instance.root.join(path);
+                if let Some(saved) = saved {
+                    let bytes = fs::read(root.join("files").join(saved))
+                        .map_err(|e| format!("saved copy of {path}: {e}"))?;
+                    write_atomic(&at, &bytes)?;
+                } else if at.exists() {
+                    fs::remove_file(&at).map_err(|e| io(&at, e))?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Mark the install complete.
@@ -212,7 +348,9 @@ pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
     }
     let sort = journal.kind == KIND_SORT;
     let mods = journal.kind == KIND_MODS;
-    if !sort && !mods && journal.kind != KIND_PLUGINS {
+    if journal.kind == KIND_LIFECYCLE {
+        undo_ops(instance, journal, &root)?;
+    } else if !sort && !mods && journal.kind != KIND_PLUGINS {
         let mod_dir = instance.mod_dir(&journal.r#mod);
         if mod_dir.exists() {
             fs::remove_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;

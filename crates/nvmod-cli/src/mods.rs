@@ -2,7 +2,7 @@
 //! `nvmod mods list|enable|disable|reorder`: the Mods of a profile, in priority order (the first is the highest
 //! priority). A change is journaled like an install, so `nvmod rollback` takes it back.
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
+use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args, mods_life};
 use nvmod_instance::NvmodInstance;
 use nvmod_modinstall::mods::{self, Change, ModRow, ModsError, Place, Report};
 use std::io::Write;
@@ -11,7 +11,8 @@ use std::path::Path;
 const USAGE_TEXT: &str = "usage: nvmod mods list --instance <dir> [--profile <name>] [--json]
        nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
        nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
-                --instance <dir> [--profile <name>] [--dry-run] [--json]";
+                --instance <dir> [--profile <name>] [--dry-run] [--json]
+       nvmod mods remove|rename|create|clone|hide|unhide|note: see `nvmod mods remove` with no arguments";
 
 fn print_rows(out: &mut dyn Write, rows: &[ModRow]) {
     for r in rows {
@@ -82,7 +83,12 @@ fn place_of(args: &Args) -> Option<Place> {
     }
 }
 
+// One flat command with its list and change branches.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    if mods_life::handles(args.first().map(String::as_str)) {
+        return mods_life::run(args, out, err);
+    }
     let args = match Args::parse(
         args,
         &["json", "dry-run", "top", "bottom"],
