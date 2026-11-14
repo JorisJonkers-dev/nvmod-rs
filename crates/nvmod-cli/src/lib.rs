@@ -19,6 +19,7 @@ mod pe;
 mod plugins;
 mod profile;
 mod profile_apply;
+mod saves;
 mod setup;
 mod setup_state;
 mod sort;
@@ -127,6 +128,17 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               plugins.txt and loadorder.txt, and archive invalidation; whatever it displaces is
                               backed up, a read-only file is refused (exit 2) before any write; finish (and the
                               next apply) copies back what the game changed in the prefix
+  nvmod saves list|backup|check|checksum --instance <dir> [--profile <name>] [--prefix <dir>] [--json]
+  nvmod saves restore <id|latest> --instance <dir> [--profile <name>] [--prefix <dir>] [--json]
+  nvmod saves transfer <from> <to> --instance <dir> [--prefix <dir>] [--force] [--json]
+                              the saves of a profile (its saves/ with LocalSaves, else the prefix's My Games Saves):
+                              list them with the plugin count from the header (a documented, unverified layout),
+                              back up into .nvmod/saves-backup/<UTC>/ with a manifest of hashes, restore a backup
+                              (verified, exit 3 on a mismatch; the folder as it was is backed up first; nothing is
+                              deleted), copy saves with their .nvse co-saves to another profile (refused without
+                              the co-save unless --force, and never over a different file), check each save's
+                              plugin list against the profile (exit 1 when one needs a plugin that is not active),
+                              or print the checksums that `nvmod run` compares before and after a launch
   nvmod target <vanilla|nv-rs> --instance <dir>
                               choose what the Instance runs on (the Doctor checks xNVSE's DLL on vanilla)
   nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
@@ -202,6 +214,10 @@ fn writes_instance(args: &[String]) -> bool {
         ),
         Some("sort") => args.iter().any(|a| a == "--apply"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
+        Some("saves") => matches!(
+            args.get(1).map(String::as_str),
+            Some("backup" | "restore" | "transfer")
+        ),
         Some("profile") => matches!(args.get(1).map(String::as_str), Some("apply" | "finish")),
         _ => false,
     }
@@ -268,6 +284,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("mods") => mods::run(&args[1..], out, err),
         Some("profile") => profile::run(&args[1..], out, err),
+        Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),

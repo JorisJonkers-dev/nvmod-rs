@@ -96,3 +96,10 @@ path = "fuzz_targets/capabilities_parse.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "savegame"
+path = "fuzz_targets/savegame.rs"
+test = false
+doc = false
+bench = false
