@@ -1,5 +1,5 @@
 # release-please keeps a release pull request open; merging it tags vX.Y.Z, writes CHANGELOG.md and bumps the
-# version in Cargo.toml and Cargo.lock (release-please-config.json). Nothing is published: no crates.io, no
+# version in Cargo.toml (release-please-config.json) and the lock files (the step below). Nothing is published: no crates.io, no
 # registry, no binaries (the game data needed to use the tool never leaves the owner's machine anyway).
 name: Release
 
@@ -37,3 +37,23 @@ jobs:
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # release-please cannot edit Cargo.lock: its JSONPath filters match nothing in an array of tables. Without
+      # the lock bump the release PR fails every `--locked` build. So refresh the workspace members' own entries
+      # on the release branch, with the App token so that CI runs on the new commit.
+      - if: ${{ steps.rp.outputs.pr }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+      - if: ${{ steps.rp.outputs.pr }}
+        name: Refresh the lock entries of the workspace crates
+        run: |
+          set -euo pipefail
+          cargo update --workspace
+          cargo update --workspace --manifest-path fuzz/Cargo.toml
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): refresh the workspace lock entries"
+          git push
