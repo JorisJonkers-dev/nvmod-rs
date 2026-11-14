@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
-description = "Installs nv-rs into an nvmod Instance: builds it from source or fetches and verifies the fork's release, then runs nv-rs's play-patch step."
+description = "Installs nv-rs into an nvmod Instance: builds it from source or fetches and verifies the fork's release, then runs `nv-viewer <data folder> --check`."
 
 [dependencies]
 nvmod-instance = { workspace = true }

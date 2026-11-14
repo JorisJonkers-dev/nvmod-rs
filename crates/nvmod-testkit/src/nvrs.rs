@@ -2,7 +2,8 @@
 #![allow(clippy::missing_panics_doc, clippy::must_use_candidate)]
 //! Fakes for the nv-rs install step, built in code: a tiny cargo workspace that stands in for the nv-rs source, a
 //! fake release (an archive and its `SHA256SUMS`), a local HTTP server that counts requests, and shell scripts
-//! that stand in for `gh`, `curl` and nv-rs's play-patch step. Nothing here is a real nv-rs file or game file.
+//! that stand in for `gh` and `curl`. The fake `nv-viewer` answers `--check` like the real one (exit 0 when the game
+//! can start, 1 when not) and prints the arguments it got. Nothing here is a real nv-rs file or game file.
 
 use crate::write_file;
 use std::io::{Read, Write};
@@ -16,7 +17,12 @@ use std::thread::JoinHandle;
 /// What the fake nv-rs binary prints, so a test can tell it ran.
 pub const FAKE_BUILT_BANNER: &str = "fake nv-rs built from source";
 /// The bytes of the binary inside the fake release.
-pub const FAKE_RELEASE_BINARY: &[u8] = b"#!/bin/sh\necho fake nv-rs from a release\n";
+pub const FAKE_RELEASE_BINARY: &[u8] = b"#!/bin/sh\necho fake nv-rs from a release \"$@\"\n";
+/// The bytes of the binary inside a fake release whose `--check` fails.
+pub const FAKE_FAILING_RELEASE_BINARY: &[u8] =
+    b"#!/bin/sh\necho fake-check-refused \"$@\" >&2\nexit 1\n";
+/// What the fake source-built `nv-viewer` prints on a failing `--check`.
+pub const FAKE_CHECK_REFUSED: &str = "fake-check-refused";
 /// The asset name the fake release uses.
 pub const FAKE_ASSET: &str = "nv-rs-linux-x86_64-dev.tar.gz";
 
@@ -24,6 +30,7 @@ pub const FAKE_ASSET: &str = "nv-rs-linux-x86_64-dev.tar.gz";
 #[derive(Debug, Clone, Default)]
 pub struct FakeNvRs {
     broken: bool,
+    failing_check: bool,
 }
 
 impl FakeNvRs {
@@ -36,6 +43,13 @@ impl FakeNvRs {
     #[must_use]
     pub fn failing_build(mut self) -> FakeNvRs {
         self.broken = true;
+        self
+    }
+
+    /// A workspace whose `nv-viewer --check` exits 1 and prints [`FAKE_CHECK_REFUSED`].
+    #[must_use]
+    pub fn failing_check(mut self) -> FakeNvRs {
+        self.failing_check = true;
         self
     }
 
@@ -59,7 +73,16 @@ impl FakeNvRs {
         let main = if self.broken {
             "fn main() { let fake-compile-error = ; }\n".to_owned()
         } else {
-            format!("fn main() {{ println!(\"{FAKE_BUILT_BANNER}\"); }}\n")
+            let verdict = if self.failing_check {
+                format!("eprintln!(\"{FAKE_CHECK_REFUSED}\"); std::process::exit(1);")
+            } else {
+                "println!(\"fake check passed {}\", args.join(\" \"));".to_owned()
+            };
+            format!(
+                "fn main() {{ let args: Vec<String> = std::env::args().skip(1).collect(); \
+                 if args.iter().any(|a| a == \"--check\") {{ {verdict} return; }} \
+                 println!(\"{FAKE_BUILT_BANNER}\"); }}\n"
+            )
         };
         write_file(root, "viewer/src/main.rs", main.as_bytes());
     }
@@ -72,7 +95,8 @@ pub struct FakeRelease {
     wrong_sum: bool,
     malformed_sums: bool,
     unlisted: bool,
-    play_patch: bool,
+    manifest: Option<String>,
+    failing_check: bool,
     escaping_member: bool,
 }
 
@@ -89,7 +113,8 @@ impl FakeRelease {
             wrong_sum: false,
             malformed_sums: false,
             unlisted: false,
-            play_patch: false,
+            manifest: None,
+            failing_check: false,
             escaping_member: false,
         }
     }
@@ -115,10 +140,17 @@ impl FakeRelease {
         self
     }
 
-    /// The archive also carries a `play-patch` program.
+    /// The archive also carries this `release-manifest.json` text.
     #[must_use]
-    pub fn with_play_patch(mut self) -> FakeRelease {
-        self.play_patch = true;
+    pub fn with_manifest(mut self, text: &str) -> FakeRelease {
+        self.manifest = Some(text.to_owned());
+        self
+    }
+
+    /// The archive's `nv-viewer --check` exits 1.
+    #[must_use]
+    pub fn failing_check(mut self) -> FakeRelease {
+        self.failing_check = true;
         self
     }
 
@@ -132,20 +164,25 @@ impl FakeRelease {
     /// Write the release into `dir` (`hash` computes the SHA-256 hex of bytes). Returns the asset's bytes.
     pub fn write(&self, dir: &Path, hash: fn(&[u8]) -> String) -> Vec<u8> {
         let work = dir.join(".pack");
-        write_file(&work, "nv-rs/nv-viewer", FAKE_RELEASE_BINARY);
+        let binary = if self.failing_check {
+            FAKE_FAILING_RELEASE_BINARY
+        } else {
+            FAKE_RELEASE_BINARY
+        };
+        write_file(&work, "nv-rs/nv-viewer", binary);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                work.join("nv-rs/nv-viewer"),
+                std::fs::Permissions::from_mode(0o755),
+            )
+            .expect("make nv-viewer executable");
+        }
         let mut members = vec!["nv-rs/nv-viewer"];
-        if self.play_patch {
-            write_file(&work, "nv-rs/play-patch", b"#!/bin/sh\nexit 0\n");
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(
-                    work.join("nv-rs/play-patch"),
-                    std::fs::Permissions::from_mode(0o755),
-                )
-                .expect("make play-patch executable");
-            }
-            members.push("nv-rs/play-patch");
+        if let Some(manifest) = &self.manifest {
+            write_file(&work, "nv-rs/release-manifest.json", manifest.as_bytes());
+            members.push("nv-rs/release-manifest.json");
         }
         let mut cmd = Command::new("tar");
         cmd.arg("-czf")

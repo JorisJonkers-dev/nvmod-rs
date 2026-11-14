@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod install-nv-rs`: build nv-rs from source, or fetch and verify the fork's release, then run the play-patch
-//! step. The tools it runs (`cargo`, `gh`, `curl`, the play-patch step) can each be named, so tests inject fakes.
+//! `nvmod install-nv-rs`: build nv-rs from source, or fetch and verify the fork's release, then run the
+//! installation check. The tools it runs (`cargo`, `gh`, `curl`) can each be named, so tests inject fakes.
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
 use nvmod_install::{
@@ -20,7 +20,6 @@ const OPTIONS: &[&str] = &[
     "repo",
     "gh",
     "curl",
-    "play-patch",
     "retry-delay-ms",
 ];
 
@@ -57,7 +56,6 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         repo: args.option("repo").unwrap_or(DEFAULT_REPO).to_owned(),
         gh: path("gh").unwrap_or_else(|| PathBuf::from("gh")),
         curl: path("curl").unwrap_or_else(|| PathBuf::from("curl")),
-        play_patch: path("play-patch"),
         retry_delay: Duration::from_millis(delay),
     };
     match install(&opts) {
@@ -71,16 +69,14 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                 "nvmod install-nv-rs: nv-rs {how}: {}",
                 done.binary.display()
             );
-            match done.play_patch {
-                Some(step) => {
-                    let _ = writeln!(out, "play-patch step run: {}", step.display());
-                }
-                None => {
-                    let _ = writeln!(
-                        out,
-                        "no play-patch step was given or shipped, so none was run"
-                    );
-                }
+            let _ = writeln!(
+                out,
+                "installation check passed: {}",
+                done.check.command.join(" ")
+            );
+            let shown = done.check.output.trim_end();
+            if !shown.is_empty() {
+                let _ = writeln!(out, "{shown}");
             }
             OK
         }
@@ -98,7 +94,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(InstallError::Failed(why)) => {
             let _ = writeln!(
                 err,
-                "nvmod install-nv-rs: step failed and was rolled back: {why}"
+                "nvmod install-nv-rs: failed and was rolled back: {why}"
             );
             ROLLED_BACK
         }
