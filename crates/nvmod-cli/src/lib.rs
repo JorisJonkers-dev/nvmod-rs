@@ -16,6 +16,7 @@ mod mods;
 mod pe;
 mod plugins;
 mod profile;
+mod profile_apply;
 mod setup;
 mod setup_state;
 mod sort;
@@ -115,6 +116,13 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               `Tale of Two Wastelands`; a failure exits 4 and changes nothing
   nvmod profile create --instance <dir> [--name <name>]
                               make an empty profile (default name `Default`)
+  nvmod profile apply --instance <dir> [--profile <name>] [--prefix <dir>] [--dry-run] [--json]
+  nvmod profile finish --instance <dir> [--prefix <dir>] [--dry-run] [--json]
+                              place a profile in the Wine prefix before a launch (default prefix: <instance>/compatdata):
+                              its game INIs (LocalSettings), a regenerated initweaks.ini, the local-saves redirect,
+                              plugins.txt and loadorder.txt, and archive invalidation; whatever it displaces is
+                              backed up, a read-only file is refused (exit 2) before any write; finish (and the
+                              next apply) copies back what the game changed in the prefix
   nvmod target <vanilla|nv-rs> --instance <dir>
                               choose what the Instance runs on (the Doctor checks xNVSE's DLL on vanilla)
   nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
@@ -181,6 +189,7 @@ fn writes_instance(args: &[String]) -> bool {
         ),
         Some("sort") => args.iter().any(|a| a == "--apply"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
+        Some("profile") => matches!(args.get(1).map(String::as_str), Some("apply" | "finish")),
         _ => false,
     }
 }

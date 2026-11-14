@@ -1,0 +1,25 @@
+[package]
+name = "nvmod-profile"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Profile materialisation: the per-profile game INIs, the INI tweak merge, local saves, the plugin lists and archive invalidation, placed in a Wine prefix before a launch and collected after it."
+
+[dependencies]
+nvmod-backup = { workspace = true }
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+nvmod-stage = { workspace = true }
+nvmod-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true

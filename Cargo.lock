@@ -730,6 +730,7 @@ dependencies = [
  "nvmod-modinstall",
  "nvmod-pe",
  "nvmod-plugins",
+ "nvmod-profile",
  "nvmod-stage",
  "nvmod-testkit",
  "nvmod-tools",
@@ -882,6 +883,21 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "nvmod-profile"
+version = "0.3.0"
+dependencies = [
+ "nvmod-backup",
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
