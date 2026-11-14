@@ -11,6 +11,8 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 nvmod-core = { path = "../crates/nvmod-core" }
+nvmod-pe = { path = "../crates/nvmod-pe" }
+nvmod-testkit = { path = "../crates/nvmod-testkit" }
 
 # Own workspace root: keeps libfuzzer-sys out of the shipped crates and the root lockfile.
 [workspace]
@@ -24,6 +26,13 @@ unsafe_code = "forbid"
 [[bin]]
 name = "severity"
 path = "fuzz_targets/severity.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pe_inspect"
+path = "fuzz_targets/pe_inspect.rs"
 test = false
 doc = false
 bench = false

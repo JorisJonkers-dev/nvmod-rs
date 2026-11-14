@@ -1,0 +1,22 @@
+{
+  "machine": 332,
+  "machine_name": "i386",
+  "format": "pe32",
+  "is_dll": false,
+  "large_address_aware": true,
+  "subsystem": 2,
+  "timestamp": 1593835520,
+  "sections": 1,
+  "file_version": "1.4.0.525",
+  "product_version": "1.4.0.525",
+  "exports": [],
+  "imports": [],
+  "nvse": {
+    "is_plugin": false,
+    "has_query": false,
+    "has_load": false,
+    "has_version_export": false,
+    "version_struct": null
+  },
+  "issues": []
+}

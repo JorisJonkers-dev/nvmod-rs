@@ -1,0 +1,36 @@
+{
+  "machine": 332,
+  "machine_name": "i386",
+  "format": "pe32",
+  "is_dll": true,
+  "large_address_aware": false,
+  "subsystem": 2,
+  "timestamp": 1593835520,
+  "sections": 1,
+  "file_version": null,
+  "product_version": null,
+  "exports": [
+    {
+      "name": "NVSEPlugin_Load",
+      "rva": 4096,
+      "forwarded": false
+    },
+    {
+      "name": "NVSEPlugin_Query",
+      "rva": 4100,
+      "forwarded": false
+    }
+  ],
+  "imports": [
+    "KERNEL32.dll",
+    "MSVCP140.dll"
+  ],
+  "nvse": {
+    "is_plugin": true,
+    "has_query": true,
+    "has_load": true,
+    "has_version_export": false,
+    "version_struct": null
+  },
+  "issues": []
+}

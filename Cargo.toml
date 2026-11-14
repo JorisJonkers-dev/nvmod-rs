@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nvmod-core", "crates/nvmod-cli"]
+members = ["crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit"]
 # fuzz/ is its own workspace (libfuzzer-sys stays out of the shipped crates).
 exclude = ["fuzz"]
 
@@ -22,6 +22,8 @@ pedantic = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
 nvmod-core = { path = "crates/nvmod-core" }
+nvmod-pe = { path = "crates/nvmod-pe" }
+nvmod-testkit = { path = "crates/nvmod-testkit" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 proptest = { version = "1.12.0", default-features = false, features = ["std"] }
