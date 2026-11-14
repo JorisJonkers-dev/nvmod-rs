@@ -16,6 +16,18 @@ Each archive holds `nvmod`, `LICENSE`, `THIRD-PARTY-NOTICES.txt` (the linked cra
 `README.txt`. Tools are never bundled. All assets carry one GitHub artifact attestation made by `release-assets.yml`.
 `known_good_set` is `null` until the lock names a set id.
 
+## Package proxy
+
+The `build` and `sbom` jobs download crates, so each runs the estate's `setup-package-proxy` step with the org secret
+`PACKAGES_PROXY_TOKEN` (the same pinned action as `fuzz.yml`). The secret is passed to those steps only; the job that
+checksums, attests and uploads never sees it.
+
+## Publishing
+
+Assets are uploaded to a GitHub release only when `publish` is true, and the publish job refuses any tag that is not a
+release-please release: the tag must be `vX.Y.Z`, reachable from `main`, on a `chore(main): release X.Y.Z` commit.
+`release.yml` dispatches with `publish=true` for the tag it just created; a manual dispatch defaults to false.
+
 ## Verify
 
 ```sh

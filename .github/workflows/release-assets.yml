@@ -6,7 +6,9 @@
 #
 # release.yml dispatches this workflow when release-please creates a release (a tag made with the default token starts
 # no other workflow), with publish true. A manual dispatch on an existing tag is the dry run: it builds and attests,
-# and uploads to the release only when `publish` is left false. Verify an asset with docs/releasing.md.
+# and uploads to the release only when `publish` is true, which the publish job allows for release-please tags only.
+# PACKAGES_PROXY_TOKEN reaches the build and SBOM jobs only (the ones that download crates), never the publish job.
+# Verify an asset with docs/releasing.md.
 name: Release assets
 
 on:
@@ -53,6 +55,9 @@ jobs:
         with:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+        with:
+          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
 
       - name: The tag matches the workspace version
         shell: bash
@@ -116,6 +121,9 @@ jobs:
         with:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+        with:
+          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
       - name: CycloneDX SBOM of the nvmod binary
         run: |
           set -euo pipefail
@@ -149,7 +157,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ inputs.tag }}
+          fetch-depth: 0
           persist-credentials: false
+      - name: Publishing is for release-please tags only
+        if: ${{ env.PUBLISH == 'true' }}
+        run: |
+          set -euo pipefail
+          # The tag must be a release-please release: vX.Y.Z on main, on the commit of a merged release pull request.
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag $TAG is not vX.Y.Z"; exit 1; }
+          git merge-base --is-ancestor "refs/tags/$TAG" refs/remotes/origin/main || { echo "$TAG is not on main"; exit 1; }
+          subject="$(git log -1 --format=%s "refs/tags/$TAG")"
+          [[ "$subject" =~ ^chore\(main\):\ release\ ${TAG#v}\  ]] || { echo "$TAG is not a release-please commit: $subject"; exit 1; }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: dist-*
