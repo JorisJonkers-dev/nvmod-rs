@@ -2,6 +2,9 @@
 //! `nvmod conflicts` and `nvmod tree` against a scratch Instance made by `nvmod init` from a synthetic base copy.
 //! Mods are written as files, in code.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
 use serde_json::Value;
 use std::collections::BTreeSet;
