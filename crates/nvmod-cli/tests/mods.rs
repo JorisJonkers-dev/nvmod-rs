@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod mods`, run as a program against a scratch Instance made by `nvmod init`. No game data is used.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
 use serde_json::Value;
 use std::fs;

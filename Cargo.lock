@@ -811,6 +811,7 @@ name = "nvmod-install"
 version = "0.3.0"
 dependencies = [
  "nvmod-instance",
+ "nvmod-runner",
  "nvmod-testkit",
  "nvmod-tools",
  "serde",
@@ -847,6 +848,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-runner",
  "nvmod-stage",
  "nvmod-testkit",
  "roxmltree",
@@ -883,6 +885,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-runner"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-testkit",
+ "sha2",
+]
+
+[[package]]
 name = "nvmod-stage"
 version = "0.3.0"
 dependencies = [
@@ -905,10 +916,10 @@ dependencies = [
  "jsonschema",
  "loot-rs",
  "nvmod-core",
+ "nvmod-runner",
  "nvmod-testkit",
  "serde",
  "serde_json",
- "sha2",
  "toml",
 ]
 

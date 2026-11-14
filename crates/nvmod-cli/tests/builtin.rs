@@ -3,6 +3,9 @@
 //! scratch Instances of both targets. The catalogue and the installed nv-rs's `capabilities.json` are synthetic
 //! and written here; every number in a test is made up for the test.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{
     BaseBuilder, PeBuilder, PluginBuilder, TempDir, capabilities_json, write_file,
 };

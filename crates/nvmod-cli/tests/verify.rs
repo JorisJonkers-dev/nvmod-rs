@@ -2,6 +2,9 @@
 //! `nvmod verify`, run as a program against a scratch Instance made by `nvmod init` and `nvmod profile create`
 //! from a synthetic base copy. nv-rs is a fake file and its record written here. No game data.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
 use nvmod_tools::sha256_hex;
 use serde_json::Value;

@@ -2,6 +2,9 @@
 //! `nvmod install` and `nvmod rollback`, run as a program against a scratch Instance made by `nvmod init`.
 //! Archives are built in code by the testkit; no mod data is used.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{
     BaseBuilder, TarBuilder, TempDir, ZipBuilder, snapshot, write_file, write_script,
 };

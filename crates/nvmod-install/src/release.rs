@@ -2,12 +2,17 @@
 //! Fetching the fork's release, checking its checksum and attestation, and unpacking it.
 
 use crate::install::InstallError;
+use nvmod_runner::{Call, Runner};
 use nvmod_tools::{
     Attestation, Fetcher, VerifyError, check_sha256, fetch_bytes, verify_attestation,
 };
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
+
+/// How long unpacking or listing a release archive may take.
+const TAR_TIMEOUT: Duration = Duration::from_mins(30);
+/// The most bytes of an archive listing kept.
+const TAR_LIST_CAP: usize = 64 * 1024 * 1024;
 
 /// Where a release is fetched from and how it is checked.
 pub(crate) struct Source<'a> {
@@ -72,21 +77,29 @@ pub(crate) fn fetch_verified(src: &Source, dir: &Path) -> Result<PathBuf, Instal
 }
 
 fn tar(args: &[&str], archive: &Path, into: Option<&Path>) -> Result<String, InstallError> {
-    let mut cmd = Command::new("tar");
-    cmd.args(args).arg(archive);
+    let mut words: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
+    words.push(archive.display().to_string());
     if let Some(dir) = into {
-        cmd.arg("-C").arg(dir);
+        words.push("-C".to_owned());
+        words.push(dir.display().to_string());
     }
-    let out = cmd
-        .output()
+    // File names in the archive are bytes: read them as UTF-8, not through the scrubbed C locale.
+    let runner = Runner {
+        timeout: TAR_TIMEOUT,
+        max_output: TAR_LIST_CAP,
+        ..Runner::default()
+    }
+    .with_env("LC_ALL", "C.UTF-8");
+    let out = runner
+        .run_any(&Call::new("tar", Path::new("tar"), &words))
         .map_err(|e| InstallError::Failed(format!("cannot run tar: {e}")))?;
-    if out.status.success() {
+    if out.exit_code == 0 {
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     } else {
         Err(InstallError::Failed(format!(
             "tar failed on {}: {}",
             archive.display(),
-            String::from_utf8_lossy(&out.stderr).trim()
+            out.stderr.trim()
         )))
     }
 }

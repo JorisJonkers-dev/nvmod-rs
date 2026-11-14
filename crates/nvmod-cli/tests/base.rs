@@ -2,6 +2,9 @@
 //! `nvmod init` and `nvmod doctor` on a base copy, run as a program against scratch folders built from synthetic
 //! fixtures (a fake Steam, GOG or Epic copy). Nothing here depends on the machine or on any game file.
 
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
+
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot};
 use serde_json::Value;
 use std::process::Command;

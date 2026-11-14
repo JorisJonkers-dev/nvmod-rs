@@ -4,6 +4,8 @@
 //! code is 4. A step is held open by the test hook `NVMOD_PAUSE_AT=<step>`, which creates `NVMOD_PAUSE_FILE`
 //! when the step is reached. No game data is used.
 #![cfg(unix)]
+// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
+#![allow(clippy::disallowed_methods)]
 
 use nvmod_testkit::{
     BaseBuilder, Mo2Builder, ModSpec, PeBuilder, PluginBuilder, TempDir, ZipBuilder, snapshot,
