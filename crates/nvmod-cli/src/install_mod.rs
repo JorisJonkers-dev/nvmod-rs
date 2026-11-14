@@ -201,6 +201,12 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
                     out,
                     "nvmod rollback: restored the Instance file as it was before its schema migration"
                 );
+            } else if report.kind == "mods" {
+                let _ = writeln!(
+                    out,
+                    "nvmod rollback: undid the Mods change of profile `{}`",
+                    report.profile
+                );
             } else if report.kind == "sort" {
                 let _ = writeln!(
                     out,
