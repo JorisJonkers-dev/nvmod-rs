@@ -615,7 +615,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-catalog"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "toml",
@@ -623,7 +623,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "schemars",
  "serde",
@@ -632,7 +632,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-formats"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nvmod-core",
 ]
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-instance"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nvmod-core",
  "serde",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-modinstall"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -677,14 +677,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-pe"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "nvmod-stage"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -695,11 +695,11 @@ dependencies = [
 
 [[package]]
 name = "nvmod-testkit"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "nvmod-tools"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "jsonschema",
  "serde",
