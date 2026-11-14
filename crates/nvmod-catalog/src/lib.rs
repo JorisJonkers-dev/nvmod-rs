@@ -388,6 +388,42 @@ mod tests {
     }
 
     #[test]
+    fn the_mods_the_doctor_found_missing_have_entries() {
+        let catalog = Catalog::builtin();
+        for (id, dll, nexus) in [
+            (
+                "vanilla-plus-terrain",
+                "VanillaPlusTerrain.dll",
+                Some(92519),
+            ),
+            ("vats-lag-fix", "VATSLagFix.dll", None),
+            (
+                "viewmodel-shading-fix",
+                "Viewmodel Shading Fix.dll",
+                Some(84781),
+            ),
+            ("yui", "yUI.dll", Some(74357)),
+            ("zlib-updated", "zlibUpdate.dll", Some(85267)),
+        ] {
+            let p = catalog.plugin(id).unwrap();
+            assert_eq!(p.dll, dll, "{id}");
+            assert_eq!(p.nexus_mod_id, nexus, "{id}");
+            assert_eq!(catalog.by_dll(&dll.to_uppercase()).unwrap().id, id);
+            assert_eq!(p.provided_by.vanilla.kind, Kind::External, "{id}");
+            assert_eq!(p.provided_by.nv_rs.kind, Kind::External, "{id}");
+            assert!(p.provenance.verified && p.provenance.verified_on == "2026-11-14");
+        }
+        assert_eq!(catalog.plugin("yui").unwrap().ini, ["yUI.ini"]);
+        // The owner has not decided these two; neither is marked absent on any target.
+        for id in ["johnnyguitar", "showoff"] {
+            if let Some(p) = catalog.plugin(id) {
+                assert_ne!(p.provided_by.nv_rs.kind, Kind::Absent, "{id}");
+                assert_ne!(p.provided_by.vanilla.kind, Kind::Absent, "{id}");
+            }
+        }
+    }
+
+    #[test]
     fn defaults_are_empty_and_every_target_is_external() {
         let catalog = Catalog::parse(&one("")).unwrap();
         let p = &catalog.plugins[0];

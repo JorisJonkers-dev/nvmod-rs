@@ -548,6 +548,66 @@ verified_on = "2026-11-14"
 verified = true
 note = "dll and ini names observed; compatibility facts not recorded"
 
+[[plugin]]
+id = "vanilla-plus-terrain"
+name = "Vanilla Plus Terrain"
+dll = "VanillaPlusTerrain.dll"
+nexus_mod_id = 92519
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/research/mod-audit-and-replacements.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll names observed; Nexus id as stated by the document, not checked on the site; compatibility facts not recorded"
+
+[[plugin]]
+id = "vats-lag-fix"
+name = "VATS Lag Fix"
+dll = "VATSLagFix.dll"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "viewmodel-shading-fix"
+name = "Viewmodel Shading Fix - NVSE"
+dll = "Viewmodel Shading Fix.dll"
+nexus_mod_id = 84781
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/research/mod-audit-and-replacements.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll names observed; Nexus id as stated by the document, not checked on the site; compatibility facts not recorded"
+
+[[plugin]]
+id = "yui"
+name = "yUI"
+dll = "yUI.dll"
+ini = ["yUI.ini"]
+nexus_mod_id = 74357
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/research/mod-audit-and-replacements.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; Nexus id as stated by the document, not checked on the site; compatibility facts not recorded"
+
+[[plugin]]
+id = "zlib-updated"
+name = "zlib Updated - NVSE"
+dll = "zlibUpdate.dll"
+nexus_mod_id = 85267
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/research/mod-audit-and-replacements.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll names observed; Nexus id as stated by the document, not checked on the site; compatibility facts not recorded"
+
 [[mod]]
 name = "MAC-TEN"
 nexus_mod_id = 83815
