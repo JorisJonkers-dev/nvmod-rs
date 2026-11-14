@@ -4,8 +4,13 @@
 
 mod base;
 mod mo2;
+mod nvrs;
 mod pe;
 
 pub use base::{BaseBuilder, Store, snapshot};
 pub use mo2::{Mo2Builder, ModSpec, TempDir, write_file};
+pub use nvrs::{
+    FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_RELEASE_BINARY, FakeNvRs, FakeRelease, FakeServer, Reply,
+    write_script,
+};
 pub use pe::{ExportSpec, PeBuilder};
