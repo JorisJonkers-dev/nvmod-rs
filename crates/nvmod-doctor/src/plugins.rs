@@ -3,7 +3,7 @@
 
 use crate::OVERWRITE;
 use crate::report::PluginReport;
-use nvmod_catalog::{Catalog, NvRs};
+use nvmod_catalog::{Catalog, Kind};
 use nvmod_core::{FileIndex, Finding, Severity};
 use nvmod_formats::scan::files_under;
 use nvmod_formats::{Mo2Instance, Mo2Profile};
@@ -149,7 +149,7 @@ pub(crate) fn check(
             winner: winner.source.clone(),
             shadowed,
             catalog_id: entry.map(|p| p.id.clone()),
-            nv_rs: entry.map_or(NvRs::Unknown, |p| p.nv_rs),
+            nv_rs: entry.map_or(Kind::External, |p| p.provided_by.nv_rs.kind),
             pe,
         });
     }

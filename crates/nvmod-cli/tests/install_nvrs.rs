@@ -318,6 +318,38 @@ fn without_a_toolchain_the_release_is_fetched_verified_and_installed() {
 }
 
 #[test]
+fn the_capabilities_file_of_a_release_is_installed_next_to_the_binaries() {
+    let rig = Rig::new();
+    let release = rig.release(&FakeRelease::new().with_capabilities());
+    let gh = rig.gh(0);
+    let (code, out, err) = rig.install(&["--release", "--release-url", &release, "--gh", &gh]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let text = std::fs::read_to_string(rig.root().join("nv-rs/capabilities.json")).unwrap();
+    assert!(text.contains("\"synthetic\""), "{text}");
+    // A release without one installs without one; the Doctor then warns that no coverage is known.
+    let rig = Rig::new();
+    let release = rig.release(&FakeRelease::new());
+    let gh = rig.gh(0);
+    let (code, ..) = rig.install(&["--release", "--release-url", &release, "--gh", &gh]);
+    assert_eq!(code, 0);
+    assert!(!rig.root().join("nv-rs/capabilities.json").exists());
+}
+
+#[test]
+fn the_capabilities_file_of_the_source_tree_is_installed_when_it_has_one() {
+    let rig = Rig::new();
+    nvmod_testkit::write_file(
+        rig.source.path(),
+        ".fork/capabilities.json",
+        nvmod_testkit::capabilities_json(&[("synthetic", "Synthetic", 1, 2)]).as_bytes(),
+    );
+    let (code, out, err) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let text = std::fs::read_to_string(rig.root().join("nv-rs/capabilities.json")).unwrap();
+    assert!(text.contains("\"synthetic\""), "{text}");
+}
+
+#[test]
 fn the_release_can_be_requested_even_with_a_toolchain() {
     let rig = Rig::new();
     let release = rig.release(&FakeRelease::new());

@@ -29,6 +29,12 @@ impl Scratch {
     fn new() -> Scratch {
         let base = TempDir::new("stage-base");
         BaseBuilder::steam().write(base.path());
+        // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
+        write_file(
+            base.path(),
+            "nvse_1_4.dll",
+            &nvmod_testkit::PeBuilder::dll().build(),
+        );
         write_file(base.path(), "Data/Meshes/Rock.nif", b"base rock");
         write_file(base.path(), "Data/Fallout - Meshes.bsa", b"base bsa");
         let inst = TempDir::new("stage-inst");

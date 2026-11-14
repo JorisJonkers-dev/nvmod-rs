@@ -7,6 +7,7 @@
 //! assumptions"); the constants below name them.
 
 mod base;
+mod builtin;
 mod game;
 mod order;
 mod plugins;
@@ -14,6 +15,7 @@ mod profile;
 mod report;
 
 pub use base::{BaseExe, BaseReport, BaseSummary, check_base, check_instance};
+pub use builtin::{CapabilitiesStatus, CapabilitiesUse, ExtenderCoverage, NvRsReport};
 pub use report::{ExeReport, GameReport, PluginReport, Report, Summary};
 
 use nvmod_catalog::Catalog;

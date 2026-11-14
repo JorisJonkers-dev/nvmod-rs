@@ -98,6 +98,7 @@ pub struct FakeRelease {
     manifest: Option<String>,
     failing_check: bool,
     escaping_member: bool,
+    capabilities: bool,
 }
 
 impl Default for FakeRelease {
@@ -116,6 +117,7 @@ impl FakeRelease {
             manifest: None,
             failing_check: false,
             escaping_member: false,
+            capabilities: false,
         }
     }
 
@@ -154,6 +156,13 @@ impl FakeRelease {
         self
     }
 
+    /// The archive also carries a synthetic `capabilities.json` (one extender, 3 of 4 commands).
+    #[must_use]
+    pub fn with_capabilities(mut self) -> FakeRelease {
+        self.capabilities = true;
+        self
+    }
+
     /// The archive holds a member whose path leaves the extraction folder.
     #[must_use]
     pub fn escaping_member(mut self) -> FakeRelease {
@@ -183,6 +192,14 @@ impl FakeRelease {
         if let Some(manifest) = &self.manifest {
             write_file(&work, "nv-rs/release-manifest.json", manifest.as_bytes());
             members.push("nv-rs/release-manifest.json");
+        }
+        if self.capabilities {
+            write_file(
+                &work,
+                "nv-rs/capabilities.json",
+                capabilities_json(&[("synthetic", "Synthetic", 3, 4)]).as_bytes(),
+            );
+            members.push("nv-rs/capabilities.json");
         }
         let mut cmd = Command::new("tar");
         cmd.arg("-czf")
@@ -344,4 +361,23 @@ fn serve(mut stream: TcpStream, requests: &Mutex<Vec<String>>, handler: &Handler
         }
     };
     let _ = stream.write_all(&reply);
+}
+
+/// A synthetic `capabilities.json` of nv-rs's schema: per extender `(id, name, implemented, total)`, with made up
+/// command names (`Command1`, `Command2`, ...) for the implemented ones.
+pub fn capabilities_json(extenders: &[(&str, &str, u64, u64)]) -> String {
+    let list: Vec<String> = extenders
+        .iter()
+        .map(|(id, name, implemented, total)| {
+            let names: Vec<String> = (1..=*implemented).map(|n| format!("\"Command{n}\"")).collect();
+            format!(
+                "{{\"id\":\"{id}\",\"name\":\"{name}\",\"commands\":{{\"implemented\":{implemented},\"total\":{total},\"implemented_names\":[{}]}}}}",
+                names.join(",")
+            )
+        })
+        .collect();
+    format!(
+        "{{\"schema_version\":1,\"extenders\":[{}]}}",
+        list.join(",")
+    )
 }

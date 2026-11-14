@@ -361,6 +361,12 @@ fn import_usage_errors_exit_with_five() {
 #[test]
 fn the_imported_instance_stages_and_passes_the_doctor() {
     let w = World::new();
+    // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
+    nvmod_testkit::write_file(
+        w.base.path(),
+        "nvse_1_4.dll",
+        &nvmod_testkit::PeBuilder::dll().build(),
+    );
     assert_eq!(w.import(&[]).0, 0);
     let inst = w.instance();
     let inst = inst.to_str().unwrap();

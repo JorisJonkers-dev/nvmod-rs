@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The report and its JSON shape.
 
-use nvmod_catalog::NvRs;
+use nvmod_catalog::Kind;
 use nvmod_core::{Finding, Severity};
 use nvmod_pe::{PeReport, Version4};
 use serde::Serialize;
@@ -45,8 +45,8 @@ pub struct PluginReport {
     pub shadowed: Vec<String>,
     /// Catalogue id, when the catalogue knows the DLL.
     pub catalog_id: Option<String>,
-    /// How nv-rs treats it (`unknown` when the catalogue does not say).
-    pub nv_rs: NvRs,
+    /// What provides it on nv-rs (`external` when the catalogue does not say, which on nv-rs means unknown).
+    pub nv_rs: Kind,
     /// What the PE inspector found, `None` when the file could not be read as a PE file.
     pub pe: Option<PeReport>,
 }
@@ -147,8 +147,10 @@ impl Report {
                 ),
             };
             lines.push(format!(
-                "  {} <- {} ({state}; nv-rs: {:?})",
-                p.dll, p.winner, p.nv_rs
+                "  {} <- {} ({state}; nv-rs: {})",
+                p.dll,
+                p.winner,
+                p.nv_rs.label()
             ));
         }
         lines.push(format!(

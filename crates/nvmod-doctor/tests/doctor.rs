@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The doctor on instances and game folders built in code.
 
-use nvmod_catalog::{Catalog, NvRs};
+use nvmod_catalog::{Catalog, Kind};
 use nvmod_core::Severity;
 use nvmod_doctor::{Report, run};
 use nvmod_formats::Mo2Instance;
@@ -97,7 +97,7 @@ fn a_healthy_setup_has_no_warnings_or_errors() {
         (p.dll.as_str(), p.winner.as_str(), p.catalog_id.as_deref()),
         ("jip_nvse.dll", "JIP LN NVSE Plugin", Some("jip-ln"))
     );
-    assert_eq!(p.nv_rs, NvRs::Unknown);
+    assert_eq!(p.nv_rs, Kind::BuiltinPartial);
     assert_eq!(
         p.pe.as_ref().unwrap().nvse.version_struct.unwrap().version,
         7
@@ -243,7 +243,7 @@ fn catalogue_rules_requirements_conflicts_replacements_and_inis() {
         let prov =
             "[plugin.provenance]\nsource = \"t\"\nverified_on = \"2026-11-14\"\nverified = false\n";
         format!(
-            "schema = 1\n[[plugin]]\nid = \"a\"\nname = \"A\"\ndll = \"a.dll\"\nini = [\"a.ini\"]\nrequires = [\"fw\"]\nconflicts = [\"b\"]\nreplaced_by = \"c\"\nnv_rs = \"unsupported\"\n{prov}\n[[plugin]]\nid = \"b\"\nname = \"B\"\ndll = \"b.dll\"\nconflicts = [\"a\"]\n{prov}\n[[plugin]]\nid = \"fw\"\nname = \"FW\"\ndll = \"fw.dll\"\n{prov}\n[[plugin]]\nid = \"c\"\nname = \"C\"\ndll = \"c.dll\"\n{prov}{extra}"
+            "schema = 1\n[[plugin]]\nid = \"a\"\nname = \"A\"\ndll = \"a.dll\"\nini = [\"a.ini\"]\nrequires = [\"fw\"]\nconflicts = [\"b\"]\nreplaced_by = \"c\"\nprovided_by = {{ nv-rs = {{ kind = \"absent\" }} }}\n{prov}\n[[plugin]]\nid = \"b\"\nname = \"B\"\ndll = \"b.dll\"\nconflicts = [\"a\"]\n{prov}\n[[plugin]]\nid = \"fw\"\nname = \"FW\"\ndll = \"fw.dll\"\n{prov}\n[[plugin]]\nid = \"c\"\nname = \"C\"\ndll = \"c.dll\"\n{prov}{extra}"
         )
     };
     let catalog = Catalog::parse(&text("")).unwrap();
@@ -281,7 +281,7 @@ fn catalogue_rules_requirements_conflicts_replacements_and_inis() {
             .find(|p| p.dll == "a.dll")
             .unwrap()
             .nv_rs,
-        NvRs::Unsupported
+        Kind::Absent
     );
 }
 

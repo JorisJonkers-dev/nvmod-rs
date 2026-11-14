@@ -16,6 +16,7 @@ nvmod-instance = { workspace = true }
 nvmod-stage = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-catalog = { workspace = true }
+nvmod-tools = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]

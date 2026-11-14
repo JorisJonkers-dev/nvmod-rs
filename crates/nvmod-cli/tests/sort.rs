@@ -60,6 +60,12 @@ impl Scratch {
     fn new() -> Scratch {
         let base = TempDir::new("sort-base");
         BaseBuilder::steam().write(base.path());
+        // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
+        write_file(
+            base.path(),
+            "nvse_1_4.dll",
+            &nvmod_testkit::PeBuilder::dll().build(),
+        );
         write_file(
             base.path(),
             "Data/FalloutNV.esm",

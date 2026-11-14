@@ -48,6 +48,7 @@ macro_rules! snapshot {
 pub const SNAPSHOTS: &[Snapshot] = &[
     snapshot!("lodwright-rs", "lodwright-plan", 1, true),
     snapshot!("loot-rs", "loot-sort", 1, true),
+    snapshot!("nv-rs", "nv-rs-capabilities", 1, false),
     snapshot!("nv-rs", "nv-rs-release-manifest", 1, false),
     snapshot!("ttw-installer", "ttw-installer-result", 1, false),
 ];
