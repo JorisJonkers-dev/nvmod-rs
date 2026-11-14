@@ -702,6 +702,7 @@ name = "nvmod-tools"
 version = "0.2.0"
 dependencies = [
  "jsonschema",
+ "nvmod-core",
  "serde",
  "serde_json",
  "sha2",

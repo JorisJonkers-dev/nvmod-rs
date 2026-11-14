@@ -748,6 +748,37 @@ struct Run {
     resumed: bool,
 }
 
+/// The `resumed` event of a continued run.
+fn emit_resumed(events: &mut Events, steps: &[Step], run: &Run, instance: &Path) {
+    let total = steps.len();
+    events.emit(
+        serde_json::json!({
+            "event": "resumed", "instance": instance, "total": total,
+            "completed": run.state.completed.iter().map(|c| c.step.clone()).collect::<Vec<_>>(),
+            "next": steps.get(run.done).map(|s| s.name.clone()),
+        }),
+        &format!(
+            "nvmod setup: resuming at step {} of {total}",
+            run.done.min(total - 1) + 1
+        ),
+    );
+}
+
+/// The `skipped` event of a step that finished earlier and still holds.
+fn emit_skipped(events: &mut Events, step: &Step, i: usize, total: usize) {
+    events.emit(
+        serde_json::json!({
+            "event": "skipped", "step": step.name, "index": i + 1, "total": total,
+            "description": step.what, "reason": "finished earlier and still holds",
+        }),
+        &format!(
+            "[{}/{total}] {}: finished earlier, skipped",
+            i + 1,
+            step.name
+        ),
+    );
+}
+
 /// Run the steps in order. A failure with `keep` set (and something finished) leaves the Instance resumable;
 /// otherwise it undoes the run. Either way the run finishes with that step's code.
 fn execute(
@@ -762,32 +793,29 @@ fn execute(
     let profile = args.option("profile").unwrap_or("Default").to_owned();
     let pre_existing = instance.is_dir();
     if run.resumed {
-        events.emit(
-            serde_json::json!({
-                "event": "resumed", "instance": instance, "total": total,
-                "completed": run.state.completed.iter().map(|c| c.step.clone()).collect::<Vec<_>>(),
-                "next": steps.get(run.done).map(|s| s.name.clone()),
-            }),
-            &format!(
-                "nvmod setup: resuming at step {} of {total}",
-                run.done.min(total - 1) + 1
-            ),
-        );
+        emit_resumed(events, steps, run, &instance);
     }
     for (i, step) in steps.iter().enumerate() {
         if i < run.done {
-            events.emit(
-                serde_json::json!({
-                    "event": "skipped", "step": step.name, "index": i + 1, "total": total,
-                    "description": step.what, "reason": "finished earlier and still holds",
-                }),
-                &format!(
-                    "[{}/{total}] {}: finished earlier, skipped",
-                    i + 1,
-                    step.name
-                ),
-            );
+            emit_skipped(events, step, i, total);
             continue;
+        }
+        if nvmod_core::cancel::requested() {
+            // Stopped between two steps: nothing of this step ran; the run ends like a failed step.
+            return fail(
+                &Failed {
+                    step,
+                    index: i,
+                    total,
+                    code: ROLLED_BACK,
+                    shown: nvmod_core::cancel::INTERRUPTED,
+                },
+                &instance,
+                pre_existing,
+                events,
+                err,
+                run,
+            );
         }
         events.step(
             step,
@@ -829,7 +857,11 @@ fn execute(
             );
             continue;
         }
-        let code = step_code(code);
+        let code = if nvmod_core::cancel::requested() {
+            ROLLED_BACK
+        } else {
+            step_code(code)
+        };
         return fail(
             &Failed {
                 step,
@@ -919,6 +951,8 @@ fn fail(
         serde_json::json!({
             "event": "finished", "status": "failed", "exit_code": final_code,
             "rolled_back": undone, "resumable": resumable, "failed_step": step.name,
+            "outcome": if resumable { "kept-partial" } else if undone { "rolled-back" } else { "rollback-failed" },
+            "interrupted": nvmod_core::cancel::requested(),
         }),
         &note,
     );

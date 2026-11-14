@@ -32,6 +32,7 @@ loot-rs = { workspace = true }
 nvmod-pe = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+ctrlc = { version = "3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }

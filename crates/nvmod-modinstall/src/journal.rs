@@ -69,6 +69,24 @@ pub struct RollbackReport {
     pub profile: String,
 }
 
+/// A journal id: `{millis:016}-{counter:06}-{pid}`. Two journals of one process never share an id (the counter
+/// grows with every call, even inside one millisecond), and ids sort in creation order: the milliseconds never go
+/// back within a process, then the counter, and a restart of the process gets later milliseconds.
+fn next_id() -> String {
+    use std::sync::Mutex;
+    // The last milliseconds handed out and the counter: a clock that steps back cannot reorder ids.
+    static LAST: Mutex<(u128, u64)> = Mutex::new((0, 0));
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    let mut last = LAST
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    last.0 = last.0.max(now);
+    last.1 += 1;
+    format!("{:016}-{:06}-{}", last.0, last.1, std::process::id())
+}
+
 fn journal_root(instance: &NvmodInstance) -> PathBuf {
     instance.root.join(".nvmod").join("journal")
 }
@@ -119,10 +137,7 @@ pub fn begin_kind(
     name: &str,
     kind: &str,
 ) -> Result<Entry, String> {
-    let millis = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_millis());
-    let id = format!("{millis:016}-{}", std::process::id());
+    let id = next_id();
     let root = journal_root(instance).join(&id);
     let backup = root.join("backup");
     fs::create_dir_all(&backup).map_err(|e| format!("{}: {e}", backup.display()))?;
@@ -253,4 +268,34 @@ pub fn rollback(instance: &NvmodInstance) -> Result<RollbackReport, RollbackErro
     Err(RollbackError::Refused(
         "there is no install to roll back".to_owned(),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::next_id;
+
+    #[test]
+    fn ids_made_in_one_process_are_unique_and_sort_in_creation_order() {
+        let ids: Vec<String> = (0..2000).map(|_| next_id()).collect();
+        let mut sorted = ids.clone();
+        sorted.sort();
+        assert_eq!(ids, sorted, "ids sort in creation order");
+        sorted.dedup();
+        assert_eq!(sorted.len(), ids.len(), "no two ids are equal");
+    }
+
+    #[test]
+    fn ids_made_on_several_threads_never_collide() {
+        let handles: Vec<_> = (0..4)
+            .map(|_| std::thread::spawn(|| (0..500).map(|_| next_id()).collect::<Vec<_>>()))
+            .collect();
+        let mut all: Vec<String> = handles
+            .into_iter()
+            .flat_map(|h| h.join().unwrap())
+            .collect();
+        let n = all.len();
+        all.sort();
+        all.dedup();
+        assert_eq!(all.len(), n);
+    }
 }

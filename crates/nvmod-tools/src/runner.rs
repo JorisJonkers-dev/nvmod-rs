@@ -283,6 +283,8 @@ impl Runner {
                     "it wrote more than the cap of {} bytes",
                     self.max_output
                 ));
+            } else if nvmod_core::cancel::requested() {
+                stop = Some(nvmod_core::cancel::INTERRUPTED.to_owned());
             } else if Instant::now() >= deadline {
                 stop = Some(format!("it ran longer than {:?}", self.timeout));
             } else {

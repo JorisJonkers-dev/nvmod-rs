@@ -121,7 +121,59 @@ exit codes:
   2  refused (nothing was changed)
   3  verification failure
   4  step failed and rolled back
-  5  command line not understood\n";
+  5  command line not understood\n
+SIGTERM or SIGINT during setup, install, ttw, import-mo2, mods or sort --apply rolls the step in flight back
+(setup keeps a partial Instance with --keep-partial) and exits 4 with a `finished` record.\n";
+
+/// Whether `args` is a command that writes to an Instance and so rolls back when it is stopped: `setup`,
+/// `install`, `ttw`, `import-mo2`, `mods enable|disable|reorder` and `sort --apply`.
+fn writes_instance(args: &[String]) -> bool {
+    match args.first().map(String::as_str) {
+        Some("setup" | "install" | "ttw" | "import-mo2") => true,
+        Some("mods") => matches!(
+            args.get(1).map(String::as_str),
+            Some("enable" | "disable" | "reorder")
+        ),
+        Some("sort") => args.iter().any(|a| a == "--apply"),
+        _ => false,
+    }
+}
+
+/// [`run`] for the binary. For a writing command (see [`writes_instance`]) SIGTERM and SIGINT (Ctrl+C on
+/// Windows) do not kill the process: they ask the step in flight to stop, which the journal machinery rolls
+/// back (setup keeps a partial Instance with `--keep-partial`). The run then ends with exit code 4 and a
+/// `finished` record: setup's own event, or for the other commands `{"event":"finished",...,"interrupted":true,
+/// "outcome":"rolled-back"}` on standard output with `--json` and a line on standard error without.
+pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    if writes_instance(args) {
+        // Best effort: without a handler the default action (end the process) stays.
+        let _ = ctrlc::set_handler(nvmod_core::cancel::request);
+    }
+    let code = run(args, out, err);
+    if code == ROLLED_BACK
+        && nvmod_core::cancel::requested()
+        && args.first().map(String::as_str) != Some("setup")
+    {
+        let command = args.first().map_or("nvmod", String::as_str);
+        if args.iter().any(|a| a == "--json") {
+            let _ = writeln!(
+                out,
+                "{}",
+                serde_json::json!({
+                    "event": "finished", "status": "failed", "exit_code": ROLLED_BACK,
+                    "rolled_back": true, "resumable": false, "interrupted": true,
+                    "outcome": "rolled-back", "command": command,
+                })
+            );
+        } else {
+            let _ = writeln!(
+                err,
+                "nvmod {command}: interrupted; the step in flight was rolled back"
+            );
+        }
+    }
+    code
+}
 
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.

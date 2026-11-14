@@ -9,6 +9,7 @@ publish.workspace = true
 description = "The Load order of a Profile: sorted by loot-rs, written to plugins.txt and loadorder.txt, and encoded in plugin file modification times."
 
 [dependencies]
+nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-modinstall = { workspace = true }
