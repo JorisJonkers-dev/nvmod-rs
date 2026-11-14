@@ -7,6 +7,7 @@ mod catalog;
 mod doctor;
 mod import;
 mod init;
+mod install_nvrs;
 mod pe;
 mod stage;
 
@@ -38,6 +39,10 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
                               check an nvmod Instance, or the NVSE plugins of an MO2 profile (read only)
+  nvmod install-nv-rs --instance <dir> [--source <dir>] [--release] [--release-url <url>] [--cargo <path>]
+                              [--gh <path>] [--curl <path>] [--play-patch <path>] [--asset <name>] [--repo <o/r>]
+                              build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
+                              or PATH) or fetch and verify the fork's release; then run the play-patch step
   nvmod --version | --help
 
 exit codes:
@@ -61,6 +66,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("stage") => stage::run(&args[1..], out, err),
         Some("init") => init::run(&args[1..], out, err),
         Some("import-mo2") => import::run(&args[1..], out, err),
+        Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
             OK
