@@ -52,7 +52,6 @@ impl Args {
 
     /// The value of `--name`, if given (the last one wins).
     #[must_use]
-    #[allow(dead_code)] // used by the doctor command
     pub fn option(&self, name: &str) -> Option<&str> {
         self.options.get(name).map(String::as_str)
     }

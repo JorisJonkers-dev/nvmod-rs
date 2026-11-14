@@ -3,6 +3,8 @@
 //! on a GUI.
 
 mod args;
+mod catalog;
+mod doctor;
 mod pe;
 
 use std::io::Write;
@@ -14,7 +16,10 @@ pub const FOUND: u8 = 1;
 /// Exit code for a command line that could not be understood.
 pub const USAGE: u8 = 2;
 
-const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fallout: New Vegas / TTW\n\nusage:\n  nvmod pe <file> [--json]    inspect one PE file (a plugin DLL or an executable)\n  nvmod --version | --help\n";
+const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fallout: New Vegas / TTW\n\nusage:\n  nvmod pe <file> [--json]    inspect one PE file (a plugin DLL or an executable)\n  nvmod catalog [--json]      list the NVSE plugin catalogue
+  nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
+                              check the NVSE plugins of an MO2 profile (read only)
+  nvmod --version | --help\n";
 
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
@@ -25,6 +30,8 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
             OK
         }
         Some("pe") => pe::run(&args[1..], out, err),
+        Some("catalog") => catalog::run(&args[1..], out, err),
+        Some("doctor") => doctor::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
             OK
