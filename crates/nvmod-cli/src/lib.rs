@@ -13,6 +13,7 @@ mod install_mod;
 mod install_nvrs;
 mod lod;
 mod mods;
+mod nvse_usage;
 mod pe;
 mod plugins;
 mod profile;
@@ -151,6 +152,10 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               nothing is written into the Instance; the plan is checked against the vendored
                               contract, a tool failure exits 4); generate exits 2 with the reason until
                               lodwright-rs can generate
+  nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]
+                              count the extender opcodes the compiled scripts of the active plugins call (read
+                              only; prints only opcode numbers, command names from the tables you name, counts
+                              and plugin file names; docs/nvse-usage.md)
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools contracts [--json]
                               the tool contracts this nvmod reads and the schema versions it accepts (the current
@@ -259,6 +264,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
+        Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),
         Some("lod") => lod::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),

@@ -11,6 +11,7 @@ pub mod metaini;
 pub mod modlist;
 pub mod plugins;
 pub mod scan;
+pub mod scripts;
 pub mod text;
 pub mod version;
 pub mod winpath;

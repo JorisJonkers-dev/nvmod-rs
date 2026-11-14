@@ -791,6 +791,7 @@ dependencies = [
 name = "nvmod-formats"
 version = "0.3.0"
 dependencies = [
+ "flate2",
  "nvmod-core",
  "nvmod-testkit",
  "proptest",

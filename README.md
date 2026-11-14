@@ -23,6 +23,7 @@ Nothing in this repository writes to a Mod Organizer 2 instance or to a game fol
 ```text
 nvmod pe <file.dll> [--json]                    inspect one PE file
 nvmod catalog [--json]                          list the plugin catalogue
+nvmod nvse-usage --instance <dir> [--json]      opcode usage of the active plugins' scripts (docs/nvse-usage.md)
 nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
 ```
 

@@ -17,4 +17,4 @@ pub use nvrs::{
     FAKE_RELEASE_BINARY, FakeNvRs, FakeRelease, FakeServer, Reply, capabilities_json, write_script,
 };
 pub use pe::{ExportSpec, PeBuilder};
-pub use plugin::PluginBuilder;
+pub use plugin::{PluginBuilder, ScdaBuilder};
