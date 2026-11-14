@@ -6,9 +6,12 @@ use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::Path;
 
-const USAGE_LINE: &str = "usage: nvmod profile create --instance <dir> [--name <name>]";
+const USAGE_LINE: &str = "usage: nvmod profile create --instance <dir> [--name <name>]\n       nvmod profile apply|finish --instance <dir> ... (see --help)";
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    if matches!(args.first().map(String::as_str), Some("apply" | "finish")) {
+        return crate::profile_apply::run(args, out, err);
+    }
     let args = match Args::parse(args, &[], &["instance", "name"]) {
         Ok(a) if a.positional == ["create"] && a.option("instance").is_some() => a,
         Ok(_) => {
