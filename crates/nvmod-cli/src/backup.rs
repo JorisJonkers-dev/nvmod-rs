@@ -271,6 +271,8 @@ fn changes_lists(args: &[String]) -> bool {
                     | "hide"
                     | "unhide"
                     | "note"
+                    | "separator"
+                    | "category"
             )
         ),
         Some("plugins") => matches!(

@@ -4,6 +4,7 @@
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args, mods_life};
 use nvmod_instance::NvmodInstance;
+use nvmod_modinstall::lifecycle;
 use nvmod_modinstall::mods::{self, Change, ModRow, ModsError, Place, Report};
 use std::io::Write;
 use std::path::Path;
@@ -12,7 +13,8 @@ const USAGE_TEXT: &str = "usage: nvmod mods list --instance <dir> [--profile <na
        nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
        nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
                 --instance <dir> [--profile <name>] [--dry-run] [--json]
-       nvmod mods remove|rename|create|clone|hide|unhide|note: see `nvmod mods remove` with no arguments";
+       nvmod mods list ... [--category <id>]; remove|rename|create|clone|hide|unhide|note|separator|category:
+                see `nvmod mods remove` with no arguments";
 
 fn print_rows(out: &mut dyn Write, rows: &[ModRow]) {
     for r in rows {
@@ -92,7 +94,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let args = match Args::parse(
         args,
         &["json", "dry-run", "top", "bottom"],
-        &["instance", "profile", "before", "after", "position"],
+        &[
+            "instance", "profile", "before", "after", "position", "category",
+        ],
     ) {
         Ok(a) if a.option("instance").is_some() && !a.positional.is_empty() => a,
         Ok(_) => {
@@ -148,13 +152,19 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     };
     let json = args.flag("json");
     let Some(change) = change else {
-        let rows = mods::list(&instance, &profile);
+        let only = match args.option("category").map(str::parse::<u32>) {
+            Some(Ok(id)) => Some(id),
+            Some(Err(_)) => return refused("--category takes a category id (a number)", err),
+            None => None,
+        };
+        let listed = lifecycle::list_categorised(&instance, &profile, only);
+        let rows: Vec<ModRow> = listed.iter().map(|r| r.row.clone()).collect();
         if json {
             let _ = writeln!(
                 out,
                 "{}",
                 serde_json::to_string_pretty(
-                    &serde_json::json!({ "profile": profile, "mods": rows })
+                    &serde_json::json!({ "profile": profile, "mods": listed })
                 )
                 .unwrap_or_default()
             );

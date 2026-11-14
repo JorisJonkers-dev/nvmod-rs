@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The life of one Mod folder: remove, rename, create empty, clone as a backup, hide and unhide a file, set a
-//! note.
+//! note, set categories, and the separators (a folder `<label>_separator` with a `meta.ini` and no files).
 //!
 //! Every change is journaled (kind `lifecycle`, undone by `nvmod rollback`): the four profile files are saved and
 //! each file operation is recorded before it is done. A removed Mod folder is moved to
@@ -62,6 +62,25 @@ pub enum Action {
         /// The text.
         text: String,
     },
+    /// Make a separator; the target is its label.
+    SeparatorAdd {
+        /// Where its line goes.
+        place: Place,
+    },
+    /// Rename a separator (the target is its label).
+    SeparatorRename {
+        /// The new label.
+        to: String,
+    },
+    /// Remove a separator (the target is its label).
+    SeparatorRemove,
+    /// Set the categories of a Mod (the first is the primary one); empty clears them.
+    Categories {
+        /// The category ids.
+        ids: Vec<u32>,
+        /// The ids `categories.dat` has; an id outside it is refused.
+        known: Vec<u32>,
+    },
 }
 
 impl Action {
@@ -74,6 +93,10 @@ impl Action {
             Action::Hide { .. } => "hide",
             Action::Unhide { .. } => "unhide",
             Action::Note { .. } => "note",
+            Action::SeparatorAdd { .. } => "separator-add",
+            Action::SeparatorRename { .. } => "separator-rename",
+            Action::SeparatorRemove => "separator-remove",
+            Action::Categories { .. } => "category-set",
         }
     }
 }
@@ -85,7 +108,8 @@ pub struct Report {
     pub status: &'static str,
     /// True for a dry run.
     pub dry_run: bool,
-    /// The action: `remove`, `rename`, `create`, `clone`, `hide`, `unhide` or `note`.
+    /// The action: `remove`, `rename`, `create`, `clone`, `hide`, `unhide`, `note`, `separator-add`,
+    /// `separator-rename`, `separator-remove` or `category-set`.
     pub action: &'static str,
     /// The profile.
     pub profile: String,
@@ -99,7 +123,7 @@ pub struct Report {
     pub plugins_dropped: Vec<String>,
     /// Active plugins of other Mods that need a plugin of the removed Mod (only with `--force`).
     pub dependants: Vec<String>,
-    /// The file hidden or unhidden, or the note, as text.
+    /// The file hidden or unhidden, or the categories set, as text.
     pub detail: Option<String>,
     /// Files in the Staging tree after the change; `None` when it was not staged again.
     pub staged_files: Option<usize>,
@@ -139,7 +163,7 @@ fn valid_mod_name(name: &str) -> Result<(), ModsError> {
     valid_name(name, "Mod")?;
     if name.ends_with("_separator") {
         return refuse(format!(
-            "`{name}` ends in `_separator`, which names a separator"
+            "`{name}` ends in `_separator`, which names a separator; use `nvmod mods separator add`"
         ));
     }
     if is_backup_name(name) {
@@ -148,6 +172,10 @@ fn valid_mod_name(name: &str) -> Result<(), ModsError> {
         ));
     }
     Ok(())
+}
+
+fn separator_name(label: &str) -> String {
+    format!("{label}_separator")
 }
 
 /// A relative path of `/` separated names that stays inside the Mod folder.
@@ -283,6 +311,11 @@ fn meta_for_new(extra: &[(&str, &str)]) -> Vec<u8> {
     meta.to_bytes()
 }
 
+fn separator_meta() -> Vec<u8> {
+    b"[General]\r\nmodid=0\r\nversion=\r\nnewestVersion=\r\ncategory=0\r\ninstallationFile=\r\n"
+        .to_vec()
+}
+
 fn rel_mod(folder: &str) -> String {
     format!("mods/{folder}")
 }
@@ -321,7 +354,10 @@ impl Ctx<'_> {
         if let Some(i) = found.entry {
             let entry = &self.parsed.entries[i];
             if entry.kind == EntryKind::Separator {
-                return refuse(format!("`{}` is a separator, not a Mod", entry.name));
+                return refuse(format!(
+                    "`{}` is a separator; use `nvmod mods separator`",
+                    entry.name
+                ));
             }
             if entry.state == ModState::Foreign {
                 return refuse(format!("`{}` is not a Mod", entry.name));
@@ -369,6 +405,10 @@ impl Ctx<'_> {
             Action::Hide { path } => self.hide(&mut plan, target, path, true)?,
             Action::Unhide { path } => self.hide(&mut plan, target, path, false)?,
             Action::Note { text } => self.note(&mut plan, target, text)?,
+            Action::Categories { ids, known } => self.categories(&mut plan, target, ids, known)?,
+            Action::SeparatorAdd { place } => self.separator_add(&mut plan, target, place)?,
+            Action::SeparatorRename { to } => self.separator_rename(&mut plan, target, to)?,
+            Action::SeparatorRemove => self.separator_remove(&mut plan, target)?,
         }
         Ok(plan)
     }
@@ -612,6 +652,165 @@ impl Ctx<'_> {
         plan.detail = Some(text.to_owned());
         Ok(())
     }
+
+    fn categories(
+        &self,
+        plan: &mut Plan,
+        target: &str,
+        ids: &[u32],
+        known: &[u32],
+    ) -> Result<(), ModsError> {
+        let found = self.mod_found(target)?;
+        plan.name.clone_from(&found.name);
+        let folder = Self::folder_or_refuse(&found)?;
+        let unknown: Vec<String> = ids
+            .iter()
+            .filter(|id| !known.contains(id))
+            .map(ToString::to_string)
+            .collect();
+        if !unknown.is_empty() {
+            return refuse(format!(
+                "category id(s) {} are not in categories.dat of the Instance",
+                unknown.join(", ")
+            ));
+        }
+        let value = nvmod_formats::categories::format_ids(ids);
+        self.meta_write(plan, folder, |meta| {
+            if ids.is_empty() {
+                meta.remove("General", "category");
+            } else {
+                meta.set("General", "category", &quote_value(&value));
+            }
+        });
+        plan.detail = Some(value);
+        Ok(())
+    }
+
+    fn separator_found(&self, label: &str) -> Result<Found, ModsError> {
+        let name = if label.ends_with("_separator") {
+            label.to_owned()
+        } else {
+            separator_name(label)
+        };
+        let found = resolve(&self.doc, &self.parsed, &self.mods, &name)?;
+        match found.entry {
+            Some(i) if self.parsed.entries[i].kind == EntryKind::Separator => Ok(found),
+            _ => refuse(format!("`{label}` is not a separator")),
+        }
+    }
+
+    fn separator_add(&self, plan: &mut Plan, label: &str, place: &Place) -> Result<(), ModsError> {
+        valid_name(label, "separator")?;
+        let name = separator_name(label);
+        if self.taken(&name, None) {
+            return refuse(format!("a separator `{label}` already exists"));
+        }
+        plan.name.clone_from(&name);
+        let at = insert_index(&self.doc, place)?;
+        let mut lines = self.lines();
+        lines.insert(at, format!("-{name}"));
+        plan.modlist = Some(join(&lines));
+        plan.steps.push(Step::MakeDir {
+            path: rel_mod(&name),
+            files: vec![("meta.ini".to_owned(), separator_meta())],
+        });
+        plan.stage = true;
+        Ok(())
+    }
+
+    fn separator_rename(&self, plan: &mut Plan, label: &str, to: &str) -> Result<(), ModsError> {
+        let found = self.separator_found(label)?;
+        valid_name(to, "separator")?;
+        let new = separator_name(to);
+        plan.name.clone_from(&found.name);
+        if new == found.name {
+            return refuse(format!("`{to}` is already the label"));
+        }
+        if self.taken(&new, Some(&found.name)) {
+            return refuse(format!("a separator `{to}` already exists"));
+        }
+        if let Some(folder) = &found.folder {
+            plan.steps.push(Step::Move {
+                from: rel_mod(folder),
+                to: rel_mod(&new),
+            });
+        }
+        let i = found.entry.unwrap_or_default();
+        let mut lines = self.lines();
+        let at = self.doc.entries[i];
+        lines[at] = renamed_line(&lines[at], &new);
+        plan.modlist = Some(join(&lines));
+        plan.new_name = Some(new);
+        plan.stage = true;
+        Ok(())
+    }
+
+    fn separator_remove(&self, plan: &mut Plan, label: &str) -> Result<(), ModsError> {
+        let found = self.separator_found(label)?;
+        plan.name.clone_from(&found.name);
+        if let Some(folder) = &found.folder {
+            plan.steps.push(Step::Trash(folder.clone()));
+        }
+        let mut lines = self.lines();
+        lines.remove(self.doc.entries[found.entry.unwrap_or_default()]);
+        plan.modlist = Some(join(&lines));
+        plan.stage = true;
+        Ok(())
+    }
+}
+
+/// One category of a Mod as `mods list` reports it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CategoryRef {
+    /// The id in `meta.ini`.
+    pub id: u32,
+    /// Its name in `categories.dat`; `None` when the file does not have the id (it is kept, not dropped).
+    pub name: Option<String>,
+}
+
+/// A row of `mods list` with the categories of the Mod.
+#[derive(Debug, Clone, Serialize)]
+pub struct CategorisedRow {
+    /// The row.
+    #[serde(flatten)]
+    pub row: crate::mods::ModRow,
+    /// The categories in `meta.ini`, the primary one first.
+    pub categories: Vec<CategoryRef>,
+}
+
+/// The rows of `profile` with their categories (from each `meta.ini`, named by `categories.dat` at the Instance
+/// root when there is one). With `only`, just the Mods that have that category id.
+#[must_use]
+pub fn list_categorised(
+    instance: &NvmodInstance,
+    profile: &str,
+    only: Option<u32>,
+) -> Vec<CategorisedRow> {
+    let cats = fs::read(instance.root.join("categories.dat"))
+        .map(|b| nvmod_formats::categories::Categories::parse(&b))
+        .unwrap_or_default();
+    let mods = instance.root.join("mods");
+    crate::mods::list(instance, profile)
+        .into_iter()
+        .map(|row| {
+            let ids = (row.kind == "mod")
+                .then(|| folder_of(&mods, &row.name))
+                .flatten()
+                .and_then(|f| read_limited(&mods.join(f).join("meta.ini")).ok())
+                .and_then(|b| MetaIni::parse(&b).fields().category)
+                .map(|c| nvmod_formats::categories::parse_ids(&c))
+                .unwrap_or_default();
+            let categories = ids
+                .into_iter()
+                .map(|id| CategoryRef {
+                    id,
+                    name: cats.name(id).map(str::to_owned),
+                })
+                .collect();
+            CategorisedRow { row, categories }
+        })
+        .filter(|r| only.is_none_or(|id| r.categories.iter().any(|c| c.id == id)))
+        .collect()
 }
 
 fn copy_tree(from: &Path, to: &Path, hardlink: bool) -> Result<(), String> {

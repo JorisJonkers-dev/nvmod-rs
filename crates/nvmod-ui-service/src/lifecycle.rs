@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The typed calls of the Mods screen for the Mod lifecycle: `nvmod mods remove|rename|create|
-//! clone|hide|unhide|note`, as requests that print their command
-//! line and the typed JSON the commands answer with.
+//! The typed calls of the Mods screen for the Mod lifecycle and the separators: `nvmod mods remove|rename|create|
+//! clone|hide|unhide|note`, `mods separator ...` and `mods category set`, as requests that print their command
+//! line and the typed JSON the commands answer with. Colours and the collapsed state of a separator are opaque
+//! values that only the GUI sets; they are not part of these calls.
 
 use crate::service::{push, push_opt};
 use serde::Deserialize;
 
-/// Where a new Mod goes.
+/// Where a new Mod or separator goes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Where {
     /// The highest priority.
@@ -68,6 +69,32 @@ pub enum LifecycleStep {
         /// The note; empty clears it.
         text: String,
     },
+    /// `mods separator add <label> --before|--after <mod>`.
+    SeparatorAdd {
+        /// The label.
+        label: String,
+        /// Next to which entry (`Before` or `After`).
+        at: Where,
+    },
+    /// `mods separator rename <label> <new>`.
+    SeparatorRename {
+        /// The label.
+        label: String,
+        /// The new label.
+        to: String,
+    },
+    /// `mods separator remove <label>`.
+    SeparatorRemove {
+        /// The label.
+        label: String,
+    },
+    /// `mods category set <mod> <id>...`.
+    SetCategories {
+        /// The Mod.
+        name: String,
+        /// The ids, the primary first; empty clears them.
+        ids: Vec<u32>,
+    },
 }
 
 /// What one lifecycle call needs.
@@ -121,6 +148,20 @@ impl LifecycleRequest {
                 );
             }
             LifecycleStep::Note { name, text } => words(&mut rest, &["note", name, text]),
+            LifecycleStep::SeparatorAdd { label, at } => {
+                words(&mut rest, &["separator", "add", label]);
+                place(&mut rest, at);
+            }
+            LifecycleStep::SeparatorRename { label, to } => {
+                words(&mut rest, &["separator", "rename", label, to]);
+            }
+            LifecycleStep::SeparatorRemove { label } => {
+                words(&mut rest, &["separator", "remove", label]);
+            }
+            LifecycleStep::SetCategories { name, ids } => {
+                words(&mut rest, &["category", "set", name]);
+                rest.extend(ids.iter().map(ToString::to_string));
+            }
         }
         push(&mut rest, "instance", &self.instance);
         push_opt(&mut rest, "profile", self.profile.as_ref());
@@ -147,11 +188,12 @@ pub struct LifecycleReport {
     pub status: String,
     /// True for a dry run.
     pub dry_run: bool,
-    /// The action (`remove`, `rename`, `create`, `clone`, `hide`, `unhide` or `note`).
+    /// The action (`remove`, `rename`, `create`, `clone`, `hide`, `unhide`, `note`, `separator-add`,
+    /// `separator-rename`, `separator-remove` or `category-set`).
     pub action: String,
     /// The profile.
     pub profile: String,
-    /// The Mod the action is about (the new one for a create or a clone).
+    /// The Mod or separator the action is about (the new one for a create or a clone).
     pub name: String,
     /// The new name of a rename.
     pub new_name: Option<String>,
@@ -161,12 +203,21 @@ pub struct LifecycleReport {
     pub plugins_dropped: Vec<String>,
     /// Active plugins of other Mods that need a removed plugin (a forced remove).
     pub dependants: Vec<String>,
-    /// The file hidden or unhidden, or the note.
+    /// The file hidden or unhidden, or the categories set.
     pub detail: Option<String>,
     /// Files in the Staging tree after the change.
     pub staged_files: Option<usize>,
     /// The journal `nvmod rollback` undoes.
     pub journal: Option<String>,
+}
+
+/// One category of a Mod in `nvmod mods list --json`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct CategoryEntry {
+    /// The id.
+    pub id: u32,
+    /// The name in `categories.dat`; `None` for an id the file does not have.
+    pub name: Option<String>,
 }
 
 #[cfg(test)]
@@ -194,6 +245,42 @@ mod tests {
                 "remove",
                 "A b",
                 "--force",
+                "--instance",
+                "/i",
+                "--profile",
+                "P",
+                "--dry-run"
+            ]
+        );
+        assert_eq!(
+            req(LifecycleStep::SeparatorAdd {
+                label: "L".into(),
+                at: Where::After("M".into())
+            }),
+            [
+                "separator",
+                "add",
+                "L",
+                "--after",
+                "M",
+                "--instance",
+                "/i",
+                "--profile",
+                "P",
+                "--dry-run"
+            ]
+        );
+        assert_eq!(
+            req(LifecycleStep::SetCategories {
+                name: "M".into(),
+                ids: vec![2, 1]
+            }),
+            [
+                "category",
+                "set",
+                "M",
+                "2",
+                "1",
                 "--instance",
                 "/i",
                 "--profile",
