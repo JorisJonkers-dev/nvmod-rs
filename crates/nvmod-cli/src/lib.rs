@@ -12,6 +12,7 @@ mod install_nvrs;
 mod pe;
 mod sort;
 mod stage;
+mod tools;
 
 use std::io::Write;
 
@@ -60,6 +61,14 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               [--gh <path>] [--curl <path>] [--play-patch <path>] [--asset <name>] [--repo <o/r>]
                               build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
                               or PATH) or fetch and verify the fork's release; then run the play-patch step
+  nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
+  nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
+  nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
+  nvmod tools run <tool> [--lock <file>] [--store <dir>] [--instance <dir>] -- <args...>
+                              the pinned tools of tools.lock.toml: list their state, re-check the stored files
+                              without network, fetch one (only from the lock's URL; its SHA-256 is checked before
+                              it is made executable, then its attestation), confirm a third-party tool that pins
+                              no checksum, or run one (its SHA-256 is re-checked at every call)
   nvmod --version | --help
 
 exit codes:
@@ -87,6 +96,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("install") => install_mod::run_install(&args[1..], out, err),
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
+        Some("tools") => tools::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));

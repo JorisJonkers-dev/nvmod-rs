@@ -13,6 +13,7 @@ jsonschema = { version = "0.30", default-features = false }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = "0.10"
+toml = "1"
 
 [dev-dependencies]
 loot-rs = { workspace = true }

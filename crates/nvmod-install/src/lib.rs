@@ -4,14 +4,13 @@
 //! staged and rolled back on failure, and the game executable is never copied (see `docs/DECISIONS.md`).
 
 mod build;
-mod fetch;
 mod install;
 mod release;
 
 pub use build::resolve_cargo;
-pub use fetch::{Curl, FetchError, Fetcher, RETRIES, TIMEOUT_SECS, get_with_retries};
 pub use install::{
     DEFAULT_ASSET, DEFAULT_RELEASE_URL, DEFAULT_REPO, InstallError, Installed, Method, Options,
     install,
 };
 pub use nvmod_tools::sha256_hex;
+pub use nvmod_tools::{Curl, FetchError, Fetcher, RETRIES, TIMEOUT_SECS, get_with_retries};

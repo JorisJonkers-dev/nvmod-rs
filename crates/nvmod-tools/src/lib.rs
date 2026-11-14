@@ -4,13 +4,30 @@
 //! one is refused), and the one subprocess runner every tool call goes through (an argument vector, a timeout, an
 //! output cap, a scrubbed environment, the tool's checksum re-verified before each run).
 
+mod acquire;
 mod contract;
+mod fetch;
+mod lock;
 mod runner;
 mod sha256;
+mod source;
+mod store;
+mod trust;
+mod verify;
 
+pub use acquire::{Acquire, AcquireError, Acquired, Pin, pin_of};
 pub use contract::{Contract, ContractError, SNAPSHOTS, Snapshot, builtin};
+pub use fetch::{Curl, FetchError, Fetcher, RETRIES, TIMEOUT_SECS, get_with_retries};
+pub use lock::{
+    Asset, AttestationPin, Kind, LOCK_SCHEMA_VERSION, Lock, SourcePin, ToolEntry, builtin_lock,
+    platform,
+};
 pub use runner::{Call, Output, Runner, ToolError, call_contract};
 pub use sha256::sha256_hex;
+pub use source::{SourceCheck, verify_source_build};
+pub use store::{Store, StoreState, exe_file};
+pub use trust::{Confirmed, TRUST_FILE, Trust};
+pub use verify::{Attestation, VerifyError, check_sha256, fetch_bytes, verify_attestation};
 
 /// Exit code of a command that was refused before it changed anything (the exit code table).
 pub const EXIT_REFUSED: u8 = 2;

@@ -1,0 +1,21 @@
+# The external tools nvmod links or fetches, pinned (docs/architecture/integration.md, section 5).
+#
+# A fetched tool needs, per platform, the asset URL and its SHA-256, and the attestation identity (repository and
+# workflow) that built it. A third-party tool (`kind = "third-party"`) may lack the attestation, and may lack the
+# checksum too: it is then refused until the owner runs `nvmod tools trust <tool> <version>`.
+#
+# Nothing is pinned for download yet: nv-rs, lodwright-rs and the TTW installers have published no release asset
+# with a checksum and an attestation. The first one to appear is added here in the bump pull request that also
+# refreshes its contract snapshots.
+schema_version = 1
+
+# loot-rs is linked, not fetched: its version is the tag Cargo.toml depends on (a test keeps the two equal).
+[[tool]]
+name = "loot-rs"
+version = "0.1.0"
+kind = "linked"
+contracts = { loot-sort = 1 }
+
+[tool.source]
+git = "https://github.com/JorisJonkers-dev/loot-rs"
+tag = "v0.1.0"

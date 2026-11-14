@@ -2,10 +2,10 @@
 //! The install itself: stage, move into place, run the play-patch step, record; undo everything on failure.
 
 use crate::build::{build_from_source, resolve_cargo};
-use crate::fetch::Curl;
+
 use crate::release::{self, Source};
 use nvmod_instance::NvmodInstance;
-use nvmod_tools::sha256_hex;
+use nvmod_tools::{Curl, sha256_hex};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
