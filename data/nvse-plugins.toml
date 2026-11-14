@@ -1,0 +1,636 @@
+# NVSE plugin catalogue: data this repository owns. Every entry carries its provenance.
+#
+# Fields of [[plugin]]: id (stable), role (framework: other mods need it; the update checklist says so for
+# JIP LN, JohnnyGuitar and ShowOff), name (the mod's folder name in the owner's instance), dll (the file in
+# NVSE/Plugins, compared without case), ini (files next to it that the plugin reads), nexus_mod_id (only where a
+# document says so), requires / conflicts (plugin ids), replaced_by (plugin id), nv_rs (built-in | partial |
+# unsupported | inert | unknown), and [plugin.provenance] with source, verified_on, verified, note.
+#
+# `verified = true` means the file names were seen in a real instance. Nothing else is claimed: minimum xNVSE,
+# requirements and conflicts are empty until someone checks them, and nv_rs is `unknown` until the fork's own
+# command tables are read. [[mod]] records a Nexus id for a mod folder name, for the meta.ini mismatch check.
+schema = 1
+
+[[plugin]]
+id = "actorcause-save-bloat-fix"
+name = "ActorCause Save Bloat Fix"
+dll = "ActorCauseSaveBloatFix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "anhnvse"
+name = "AnhNVSE"
+dll = "AnhNVSE.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "audio-region-fix"
+name = "Audio Region Fix - NVSE"
+dll = "AudioRegionFix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "better-caravan"
+name = "Better Caravan"
+dll = "BetterCaravan.dll"
+ini = ["BetterCaravan.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "cell-offset-generator"
+name = "Cell Offset Generator - NVSE"
+dll = "CellOffsetGenerator.dll"
+nexus_mod_id = 92182
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "race-menu-presets"
+name = "Character Preset Menu"
+dll = "race_menu_presets.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "climate-control"
+name = "Climate Control NVSE"
+dll = "ClimateControl.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "cloud-upgrade"
+name = "Cloud Upgrade"
+dll = "CloudUpgrade.dll"
+ini = ["CloudUpgrade.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "weapon-lag-fix"
+name = "Combat Lag Fix"
+dll = "weapon_lag_fix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "console-paste"
+name = "Console Paste"
+dll = "nvse_console_clipboard.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "dof-fix"
+name = "Depth of Field Fix"
+dll = "DoF-Fix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "depth-resolve"
+name = "Depth Resolve - NVSE"
+dll = "DepthResolve.dll"
+nexus_mod_id = 93991
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "external-emittance-fix"
+name = "External Emittance Fix"
+dll = "ExternalEmittanceFix.dll"
+nexus_mod_id = 80443
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "fallout-alpha-rendering-tweaks"
+name = "Fallout Alpha Rendering Tweaks"
+dll = "Alpha Fixes.dll"
+ini = ["FART.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "fog-culling"
+name = "Fog-based Object Culling"
+dll = "FogCulling.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "high-res-local-maps"
+name = "High Res Local Maps"
+dll = "HighResLocalMaps.dll"
+ini = ["HighResLocalMaps.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "high-res-bloom"
+name = "High Resolution Bloom"
+dll = "HighResBloom.dll"
+ini = ["HighResBloom.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "high-res-screens"
+name = "High Resolution Screens"
+dll = "HDPipboy.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "high-res-water-fog"
+name = "High Resolution Water Fog"
+dll = "HighResWaterDepth.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "improved-console"
+name = "Improved Console"
+dll = "improved_console.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "stewie-engine-optimizations"
+name = "IStewieAI Engine Optimizations"
+dll = "EngineOptimizations.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "stewie-tweaks"
+name = "IStewieAI Tweaks"
+dll = "nvse_stewie_tweaks.dll"
+ini = ["nvse_stewie_tweaks.ini"]
+nexus_mod_id = 66347
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "jip-ln"
+role = "framework"
+name = "JIP LN NVSE Plugin"
+dll = "jip_nvse.dll"
+ini = ["jip_nvse.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "johnnyguitar"
+role = "framework"
+name = "JohnnyGuitar NVSE"
+dll = "johnnyguitar.dll"
+ini = ["JohnnyGuitar.ini"]
+nexus_mod_id = 66927
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "knvse"
+name = "kNVSE Animation Plugin"
+dll = "kNVSE.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "lod-fixes"
+name = "LOD Fixes and Improvements - NVSE"
+dll = "LOD Fixes.dll"
+ini = ["LOD Fixes.ini"]
+nexus_mod_id = 84171
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "lod-flicker-fix"
+name = "LOD Flicker Fix - NVSE"
+dll = "LODFlickerFix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "mobile-pipboy-light"
+name = "Mobile Pip-Boy Light - NVSE"
+dll = "MobilePipBoyLight.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "modern-minimap"
+name = "Modern Minimap"
+dll = "ModernMinimap.dll"
+ini = ["ModernMinimap.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "mod-limit-fix"
+name = "Mod Limit Fix"
+dll = "mlf.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "moonlight-nvse"
+name = "MoonlightNVSE"
+dll = "MoonlightNVSE.dll"
+ini = ["MoonlightNVSE.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "muzzle-flash-light-fix"
+name = "Muzzle Flash Light Fix"
+dll = "MuzzleFlashFix.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "nvac"
+name = "NVAC - New Vegas Anti Crash"
+dll = "nvac.dll"
+nexus_mod_id = 53635
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "nvr"
+name = "NVR"
+dll = "NewVegasReloaded.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "nvtf"
+name = "NVTF"
+dll = "NVTF.dll"
+ini = ["NVTF.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "real-time-reflections"
+name = "Real Time Reflections"
+dll = "DynamicReflections.dll"
+ini = ["DynamicReflections.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "shader-loader"
+name = "Shader Loader - NVSE"
+dll = "Fallout Shader Loader.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "simple-fog-remover"
+name = "Simple Fog Remover"
+dll = "SimpleFogRemover.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "showoff"
+role = "framework"
+name = "ShowOff xNVSE"
+dll = "ShowOffNVSE.dll"
+ini = ["ShowOffNVSE.ini"]
+nexus_mod_id = 72541
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened); Nexus id from docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "sup-nvse"
+name = "SUP NVSE Plugin"
+dll = "supNVSE.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "mcm"
+name = "The Mod Configuration Menu"
+dll = "MCM.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "ttw-nvse"
+name = "TTW NVSE"
+dll = "ttw_nvse.dll"
+ini = ["TTW.ini"]
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "ui-organizer"
+name = "UIO - User Interface Organizer"
+dll = "ui_organizer.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[plugin]]
+id = "vanilla-plus-ao"
+name = "Vanilla Plus AO"
+dll = "VanillaPlusAO.dll"
+nv_rs = "unknown"
+
+[plugin.provenance]
+source = "file names seen under NVSE/Plugins of the owner's MO2 instance, 2026-11-14 (names only, no file opened)"
+verified_on = "2026-11-14"
+verified = true
+note = "dll and ini names observed; compatibility facts not recorded"
+
+[[mod]]
+name = "MAC-TEN"
+nexus_mod_id = 83815
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "LODIFY"
+nexus_mod_id = 84165
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "Goodies"
+nexus_mod_id = 91028
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "MCM Extender"
+nexus_mod_id = 93642
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "Modern Night Vision"
+nexus_mod_id = 84991
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "Clean Vanilla Hud"
+nexus_mod_id = 70001
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"
+
+[[mod]]
+name = "New Vegas Interior Optimization Project"
+nexus_mod_id = 96267
+
+[mod.provenance]
+source = "docs/plans/mod-update-checklist.md of NV-Linux-Modding"
+verified_on = "2026-11-13"
+verified = false
+note = "id as stated by the update checklist, which marks some IDs unverified"

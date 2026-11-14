@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "instance": "<instance>",
+  "profile": "Default",
+  "game": {
+    "path": "<game>",
+    "exe": {
+      "file": "FalloutNV.exe",
+      "file_version": "1.4.0.525",
+      "large_address_aware": true,
+      "imports_nvse_steam_loader": true,
+      "backup_present": true
+    },
+    "xnvse_version": "6.4.0.0",
+    "nvse_loader_present": false
+  },
+  "plugins": [
+    {
+      "dll": "helper.dll",
+      "winner": "Helper",
+      "shadowed": [],
+      "catalog_id": null,
+      "nv_rs": "unknown",
+      "pe": {
+        "machine": 332,
+        "machine_name": "i386",
+        "format": "pe32",
+        "is_dll": true,
+        "large_address_aware": false,
+        "subsystem": 2,
+        "timestamp": 1593835520,
+        "sections": 1,
+        "file_version": null,
+        "product_version": null,
+        "exports": [],
+        "imports": [
+          "MSVCP140.dll"
+        ],
+        "nvse": {
+          "is_plugin": false,
+          "has_query": false,
+          "has_load": false,
+          "has_version_export": false,
+          "version_struct": null
+        },
+        "issues": []
+      }
+    },
+    {
+      "dll": "jip_nvse.dll",
+      "winner": "JIP LN NVSE Plugin",
+      "shadowed": [],
+      "catalog_id": "jip-ln",
+      "nv_rs": "unknown",
+      "pe": {
+        "machine": 332,
+        "machine_name": "i386",
+        "format": "pe32",
+        "is_dll": true,
+        "large_address_aware": false,
+        "subsystem": 2,
+        "timestamp": 1593835520,
+        "sections": 1,
+        "file_version": null,
+        "product_version": null,
+        "exports": [
+          {
+            "name": "NVSEPlugin_Load",
+            "rva": 4096,
+            "forwarded": false
+          },
+          {
+            "name": "NVSEPlugin_Query",
+            "rva": 4100,
+            "forwarded": false
+          },
+          {
+            "name": "NVSEPlugin_Version",
+            "rva": 4104,
+            "forwarded": false
+          }
+        ],
+        "imports": [
+          "KERNEL32.dll"
+        ],
+        "nvse": {
+          "is_plugin": true,
+          "has_query": true,
+          "has_load": true,
+          "has_version_export": true,
+          "version_struct": {
+            "info_version": 1,
+            "version": 3
+          }
+        },
+        "issues": []
+      }
+    }
+  ],
+  "findings": [
+    {
+      "code": "meta.modid-mismatch",
+      "severity": "warning",
+      "subject": "MAC-TEN",
+      "message": "meta.ini says Nexus id 10, the catalogue says 83815; MO2 cannot check this mod for updates"
+    },
+    {
+      "code": "pe.not-nvse-plugin",
+      "severity": "warning",
+      "subject": "helper.dll",
+      "message": "exports none of NVSEPlugin_Query, NVSEPlugin_Load or NVSEPlugin_Version: xNVSE will not treat it as a plugin (a helper library?)"
+    },
+    {
+      "code": "pe.needs-vc-runtime",
+      "severity": "info",
+      "subject": "helper.dll",
+      "message": "imports MSVCP140.dll: the Visual C++ runtime must be in the Wine prefix"
+    },
+    {
+      "code": "catalog.unknown-plugin",
+      "severity": "info",
+      "subject": "helper.dll",
+      "message": "not in the plugin catalogue (from Helper)"
+    },
+    {
+      "code": "plugin.ini-missing",
+      "severity": "info",
+      "subject": "jip_nvse.dll",
+      "message": "jip_nvse.ini is not in the merged view; the plugin runs on its defaults"
+    }
+  ],
+  "summary": {
+    "plugins": 2,
+    "catalogued": 1,
+    "info": 3,
+    "warnings": 2,
+    "errors": 0
+  }
+}

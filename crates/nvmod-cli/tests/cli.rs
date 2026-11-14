@@ -115,3 +115,176 @@ fn pe_usage_errors_exit_with_two() {
     assert_eq!(code, 2);
     assert!(err.contains("unknown option"));
 }
+
+mod doctor {
+    use super::nvmod;
+    use nvmod_testkit::{Mo2Builder, ModSpec, PeBuilder, TempDir, write_file};
+
+    fn setup() -> (TempDir, TempDir) {
+        let game = TempDir::new("cli-game");
+        write_file(
+            game.path(),
+            "FalloutNV.exe",
+            &PeBuilder::exe()
+                .versions([1, 4, 0, 525], [1, 4, 0, 525])
+                .large_address_aware(true)
+                .import("nvse_steam_loader.dll")
+                .build(),
+        );
+        write_file(game.path(), "FalloutNV_backup.exe", b"b");
+        write_file(
+            game.path(),
+            "nvse_1_4.dll",
+            &PeBuilder::dll()
+                .versions([6, 4, 0, 0], [6, 4, 0, 0])
+                .build(),
+        );
+        let root = TempDir::new("cli-mo2");
+        Mo2Builder::new(game.path())
+            .mod_dir(ModSpec::new("JIP LN NVSE Plugin").file(
+                "NVSE/Plugins/jip_nvse.dll",
+                &PeBuilder::nvse_plugin().nvse_version(1, 3).build(),
+            ))
+            .mod_dir(ModSpec::new("Helper").file(
+                "NVSE/Plugins/helper.dll",
+                &PeBuilder::dll().import("MSVCP140.dll").build(),
+            ))
+            .mod_dir(ModSpec::new("MAC-TEN").nexus(10, "14.5"))
+            .profile(
+                "Default",
+                &["+JIP LN NVSE Plugin", "+Helper", "+MAC-TEN"],
+                &["FalloutNV.esm"],
+            )
+            .profile("Other", &[], &[])
+            .selected("Default")
+            .write(root.path());
+        (game, root)
+    }
+
+    #[test]
+    fn the_json_report_matches_the_golden_file() {
+        let (game, root) = setup();
+        let (code, out, _) = nvmod(&[
+            "doctor",
+            "--instance",
+            root.path().to_str().unwrap(),
+            "--json",
+        ]);
+        assert_eq!(code, 0, "only warnings: below the default --fail-on error");
+        let normalised = out
+            .replace(root.path().to_str().unwrap(), "<instance>")
+            .replace(game.path().to_str().unwrap(), "<game>");
+        let golden =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/doctor.json");
+        if std::env::var_os("UPDATE_GOLDEN").is_some() {
+            std::fs::write(&golden, &normalised).unwrap();
+        }
+        let expected =
+            std::fs::read_to_string(&golden).expect("golden file; run with UPDATE_GOLDEN=1");
+        assert_eq!(
+            normalised, expected,
+            "run with UPDATE_GOLDEN=1 and review the diff"
+        );
+    }
+
+    #[test]
+    fn text_output_and_the_fail_on_threshold() {
+        let (_game, root) = setup();
+        let dir = root.path().to_str().unwrap();
+        let (code, out, _) = nvmod(&["doctor", "--instance", dir]);
+        assert_eq!(code, 0);
+        assert!(
+            out.contains("meta.modid-mismatch")
+                && out.contains("jip_nvse.dll <- JIP LN NVSE Plugin"),
+            "{out}"
+        );
+        assert_eq!(
+            nvmod(&["doctor", "--instance", dir, "--fail-on", "warning"]).0,
+            1
+        );
+        assert_eq!(
+            nvmod(&["doctor", "--instance", dir, "--fail-on", "info"]).0,
+            1
+        );
+        assert_eq!(
+            nvmod(&[
+                "doctor",
+                "--instance",
+                dir,
+                "--fail-on",
+                "error",
+                "--profile",
+                "Other"
+            ])
+            .0,
+            0
+        );
+    }
+
+    #[test]
+    fn an_explicit_game_folder_and_profile_are_used() {
+        let (_game, root) = setup();
+        let empty = TempDir::new("cli-empty-game");
+        let (code, out, _) = nvmod(&[
+            "doctor",
+            "--instance",
+            root.path().to_str().unwrap(),
+            "--profile",
+            "Other",
+            "--game",
+            empty.path().to_str().unwrap(),
+        ]);
+        assert_eq!(code, 1, "no game executable is an error");
+        assert!(out.contains("game.exe-missing"), "{out}");
+    }
+
+    #[test]
+    fn problems_with_the_arguments_or_the_instance_are_reported() {
+        let (_game, root) = setup();
+        let dir = root.path().to_str().unwrap();
+        assert_eq!(nvmod(&["doctor"]).0, 2);
+        assert_eq!(nvmod(&["doctor", "--instance"]).0, 2);
+        assert_eq!(nvmod(&["doctor", "--instance", dir, "extra"]).0, 2);
+        let (code, _, err) = nvmod(&["doctor", "--instance", dir, "--fail-on", "fatal"]);
+        assert_eq!((code, err.contains("--fail-on")), (2, true));
+        let (code, _, err) = nvmod(&["doctor", "--instance", dir, "--profile", "Nope"]);
+        assert_eq!(code, 1);
+        assert!(err.contains("no profile `Nope`"), "{err}");
+        let (code, out, _) = nvmod(&["doctor", "--instance", dir, "--profile", "../x", "--json"]);
+        assert_eq!(code, 1);
+        assert!(
+            serde_json::from_str::<serde_json::Value>(&out).unwrap()["error"]
+                .as_str()
+                .unwrap()
+                .contains("not a profile folder name")
+        );
+        let empty = TempDir::new("cli-not-instance");
+        let (code, _, err) = nvmod(&["doctor", "--instance", empty.path().to_str().unwrap()]);
+        assert_eq!(code, 1);
+        assert!(err.contains("not a Mod Organizer 2 instance"));
+        write_file(empty.path(), "ModOrganizer.ini", b"[General]\r\n");
+        let (code, _, err) = nvmod(&["doctor", "--instance", empty.path().to_str().unwrap()]);
+        assert_eq!(code, 1);
+        assert!(err.contains("no selected profile"), "{err}");
+    }
+}
+
+#[test]
+fn catalog_lists_plugins_as_text_and_json() {
+    let (code, out, _) = nvmod(&["catalog"]);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains("jip-ln")
+            && out.contains("jip_nvse.dll")
+            && out.contains("showoff")
+            && out.contains("nexus 72541"),
+        "{out}"
+    );
+    let (code, out, _) = nvmod(&["catalog", "--json"]);
+    assert_eq!(code, 0);
+    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(json["schema"], 1);
+    assert!(json["plugins"].as_array().unwrap().len() > 30 && json["mods"][0]["name"] == "MAC-TEN");
+    assert_eq!(nvmod(&["catalog", "x"]).0, 2);
+    assert_eq!(nvmod(&["catalog", "--nope"]).0, 2);
+}
