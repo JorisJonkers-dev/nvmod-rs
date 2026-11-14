@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The binary, run as a program.
 
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use std::process::Command;
 
 fn nvmod(args: &[&str]) -> (i32, String, String) {

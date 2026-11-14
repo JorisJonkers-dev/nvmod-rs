@@ -3,9 +3,6 @@
 //! mirrors `docs/research/fixtures/mo2-instance/` of NV-Linux-Modding (a separator, a disabled mod, a mod without a
 //! folder, a foreign DLC entry, an inactive plugin). Nothing here depends on the machine or on any game file.
 
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
 use serde_json::Value;
 use std::path::{Path, PathBuf};

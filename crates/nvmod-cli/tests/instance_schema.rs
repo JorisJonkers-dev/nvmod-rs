@@ -3,9 +3,6 @@
 //! the first command that writes, a newer one is refused with exit 2 and a reason, and `nvmod rollback` undoes the
 //! migration. Instances are made by `nvmod init` from a synthetic base copy; the old file is written in code.
 
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use nvmod_testkit::{BaseBuilder, TempDir, write_file};
 use serde_json::Value;
 use std::path::{Path, PathBuf};

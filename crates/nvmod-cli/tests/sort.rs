@@ -2,9 +2,6 @@
 //! `nvmod sort`, run as a program against a scratch Instance made by `nvmod init` and `nvmod stage`. Plugins are
 //! synthetic headers built by the testkit and the masterlist is written here in code; no game data is used.
 
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
 use serde_json::Value;
 use std::fs;

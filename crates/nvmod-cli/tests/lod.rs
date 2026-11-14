@@ -3,9 +3,6 @@
 //! how it was called and prints the plan lodwright-rs v0.1.0 prints for its synthetic worldspaces (a golden file
 //! copied from its tests). No network, no game data.
 #![cfg(unix)]
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file, write_script};
 use nvmod_tools::{platform, sha256_hex};
 use serde_json::Value;

@@ -3,9 +3,6 @@
 //! copy. The nv-rs source is a tiny cargo workspace written by the test, the release is a fake local one, and
 //! `gh` and `curl` are shell scripts that record how they were called, and the fake `nv-viewer` answers `--check`. No network, no game.
 
-// Tests start the built `nvmod` binary itself; the runner rule (ADR-0005) is for the product code.
-#![allow(clippy::disallowed_methods)]
-
 use nvmod_install::sha256_hex;
 use nvmod_testkit::{
     BaseBuilder, FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FAKE_RELEASE_BINARY, FakeNvRs,
