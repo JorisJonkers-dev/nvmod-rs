@@ -90,6 +90,9 @@ name = "nvmod-cli"
 version = "0.0.0"
 dependencies = [
  "nvmod-core",
+ "nvmod-pe",
+ "nvmod-testkit",
+ "serde",
  "serde_json",
 ]
 
@@ -101,6 +104,20 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "nvmod-pe"
+version = "0.0.0"
+dependencies = [
+ "nvmod-testkit",
+ "proptest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nvmod-testkit"
+version = "0.0.0"
 
 [[package]]
 name = "proc-macro2"
