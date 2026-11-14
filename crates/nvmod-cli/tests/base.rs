@@ -203,6 +203,12 @@ mod init {
     #[test]
     fn init_builds_an_instance_skeleton_the_doctor_accepts() {
         let base = base(&BaseBuilder::steam());
+        // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
+        nvmod_testkit::write_file(
+            base.path(),
+            "nvse_1_4.dll",
+            &nvmod_testkit::PeBuilder::dll().build(),
+        );
         let scratch = TempDir::new("instance");
         let instance = scratch.path().join("fnv");
         let before = snapshot(base.path());

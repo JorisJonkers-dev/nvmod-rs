@@ -5,6 +5,7 @@
 //! output cap, a scrubbed environment, the tool's checksum re-verified before each run).
 
 mod acquire;
+mod capabilities;
 mod contract;
 mod fetch;
 mod lock;
@@ -17,6 +18,7 @@ pub mod ttw;
 mod verify;
 
 pub use acquire::{Acquire, AcquireError, Acquired, Pin, pin_of};
+pub use capabilities::{Capabilities, CapabilitiesError, Coverage};
 pub use contract::{Contract, ContractError, SNAPSHOTS, Snapshot, builtin};
 pub use fetch::{Curl, FetchError, Fetcher, RETRIES, TIMEOUT_SECS, get_with_retries};
 pub use lock::{

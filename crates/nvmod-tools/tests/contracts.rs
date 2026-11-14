@@ -13,9 +13,10 @@ fn sample(name: &str) -> Value {
 }
 
 /// Each contract, its recorded sample, and a field whose removal must be rejected.
-const CASES: [(&str, &str, &str); 4] = [
+const CASES: [(&str, &str, &str); 5] = [
     ("lodwright-plan", "lodwright-plan", "worlds"),
     ("loot-sort", "loot-sort", "sorted"),
+    ("nv-rs-capabilities", "nv-rs-capabilities", "extenders"),
     (
         "nv-rs-release-manifest",
         "nv-rs-release-manifest",
@@ -84,7 +85,11 @@ fn a_missing_required_field_is_rejected_with_the_contract_named() {
 
 #[test]
 fn contracts_without_a_legacy_reading_need_a_schema_version() {
-    for contract in ["nv-rs-release-manifest", "ttw-installer-result"] {
+    for contract in [
+        "nv-rs-capabilities",
+        "nv-rs-release-manifest",
+        "ttw-installer-result",
+    ] {
         let recorded = if contract == "ttw-installer-result" {
             "ttw-installer-result"
         } else {

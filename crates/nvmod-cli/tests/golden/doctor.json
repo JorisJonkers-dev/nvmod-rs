@@ -20,7 +20,7 @@
       "winner": "Helper",
       "shadowed": [],
       "catalog_id": null,
-      "nv_rs": "unknown",
+      "nv_rs": "external",
       "pe": {
         "machine": 332,
         "machine_name": "i386",
@@ -51,7 +51,7 @@
       "winner": "JIP LN NVSE Plugin",
       "shadowed": [],
       "catalog_id": "jip-ln",
-      "nv_rs": "unknown",
+      "nv_rs": "builtin-partial",
       "pe": {
         "machine": 332,
         "machine_name": "i386",

@@ -114,6 +114,18 @@ impl NvmodInstance {
         })
     }
 
+    /// The folder `nvmod install-nv-rs` installs nv-rs into.
+    #[must_use]
+    pub fn nv_rs_dir(&self) -> PathBuf {
+        self.root.join("nv-rs")
+    }
+
+    /// Where the installed nv-rs's `capabilities.json` is read from.
+    #[must_use]
+    pub fn nv_rs_capabilities(&self) -> PathBuf {
+        self.nv_rs_dir().join("capabilities.json")
+    }
+
     /// The folder of the mod `name`.
     #[must_use]
     pub fn mod_dir(&self, name: &str) -> PathBuf {

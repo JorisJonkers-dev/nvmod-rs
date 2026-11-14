@@ -709,6 +709,7 @@ dependencies = [
  "nvmod-pe",
  "nvmod-stage",
  "nvmod-testkit",
+ "nvmod-tools",
  "serde",
  "serde_json",
 ]

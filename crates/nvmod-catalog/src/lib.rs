@@ -12,21 +12,65 @@ pub const BUILTIN: &str = include_str!("../../../data/nvse-plugins.toml");
 /// The only schema version understood.
 pub const SCHEMA: u32 = 1;
 
-/// How nv-rs treats a plugin. nv-rs has xNVSE and JIP built in and ignores plugin DLLs (plan, section 10.1).
+/// What provides a catalogue entry on one target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum NvRs {
-    /// The plugin's commands exist in nv-rs.
-    BuiltIn,
-    /// Some of them do.
-    Partial,
-    /// The plugin does hook-level engine work nv-rs cannot host.
-    Unsupported,
-    /// The plugin is ignored and does not matter.
-    Inert,
-    /// Nobody has checked.
+pub enum Kind {
+    /// A DLL the user installs. On the vanilla target it is checked at the catalogue's versions; on nv-rs nothing
+    /// records that nv-rs loads it, so whether it works there is unknown.
     #[default]
-    Unknown,
+    External,
+    /// Built into nv-rs with every command. The coverage is still read from `capabilities.json`.
+    BuiltinFull,
+    /// Built into nv-rs with some of its commands. The numbers are read from `capabilities.json`.
+    BuiltinPartial,
+    /// Not available on this target: a DLL of it cannot load there.
+    Absent,
+}
+
+impl Kind {
+    /// The name used in the catalogue file and in reports.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Kind::External => "external",
+            Kind::BuiltinFull => "builtin-full",
+            Kind::BuiltinPartial => "builtin-partial",
+            Kind::Absent => "absent",
+        }
+    }
+
+    /// Whether nv-rs has it built in (fully or partly).
+    #[must_use]
+    pub fn is_builtin(self) -> bool {
+        matches!(self, Kind::BuiltinFull | Kind::BuiltinPartial)
+    }
+}
+
+/// How one target provides an entry. No number lives here: coverage is read from the installed nv-rs's
+/// `capabilities.json`, through the `extender` id.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Provided {
+    /// The kind.
+    #[serde(default)]
+    pub kind: Kind,
+    /// The id of the extender in `capabilities.json`; required for the built-in kinds and refused for the others.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extender: Option<String>,
+}
+
+/// `provided_by.<target>`: what provides an entry on each target. An entry that says nothing is `external` on
+/// both.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProvidedBy {
+    /// Vanilla executable with xNVSE (Proton on Linux, native on Windows).
+    #[serde(default)]
+    pub vanilla: Provided,
+    /// nv-rs.
+    #[serde(default, rename = "nv-rs")]
+    pub nv_rs: Provided,
 }
 
 /// Where a catalogue fact came from.
@@ -72,9 +116,9 @@ pub struct Plugin {
     /// Id of the plugin that replaces this one.
     #[serde(default)]
     pub replaced_by: Option<String>,
-    /// How nv-rs treats it.
+    /// What provides it on each target.
     #[serde(default)]
-    pub nv_rs: NvRs,
+    pub provided_by: ProvidedBy,
     /// The game executable version (`a.b.c.d`) the plugin requires. Absent means nobody recorded it: the Doctor
     /// says "unknown" and never guesses.
     #[serde(default)]
@@ -82,6 +126,10 @@ pub struct Plugin {
     /// The lowest xNVSE version (`a.b.c.d`) the plugin requires. Absent means nobody recorded it.
     #[serde(default)]
     pub min_xnvse: Option<String>,
+    /// For a script extender (`role = "extender"`): the DLL version the catalogue expects on the vanilla target
+    /// (`a.b.c.d`). Absent means nobody recorded it.
+    #[serde(default)]
+    pub version: Option<String>,
     /// Where the entry came from.
     pub provenance: Provenance,
 }
@@ -139,6 +187,33 @@ fn valid_version(text: &str) -> bool {
         && parts.iter().all(|p| {
             !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) && p.parse::<u16>().is_ok()
         })
+}
+
+fn check_provided(id: &str, by: &ProvidedBy) -> Result<(), CatalogError> {
+    for (target, provided) in [("vanilla", &by.vanilla), ("nv-rs", &by.nv_rs)] {
+        if target == "vanilla" && provided.kind.is_builtin() {
+            return fail(format!(
+                "plugin {id}: provided_by.vanilla cannot be {}; the vanilla target has no built-in extender",
+                provided.kind.label()
+            ));
+        }
+        match (provided.kind.is_builtin(), provided.extender.as_deref()) {
+            (true, None | Some("")) => {
+                return fail(format!(
+                    "plugin {id}: provided_by.{target} is {} and needs `extender`, the id in capabilities.json",
+                    provided.kind.label()
+                ));
+            }
+            (false, Some(_)) => {
+                return fail(format!(
+                    "plugin {id}: provided_by.{target} is {}, which takes no `extender`",
+                    provided.kind.label()
+                ));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 fn check_provenance(what: &str, p: &Provenance) -> Result<(), CatalogError> {
@@ -205,9 +280,11 @@ impl Catalog {
                 ));
             }
             check_provenance(&format!("plugin {}", p.id), &p.provenance)?;
+            check_provided(&p.id, &p.provided_by)?;
             for (field, value) in [
                 ("game_version", &p.game_version),
                 ("min_xnvse", &p.min_xnvse),
+                ("version", &p.version),
             ] {
                 if value.as_deref().is_some_and(|v| !valid_version(v)) {
                     return fail(format!(
@@ -311,13 +388,83 @@ mod tests {
     }
 
     #[test]
-    fn defaults_are_empty_and_nv_rs_is_unknown() {
+    fn defaults_are_empty_and_every_target_is_external() {
         let catalog = Catalog::parse(&one("")).unwrap();
         let p = &catalog.plugins[0];
         assert!(p.ini.is_empty() && p.requires.is_empty() && p.nexus_mod_id.is_none());
-        assert_eq!(p.nv_rs, NvRs::Unknown);
-        let catalog = Catalog::parse(&one("nv_rs = \"built-in\"")).unwrap();
-        assert_eq!(catalog.plugins[0].nv_rs, NvRs::BuiltIn);
+        assert_eq!(p.provided_by, ProvidedBy::default());
+        assert_eq!(p.provided_by.nv_rs.kind, Kind::External);
+    }
+
+    #[test]
+    fn provided_by_has_the_four_kinds_per_target() {
+        let text =
+            one("[plugin.provided_by.nv-rs]\nkind = \"builtin-partial\"\nextender = \"jip-ln\"\n");
+        let text = text.replace("[plugin.provenance]", "\n[plugin.provenance]");
+        let catalog = Catalog::parse(&text).unwrap();
+        let by = &catalog.plugins[0].provided_by;
+        assert_eq!(by.vanilla.kind, Kind::External);
+        assert_eq!(by.nv_rs.kind, Kind::BuiltinPartial);
+        assert_eq!(by.nv_rs.extender.as_deref(), Some("jip-ln"));
+        for (kind, parsed) in [
+            ("external", Kind::External),
+            ("builtin-full", Kind::BuiltinFull),
+            ("absent", Kind::Absent),
+        ] {
+            let extender = if kind == "builtin-full" {
+                "extender = \"x\"\n"
+            } else {
+                ""
+            };
+            let text = format!(
+                "schema = 1\n[[plugin]]\nid = \"a\"\nname = \"A\"\ndll = \"a.dll\"\n[plugin.provided_by.nv-rs]\nkind = \"{kind}\"\n{extender}\n{PROV}"
+            );
+            assert_eq!(
+                Catalog::parse(&text).unwrap().plugins[0]
+                    .provided_by
+                    .nv_rs
+                    .kind,
+                parsed
+            );
+        }
+    }
+
+    #[test]
+    fn a_provided_by_that_makes_no_sense_is_refused() {
+        let with = |table: &str| {
+            format!(
+                "schema = 1\n[[plugin]]\nid = \"a\"\nname = \"A\"\ndll = \"a.dll\"\n{table}\n{PROV}"
+            )
+        };
+        let bad = |table: &str, want: &str| {
+            let error = Catalog::parse(&with(table)).unwrap_err().to_string();
+            assert!(error.contains(want), "{error} should contain {want}");
+        };
+        bad(
+            "[plugin.provided_by.nv-rs]\nkind = \"builtin-partial\"",
+            "needs `extender`",
+        );
+        bad(
+            "[plugin.provided_by.nv-rs]\nkind = \"absent\"\nextender = \"x\"",
+            "takes no `extender`",
+        );
+        bad(
+            "[plugin.provided_by.vanilla]\nkind = \"builtin-full\"\nextender = \"x\"",
+            "vanilla target has no built-in",
+        );
+        bad(
+            "[plugin.provided_by.nv-rs]\nkind = \"sometimes\"",
+            "sometimes",
+        );
+        // Coverage is never typed into the catalogue: there is no field for a number.
+        bad(
+            "[plugin.provided_by.nv-rs]\nkind = \"builtin-partial\"\nextender = \"x\"\nimplemented = 3",
+            "implemented",
+        );
+        bad(
+            "[plugin.provided_by.nv-rs]\nkind = \"builtin-partial\"\nextender = \"x\"\ntotal = 3",
+            "total",
+        );
     }
 
     #[test]

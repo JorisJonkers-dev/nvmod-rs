@@ -89,6 +89,17 @@ pub struct Installed {
 
 const STAGING: &str = ".nv-rs-staging";
 const FINAL: &str = "nv-rs";
+/// The file that says which extender commands this nv-rs implements; the Doctor reads it.
+const CAPABILITIES: &str = "capabilities.json";
+
+/// Copy `from`, when it exists, to `capabilities.json` next to the installed binaries' folder.
+fn install_capabilities(from: &Path, staging: &Path) -> Result<(), InstallError> {
+    if !from.is_file() {
+        return Ok(());
+    }
+    let to = staging.join(CAPABILITIES);
+    std::fs::copy(from, &to).map(drop).map_err(|e| io(&to, &e))
+}
 
 fn io(path: &Path, e: &std::io::Error) -> InstallError {
     InstallError::Failed(format!("{}: {e}", path.display()))
@@ -164,6 +175,8 @@ fn stage(
             let built = build_from_source(cargo.unwrap_or(Path::new("cargo")), source)
                 .map_err(InstallError::Failed)?;
             install_file(&built, bin)?;
+            // The checked-in file the fork keeps in step with its command tables.
+            install_capabilities(&source.join(".fork").join(CAPABILITIES), staging)?;
             Ok(check::default_arguments())
         }
         Method::Release => {
@@ -186,6 +199,9 @@ fn stage(
                 InstallError::Failed(format!("the release archive holds no {viewer}"))
             })?;
             install_file(&found, bin)?;
+            if let Some(caps) = release::find_file(&unpacked, CAPABILITIES) {
+                install_capabilities(&caps, staging)?;
+            }
             let arguments = match release::find_file(&unpacked, "release-manifest.json") {
                 Some(file) => {
                     let text = std::fs::read_to_string(&file).map_err(|e| io(&file, &e))?;

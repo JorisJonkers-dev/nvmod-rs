@@ -143,6 +143,20 @@ fn version_of(path: &Path) -> Option<Version4> {
     inspect_file(path).ok().and_then(|pe| pe.file_version)
 }
 
+/// The file names of the NVSE plugin DLLs in the Staging tree's `Data`, sorted.
+pub(crate) fn staged_dlls(data: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(data.join("nvse").join("plugins")) else {
+        return Vec::new();
+    };
+    let mut dlls: Vec<String> = entries
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.to_lowercase().ends_with(".dll"))
+        .collect();
+    dlls.sort();
+    dlls
+}
+
 /// NVSE plugin DLLs of the Staging tree against the catalogue's required game and xNVSE versions. A field the
 /// catalogue does not record is reported as unknown; nothing is guessed.
 fn nvse_plugins(
@@ -152,15 +166,7 @@ fn nvse_plugins(
     catalog: &Catalog,
     findings: &mut Vec<Finding>,
 ) {
-    let Ok(entries) = std::fs::read_dir(data.join("nvse").join("plugins")) else {
-        return;
-    };
-    let mut dlls: Vec<String> = entries
-        .flatten()
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.to_lowercase().ends_with(".dll"))
-        .collect();
-    dlls.sort();
+    let dlls = staged_dlls(data);
     let xnvse = find_ci(&instance.config.base, "nvse_1_4.dll")
         .as_deref()
         .and_then(version_of);

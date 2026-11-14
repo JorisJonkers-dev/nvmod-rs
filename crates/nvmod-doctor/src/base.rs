@@ -4,8 +4,9 @@
 //! docs/DECISIONS.md); an executable that is not the supported build is reported as unknown.
 
 use crate::SUPPORTED_GAME_VERSION;
+use crate::builtin::{self, NvRsReport};
 use nvmod_catalog::Catalog;
-use nvmod_core::{Finding, Severity};
+use nvmod_core::{Finding, Severity, Target};
 use nvmod_instance::{NvmodInstance, Storefront, detect_storefront, find_ci};
 use nvmod_pe::{Version4, inspect_file};
 use serde::Serialize;
@@ -44,6 +45,12 @@ pub struct BaseReport {
     pub storefront: Storefront,
     /// The executable, when found and readable.
     pub exe: Option<BaseExe>,
+    /// What the Instance runs on; absent for a plain base copy.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<Target>,
+    /// On the nv-rs target: the capabilities file used and the coverage it gave.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nv_rs: Option<NvRsReport>,
     /// What was found.
     pub findings: Vec<Finding>,
     /// Counts.
@@ -123,6 +130,8 @@ pub fn check_base(dir: &Path) -> Result<BaseReport, String> {
         base: dir.display().to_string(),
         storefront,
         exe,
+        target: None,
+        nv_rs: None,
         findings,
         summary: BaseSummary::default(),
     };
@@ -143,26 +152,37 @@ pub fn check_instance(
     catalog: &Catalog,
 ) -> Result<BaseReport, String> {
     let mut report = check_base(&instance.config.base)?;
-    let profile = match (profile, instance.profiles().is_empty()) {
-        (_, true) if profile.is_none() => return Ok(report),
-        _ => instance
-            .resolve_profile(profile)
-            .map_err(|why| why.to_string())?,
+    report.target = Some(instance.config.target);
+    let resolved = if profile.is_none() && instance.profiles().is_empty() {
+        None
+    } else {
+        Some(
+            instance
+                .resolve_profile(profile)
+                .map_err(|why| why.to_string())?,
+        )
     };
-    report
-        .findings
-        .extend(nvmod_stage::doctor_findings(instance, &profile));
-    let game = report.exe.as_ref().and_then(|e| e.file_version);
-    crate::order::check(
-        instance,
-        &profile,
-        &crate::order::Inputs {
-            masterlist,
-            game,
-            catalog,
-        },
-        &mut report.findings,
-    );
+    let mut dlls = Vec::new();
+    if let Some(profile) = &resolved {
+        report
+            .findings
+            .extend(nvmod_stage::doctor_findings(instance, profile));
+        let game = report.exe.as_ref().and_then(|e| e.file_version);
+        crate::order::check(
+            instance,
+            profile,
+            &crate::order::Inputs {
+                masterlist,
+                game,
+                catalog,
+            },
+            &mut report.findings,
+        );
+        if let Ok(data) = nvmod_loadorder::staging_data(instance, profile) {
+            dlls = crate::order::staged_dlls(&data);
+        }
+    }
+    report.nv_rs = builtin::check(instance, catalog, &dlls, &mut report.findings);
     report.recount();
     Ok(report)
 }

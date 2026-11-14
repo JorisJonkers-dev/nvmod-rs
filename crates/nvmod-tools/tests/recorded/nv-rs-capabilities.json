@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "extenders": [
+    {
+      "id": "synthetic-core",
+      "name": "Synthetic Core",
+      "provided_by_source": "crates/synthetic",
+      "commands": {
+        "implemented": 2,
+        "total": 3,
+        "implemented_names": ["DoOne", "DoTwo"]
+      }
+    }
+  ]
+}
