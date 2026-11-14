@@ -5,7 +5,7 @@
 
 use crate::SUPPORTED_GAME_VERSION;
 use nvmod_core::{Finding, Severity};
-use nvmod_instance::{Storefront, find_ci};
+use nvmod_instance::{NvmodInstance, Storefront, find_ci};
 use nvmod_pe::{Version4, inspect_file};
 use serde::Serialize;
 use std::path::Path;
@@ -50,6 +50,15 @@ pub struct BaseReport {
 }
 
 impl BaseReport {
+    fn recount(&mut self) {
+        let count = |s| self.findings.iter().filter(|f| f.severity == s).count();
+        self.summary = BaseSummary {
+            info: count(Severity::Info),
+            warnings: count(Severity::Warning),
+            errors: count(Severity::Error),
+        };
+    }
+
     /// The most serious finding, if any.
     #[must_use]
     pub fn worst(&self) -> Option<Severity> {
@@ -108,20 +117,39 @@ pub fn check_base(dir: &Path) -> Result<BaseReport, String> {
             "the base copy has no Data folder",
         ));
     }
-    let count = |s| findings.iter().filter(|f| f.severity == s).count();
-    let summary = BaseSummary {
-        info: count(Severity::Info),
-        warnings: count(Severity::Warning),
-        errors: count(Severity::Error),
-    };
-    Ok(BaseReport {
+    let mut report = BaseReport {
         schema_version: crate::SCHEMA_VERSION,
         base: dir.display().to_string(),
         storefront,
         exe,
         findings,
-        summary,
-    })
+        summary: BaseSummary::default(),
+    };
+    report.recount();
+    Ok(report)
+}
+
+/// Check an nvmod Instance: its base copy and, when it has profiles, the Staging tree of `profile` (or of the
+/// only profile).
+///
+/// # Errors
+/// The reason, when the base copy is refused or `profile` names no profile of the Instance.
+pub fn check_instance(
+    instance: &NvmodInstance,
+    profile: Option<&str>,
+) -> Result<BaseReport, String> {
+    let mut report = check_base(&instance.config.base)?;
+    let profile = match (profile, instance.profiles().is_empty()) {
+        (_, true) if profile.is_none() => return Ok(report),
+        _ => instance
+            .resolve_profile(profile)
+            .map_err(|why| why.to_string())?,
+    };
+    report
+        .findings
+        .extend(nvmod_stage::doctor_findings(instance, &profile));
+    report.recount();
+    Ok(report)
 }
 
 fn check_exe(dir: &Path, findings: &mut Vec<Finding>) -> Option<BaseExe> {

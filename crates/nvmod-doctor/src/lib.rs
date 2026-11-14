@@ -12,7 +12,7 @@ mod plugins;
 mod profile;
 mod report;
 
-pub use base::{BaseExe, BaseReport, BaseSummary, check_base};
+pub use base::{BaseExe, BaseReport, BaseSummary, check_base, check_instance};
 pub use report::{ExeReport, GameReport, PluginReport, Report, Summary};
 
 use nvmod_catalog::Catalog;
