@@ -7,8 +7,8 @@
 //! the highest priority to `modlist.txt`, activate its plugins in `plugins.txt` and `loadorder.txt`, and stage
 //! the profile. A failed step rolls everything back; [`rollback`] does the same on request.
 
-mod extract;
-mod fomod;
+pub mod extract;
+pub mod fomod;
 mod journal;
 mod lists;
 
