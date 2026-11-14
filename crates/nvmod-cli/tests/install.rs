@@ -209,6 +209,28 @@ fn a_plain_archive_is_placed_enabled_at_highest_priority_and_staged() {
 }
 
 #[test]
+fn a_folder_is_installed_like_an_archive_and_left_as_it_was() {
+    let s = Scratch::new();
+    let folder = s.archive("Generated Mod");
+    write_file(&folder, "Meshes/Gen.nif", b"generated");
+    write_file(&folder, "Generated.esm", b"master");
+    let before = snapshot(&folder);
+    let (code, report) = s.install_json(&folder, &[]);
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(report["mod"], "Generated Mod");
+    assert_eq!(
+        std::fs::read(s.root().join("mods/Generated Mod/Meshes/Gen.nif")).unwrap(),
+        b"generated"
+    );
+    assert_eq!(snapshot(&folder), before, "the source folder is only read");
+    let order = s.text("profiles/Default/loadorder.txt");
+    assert_eq!(
+        lines(&order)[1..],
+        ["FalloutNV.esm", "Generated.esm", "Existing.esp"]
+    );
+}
+
+#[test]
 fn a_wrapper_folder_and_a_data_folder_are_stripped() {
     let s = Scratch::new();
     let zip = s.archive("Wrapped-123.zip");

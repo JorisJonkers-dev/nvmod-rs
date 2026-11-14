@@ -29,7 +29,7 @@ pub struct Request<'a> {
     pub instance: &'a NvmodInstance,
     /// The profile whose lists get the Mod.
     pub profile: &'a str,
-    /// The archive.
+    /// The archive, or a folder to install as it is.
     pub archive: &'a Path,
     /// The Mod's folder name; the archive's file name without its extension when `None`.
     pub name: Option<&'a str>,
@@ -362,16 +362,21 @@ fn plan_archive(
         None => Answers::new(),
     };
     let scratch = Scratch::new().map_err(InstallError::Refused)?;
-    let extracted = scratch.0.join("x");
-    fs::create_dir_all(&extracted).map_err(|e| InstallError::Refused(e.to_string()))?;
-    extract::extract(
-        request.archive,
-        &extracted,
-        request.extract_tool,
-        request.limits,
-    )
-    .map_err(InstallError::Refused)?;
-    let root = content_root(&extracted);
+    // A folder (such as the output of the TTW installer) is read in place; an archive is extracted first.
+    let root = if request.archive.is_dir() {
+        content_root(request.archive)
+    } else {
+        let extracted = scratch.0.join("x");
+        fs::create_dir_all(&extracted).map_err(|e| InstallError::Refused(e.to_string()))?;
+        extract::extract(
+            request.archive,
+            &extracted,
+            request.extract_tool,
+            request.limits,
+        )
+        .map_err(InstallError::Refused)?;
+        content_root(&extracted)
+    };
 
     let mut inferred = Vec::new();
     let plan = if let Some(config) = resolve_ci(&root, "fomod/ModuleConfig.xml") {
