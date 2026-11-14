@@ -9,6 +9,7 @@ mod capabilities;
 mod contract;
 mod fetch;
 mod lock;
+pub mod lodwright;
 mod runner;
 mod sha256;
 mod source;
