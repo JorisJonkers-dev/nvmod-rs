@@ -258,6 +258,14 @@ fn json_is_a_stream_of_step_events_and_a_final_result() {
             "{step} has a started event"
         );
     }
+    let verify = events
+        .iter()
+        .find(|e| e["step"] == "verify" && e["status"] == "done")
+        .unwrap();
+    assert!(
+        verify["detail"].as_str().unwrap().contains("launch plan"),
+        "{verify}"
+    );
     let last = events.last().unwrap();
     assert_eq!(last["event"], "finished");
     assert_eq!(last["status"], "ok");

@@ -4,8 +4,10 @@
 //! The Instance and Profile types themselves are owned by `nvmod-core`.
 
 mod instance;
+mod launch;
 mod storefront;
 
 pub use instance::{INSTANCE_FILE, InstanceError, KIND_MIGRATE, NvmodInstance, PROFILE_FILE};
+pub use launch::{DEFAULT_PROTON, GAME_EXE, LaunchEntry, LaunchPlan, NVSE_LOADER, launch_plan};
 pub use nvmod_core::Storefront;
 pub use storefront::{detect_storefront, find_ci};

@@ -11,7 +11,7 @@
 //! The last two steps matter for the Load order: `install` and `stage` lose the plugin file times, so the run
 //! ends with `sort --apply`, which stamps them, and then the Doctor checks that they encode the order.
 
-use crate::{FOUND, OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
+use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
 use nvmod_core::Severity;
 use std::io::Write;
 use std::path::Path;
@@ -218,9 +218,9 @@ fn plan_finish(args: &Args) -> Vec<Step> {
     ));
     steps.push(step(
         "verify",
-        "run the Doctor on the finished Instance",
+        "run the Doctor on the finished Instance and print the launch plan",
         &[
-            "doctor",
+            "verify",
             "--instance",
             &instance,
             "--masterlist",
@@ -363,14 +363,10 @@ fn roll_back(instance: &Path, pre_existing: bool) -> bool {
     })
 }
 
-/// The exit code a failed step gives the run: its own code from the table, with a Doctor finding as a
-/// verification failure and a command line problem as a failed step.
-fn step_code(step: &Step, code: u8) -> u8 {
-    match (step.name.as_str(), code) {
-        ("verify", FOUND) => VERIFICATION,
-        (_, USAGE) => ROLLED_BACK,
-        _ => code,
-    }
+/// The exit code a failed step gives the run: its own code from the table, with a command line problem as a
+/// failed step (`verify` already answers a Doctor finding with 3).
+fn step_code(code: u8) -> u8 {
+    if code == USAGE { ROLLED_BACK } else { code }
 }
 
 fn detail(stdout: &[u8], stderr: &[u8]) -> String {
@@ -471,7 +467,7 @@ fn execute(args: &Args, steps: &[Step], events: &mut Events, err: &mut dyn Write
             );
             continue;
         }
-        let code = step_code(step, code);
+        let code = step_code(code);
         let undone = roll_back(&instance, pre_existing);
         events.step(
             step,
