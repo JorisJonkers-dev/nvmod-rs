@@ -6,10 +6,12 @@
 
 pub mod ini;
 pub mod instance;
+pub mod metaini;
 pub mod modlist;
 pub mod plugins;
 pub mod scan;
 pub mod text;
+pub mod version;
 pub mod winpath;
 
 pub use instance::{Executable, Mo2Error, Mo2Instance, Mo2Profile, ModMeta};
