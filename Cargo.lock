@@ -87,7 +87,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-catalog"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "proptest",
  "serde",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-cli"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "nvmod-catalog",
  "nvmod-core",
@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "proptest",
  "serde",
@@ -120,7 +120,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-doctor"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "nvmod-catalog",
  "nvmod-core",
@@ -133,7 +133,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-formats"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "nvmod-core",
  "nvmod-testkit",
@@ -142,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-pe"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "nvmod-testkit",
  "proptest",
@@ -152,7 +152,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-testkit"
-version = "0.0.0"
+version = "0.1.0"
 
 [[package]]
 name = "proc-macro2"
