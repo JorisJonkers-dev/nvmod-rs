@@ -840,6 +840,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-ui-service"
+version = "0.1.0"
+dependencies = [
+ "nvmod-cli",
+ "nvmod-testkit",
+ "nvmod-tools",
+ "nvmod-ui-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

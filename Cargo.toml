@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures", "crates/nvmod-ui-model"]
+members = ["crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures", "crates/nvmod-ui-model", "crates/nvmod-ui-service"]
 # fuzz/ is its own workspace (libfuzzer-sys stays out of the shipped crates).
 exclude = ["fuzz"]
 
@@ -35,6 +35,7 @@ nvmod-install = { path = "crates/nvmod-install" }
 nvmod-modinstall = { path = "crates/nvmod-modinstall" }
 nvmod-formats = { path = "crates/nvmod-formats" }
 nvmod-pe = { path = "crates/nvmod-pe" }
+nvmod-ui-model = { path = "crates/nvmod-ui-model" }
 nvmod-testkit = { path = "crates/nvmod-testkit" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
