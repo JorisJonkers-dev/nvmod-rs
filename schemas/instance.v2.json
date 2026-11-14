@@ -8,6 +8,13 @@
       "description": "The absolute path of the base copy. Never written to.",
       "type": "string"
     },
+    "executables": {
+      "description": "The programs `nvmod run` starts through the staged view (MO2's `customExecutables`). Absent when empty.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Executable"
+      }
+    },
     "schema_version": {
       "description": "Version of this file's layout; see [`INSTANCE_SCHEMA_VERSION`].",
       "type": "integer",
@@ -30,6 +37,49 @@
     "storefront"
   ],
   "$defs": {
+    "Executable": {
+      "description": "One entry of an Instance's executables registry.",
+      "type": "object",
+      "properties": {
+        "arguments": {
+          "description": "The arguments as one string, split on spaces with double quotes grouping words. `%DATA%` is the staged\n`Data` folder, `%INSTANCE%` the Instance folder and `%PROFILE%` the profile name.",
+          "type": "string",
+          "default": ""
+        },
+        "binary": {
+          "description": "The program, as a path on this machine (a `.exe` runs through Proton on Linux).",
+          "type": "string"
+        },
+        "hidden": {
+          "description": "Whether front ends leave the entry out of their lists.",
+          "type": "boolean"
+        },
+        "steam_app_id": {
+          "description": "The Steam app id the program runs under; the game's own id when absent.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "title": {
+          "description": "The name `nvmod run` takes; unique in the Instance, compared without regard to case.",
+          "type": "string"
+        },
+        "working_directory": {
+          "description": "The folder to run in; the program's own folder when absent.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "title",
+        "binary"
+      ]
+    },
     "Storefront": {
       "description": "Where a base copy came from.",
       "oneOf": [

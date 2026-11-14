@@ -731,6 +731,7 @@ dependencies = [
  "nvmod-pe",
  "nvmod-plugins",
  "nvmod-profile",
+ "nvmod-run",
  "nvmod-runlog",
  "nvmod-saves",
  "nvmod-stage",
@@ -902,6 +903,20 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "nvmod-run"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-runner",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -7,10 +7,12 @@ mod backup;
 mod catalog;
 mod conflicts;
 mod doctor;
+mod exec;
 mod import;
 mod init;
 mod install_mod;
 mod install_nvrs;
+mod lock;
 mod lod;
 mod logging;
 mod mods;
@@ -21,6 +23,7 @@ mod plugins;
 mod profile;
 mod profile_apply;
 mod saves;
+mod run;
 mod setup;
 mod setup_state;
 mod sort;
@@ -188,6 +191,15 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               without network, fetch one (only from the lock's URL; its SHA-256 is checked before
                               it is made executable, then its attestation), confirm a third-party tool that pins
                               no checksum, or run one (its SHA-256 is re-checked at every call)
+  nvmod exec list|add|edit|remove|import --instance <dir> ...
+                              the executables registry (title, binary, arguments, working directory, Steam app
+                              id, hidden); `import --mo2 <dir>` reads MO2's customExecutables (only Z: paths map)
+  nvmod run <title|path|game|nv-rs> --instance <dir> [--profile <name>] [--proton <program>] [--dry-run]
+                [--wait] [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]
+                              start the game or a tool through the staged view: refuses while Mod Organizer 2
+                              runs or another command holds the Instance lock (exit 2), stages the profile when
+                              the tree is missing or old, then starts the program (detached unless --wait, whose
+                              exit code passes through); --dry-run prints the plan and changes nothing
   nvmod --version | --help
 
 every command writes a run log to logs/<run id>.ndjson in the state directory ($NVMOD_STATE_DIR, else
@@ -281,7 +293,9 @@ pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
 pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    backup::around(args, err, |err| dispatch(args, out, err))
+    lock::around(args, err, |err| {
+        backup::around(args, err, |err| dispatch(args, out, err))
+    })
 }
 
 fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
@@ -307,6 +321,8 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("target") => target::run(&args[1..], out, err),
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
+        Some("exec") => exec::run(&args[1..], out, err),
+        Some("run") => run::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
         Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),
