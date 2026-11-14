@@ -13,6 +13,7 @@ mod pe;
 mod sort;
 mod stage;
 mod tools;
+mod ttw;
 
 use std::io::Write;
 
@@ -61,6 +62,12 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               [--gh <path>] [--curl <path>] [--asset <name>] [--repo <o/r>]
                               build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
                               or PATH) or fetch and verify the fork's release; then run `nv-viewer <data> --check`
+  nvmod ttw --instance <dir> --fallout3 <dir> [--package <file>] [--installer <path>] [--profile <name>] [--json]
+                [--lock <file>] [--store <dir>] [--timeout-secs <n>]
+                              Tale of Two Wastelands through the pinned external installer (never reimplemented):
+                              verify the base game, run the installer with the Fallout 3 folder (it verifies
+                              Fallout 3), check its reported result, import the output as the Mod
+                              `Tale of Two Wastelands`; a failure exits 4 and changes nothing
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
   nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
@@ -97,6 +104,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
+        Some("ttw") => ttw::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
