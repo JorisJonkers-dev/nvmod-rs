@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.2.0...v0.3.0) (2026-11-14)
+
+
+### Features
+
+* **cli:** roll back on SIGTERM and SIGINT, and make journal ids collision-free ([#36](https://github.com/JorisJonkers-dev/nvmod-rs/issues/36)) ([56075a5](https://github.com/JorisJonkers-dev/nvmod-rs/commit/56075a5b998a4e467918e2ef06f53fbeb637006f))
+* **tools:** take loot-rs v0.2.0 and state the contract versions nvmod accepts ([#38](https://github.com/JorisJonkers-dev/nvmod-rs/issues/38)) ([235209a](https://github.com/JorisJonkers-dev/nvmod-rs/commit/235209a2a75db198ad5d3403f5c96d970c2ae92b))
+
 ## [0.2.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.1.0...v0.2.0) (2026-11-14)
 
 
