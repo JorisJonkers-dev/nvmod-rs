@@ -21,6 +21,7 @@ nvmod-core = { workspace = true }
 nvmod-catalog = { workspace = true }
 nvmod-doctor = { workspace = true }
 nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
 nvmod-pe = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

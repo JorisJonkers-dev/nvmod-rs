@@ -6,11 +6,13 @@
 //! Facts the checks rest on that nobody has verified yet are listed in `docs/DECISIONS.md` ("Unverified
 //! assumptions"); the constants below name them.
 
+mod base;
 mod game;
 mod plugins;
 mod profile;
 mod report;
 
+pub use base::{BaseExe, BaseReport, BaseSummary, check_base};
 pub use report::{ExeReport, GameReport, PluginReport, Report, Summary};
 
 use nvmod_catalog::Catalog;
