@@ -493,7 +493,7 @@ fn a_lock_that_breaks_the_rules_is_refused_with_the_reason() {
 fn the_shipped_lock_lists_loot_rs_as_linked() {
     let (code, out, err) = nvmod(&["tools", "list"]);
     assert_eq!(code, 0, "{err}");
-    assert!(out.contains("loot-rs 0.1.0 linked (tag v0.1.0)"), "{out}");
+    assert!(out.contains("loot-rs 0.2.0 linked (tag v0.2.0)"), "{out}");
 }
 
 #[test]
@@ -508,4 +508,21 @@ fn usage_errors_exit_with_five() {
     ] {
         assert_eq!(nvmod(&args).0, 5, "{args:?}");
     }
+}
+
+#[test]
+fn contracts_lists_what_this_nvmod_accepts() {
+    let (code, out, err) = nvmod(&["tools", "contracts"]);
+    assert_eq!(code, 0, "{err}");
+    assert!(
+        out.contains("loot-sort (loot-rs) current v1 accepts v1"),
+        "{out}"
+    );
+    assert!(out.contains("lodwright-plan (lodwright-rs)"), "{out}");
+    let (code, out, _) = nvmod(&["tools", "contracts", "--json"]);
+    assert_eq!(code, 0);
+    let json: Value = serde_json::from_str(&out).unwrap();
+    assert!(json.as_array().unwrap().iter().any(|r| {
+        r["contract"] == "ttw-installer-result" && r["accepted"] == serde_json::json!([1])
+    }));
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod tools list|verify|fetch|trust|run`: the pinned tools of `tools.lock.toml`, the verified fetch, and the one
+//! `nvmod tools list|verify|contracts|fetch|trust|run`: the pinned tools of `tools.lock.toml`, the verified fetch, and the one
 //! runner. The lock file defaults to the one shipped with nvmod; `--lock` names another (the tests point it at a
 //! fake release server). Tools are kept by content hash in the store (`--store`, `NVMOD_TOOLS_DIR`, or the user's
 //! data folder).
@@ -7,15 +7,15 @@
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
 use nvmod_instance::NvmodInstance;
 use nvmod_tools::{
-    Acquire, AcquireError, Call, Curl, Kind, Lock, Pin, Runner, Store, StoreState, ToolEntry,
-    Trust, builtin_lock, check_sha256, fetch_bytes, pin_of, sha256_hex,
+    Acquire, AcquireError, Call, Curl, Kind, Lock, Pin, Runner, SNAPSHOTS, Store, StoreState,
+    ToolEntry, Trust, builtin, builtin_lock, check_sha256, fetch_bytes, pin_of, sha256_hex,
 };
 use serde_json::json;
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Duration;
 
-const USAGE_LINE: &str = "usage: nvmod tools list|verify [--json] | fetch <tool> | trust <tool> <version> --instance <dir> [--sha256 <hex>] | run <tool> -- <args...>\n       common options: [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>] [--retry-delay-ms <n>]";
+const USAGE_LINE: &str = "usage: nvmod tools list|verify [--json] | contracts [--json] | fetch <tool> | trust <tool> <version> --instance <dir> [--sha256 <hex>] | run <tool> -- <args...>\n       common options: [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>] [--retry-delay-ms <n>]";
 const OPTIONS: &[&str] = &[
     "lock",
     "store",
@@ -377,6 +377,46 @@ fn run_tool(ctx: &Context, tool_args: &[String], out: &mut dyn Write, err: &mut 
     }
 }
 
+/// `nvmod tools contracts`: every tool contract this build reads, with the schema versions it accepts.
+fn contracts(json: bool, out: &mut dyn Write) -> u8 {
+    let mut rows = Vec::new();
+    let mut seen: Vec<&str> = Vec::new();
+    for snapshot in SNAPSHOTS {
+        if seen.contains(&snapshot.contract) {
+            continue;
+        }
+        seen.push(snapshot.contract);
+        if let Some(contract) = builtin(snapshot.contract) {
+            rows.push((snapshot.tool, contract));
+        }
+    }
+    if json {
+        let value: Vec<_> = rows
+            .iter()
+            .map(|(tool, c)| {
+                json!({"tool": tool, "contract": c.name(), "current": c.current(), "accepted": c.accepted()})
+            })
+            .collect();
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&value).unwrap_or_default()
+        );
+        return OK;
+    }
+    for (tool, c) in &rows {
+        let accepted: Vec<String> = c.accepted().iter().map(|v| format!("v{v}")).collect();
+        let _ = writeln!(
+            out,
+            "{} ({tool}) current v{} accepts {}",
+            c.name(),
+            c.current(),
+            accepted.join(", ")
+        );
+    }
+    OK
+}
+
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     // Everything after `--` belongs to the tool.
     let split = args.iter().position(|a| a == "--");
@@ -392,7 +432,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(why) => return usage(err, Some(&why)),
     };
     let wanted = match verb.as_str() {
-        "list" | "verify" => args.positional.is_empty(),
+        "list" | "verify" | "contracts" => args.positional.is_empty(),
         "fetch" => args.positional.len() == 1,
         "trust" => args.positional.len() == 2,
         "run" => args.positional.len() == 1 && split.is_some(),
@@ -400,6 +440,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     };
     if !wanted || (verb != "run" && split.is_some()) {
         return usage(err, None);
+    }
+    if verb == "contracts" {
+        return contracts(args.flag("json"), out);
     }
     let ctx = match context(args, err) {
         Ok(c) => c,

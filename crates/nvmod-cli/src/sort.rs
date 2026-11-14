@@ -10,8 +10,9 @@ use std::path::Path;
 const USAGE_TEXT: &str =
     "usage: nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]";
 
-fn kind_name(kind: &impl std::fmt::Debug) -> String {
-    format!("{kind:?}").to_lowercase()
+/// The JSON word of a finding kind: loot-rs's label without spaces, as nvmod has always written it.
+fn finding_name(kind: loot_rs::api::FindingKind) -> String {
+    kind.label().replace(' ', "")
 }
 
 fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::Value {
@@ -27,7 +28,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
                 .find(|p| p.name.eq_ignore_ascii_case(&slot.name));
             let messages = |list: &[loot_rs::api::Message]| -> Vec<_> {
                 list.iter()
-                    .map(|m| serde_json::json!({ "kind": kind_name(&m.kind), "text": m.text }))
+                    .map(|m| serde_json::json!({ "kind": m.kind.label(), "text": m.text }))
                     .collect()
             };
             serde_json::json!({
@@ -39,7 +40,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
                 "messages": result.map(|r| messages(&r.messages)).unwrap_or_default(),
                 "generated_messages": result.map(|r| messages(&r.generated_messages)).unwrap_or_default(),
                 "findings": result.map(|r| r.findings.iter().map(|f| serde_json::json!({
-                    "kind": kind_name(&f.kind), "text": f.text, "hard": f.hard,
+                    "kind": finding_name(f.kind), "text": f.text, "hard": f.hard,
                 })).collect::<Vec<_>>()).unwrap_or_default(),
             })
         })
@@ -50,7 +51,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
         "order": order,
         "general_messages": output.general_messages.iter()
             .chain(&output.generated_general_messages)
-            .map(|m| serde_json::json!({ "kind": kind_name(&m.kind), "text": m.text }))
+            .map(|m| serde_json::json!({ "kind": m.kind.label(), "text": m.text }))
             .collect::<Vec<_>>(),
         "not_installed": output.not_installed,
         "warnings": output.warnings,
@@ -101,7 +102,7 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
             continue;
         };
         for m in result.messages.iter().chain(&result.generated_messages) {
-            let _ = writeln!(out, "       [{}] {}", kind_name(&m.kind), m.text);
+            let _ = writeln!(out, "       [{}] {}", m.kind.label(), m.text);
         }
         for f in &result.findings {
             let _ = writeln!(
@@ -117,7 +118,7 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
         .iter()
         .chain(&output.generated_general_messages)
     {
-        let _ = writeln!(out, "message [{}]: {}", kind_name(&m.kind), m.text);
+        let _ = writeln!(out, "message [{}]: {}", m.kind.label(), m.text);
     }
     for w in &output.warnings {
         let _ = writeln!(out, "warning: {w}");

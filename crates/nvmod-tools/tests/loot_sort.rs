@@ -121,7 +121,8 @@ fn the_sort_json_output_matches_the_vendored_schema() {
     fixture(dir.path());
     let (_, text) = command_line_json(dir.path());
     let document: Value = serde_json::from_str(&text).unwrap();
-    // loot-rs 0.1.0 writes no schema_version: it is read as version 1.
+    // loot-rs 0.2.0 writes schema_version 1 itself (0.1.0 wrote none and was read as version 1).
+    assert_eq!(document["schema_version"], 1);
     assert_eq!(builtin("loot-sort").unwrap().check(&document), Ok(1));
 
     // With NVMOD_BLESS=1 this output is recorded as the synthetic sample the offline contract tests read.

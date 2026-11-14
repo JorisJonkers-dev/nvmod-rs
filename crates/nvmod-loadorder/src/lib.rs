@@ -157,31 +157,17 @@ fn describe(error: &SortError) -> String {
     format!("loot-rs cannot sort this Load order: {error}")
 }
 
-/// Place the plugins that are not installed: each goes right after the plugin that preceded it in `current`.
-fn place_not_installed(current: &[Slot], sorted: &[String]) -> Vec<Slot> {
+/// Place the plugins that are not installed (loot-rs's default rule: each goes right after the installed plugin
+/// that preceded it in `current`), and carry each plugin's active flag over from `current`.
+fn place_not_installed(current: &[Slot], output: &SortOutput, slots: &[PluginSlot]) -> Vec<Slot> {
     let active = |name: &str| {
         current
             .iter()
             .find(|s| s.name.eq_ignore_ascii_case(name))
             .is_some_and(|s| s.active)
     };
-    let mut names: Vec<String> = sorted.to_vec();
-    for (index, slot) in current.iter().enumerate() {
-        if names.iter().any(|n| n.eq_ignore_ascii_case(&slot.name)) {
-            continue;
-        }
-        let at = current[..index]
-            .iter()
-            .rev()
-            .find_map(|before| {
-                names
-                    .iter()
-                    .position(|n| n.eq_ignore_ascii_case(&before.name))
-            })
-            .map_or(0, |i| i + 1);
-        names.insert(at, slot.name.clone());
-    }
-    names
+    output
+        .order_with_not_installed(slots)
         .into_iter()
         .map(|name| Slot {
             active: active(&name),
@@ -208,7 +194,7 @@ pub fn propose(
         .collect();
     let output = sort(&slots, masterlist, &data, &SortOptions::default())
         .map_err(|e| Error::Refused(describe(&e)))?;
-    let proposed = place_not_installed(&current, &output.order);
+    let proposed = place_not_installed(&current, &output, &slots);
     Ok(Proposal {
         profile: profile.to_owned(),
         data,
@@ -324,7 +310,7 @@ pub fn staged_file(data: &Path, name: &str) -> Option<PathBuf> {
 /// # Errors
 /// The reason, when the file cannot be read or its header is not a plugin header.
 pub fn masters_of(path: &Path) -> Result<Vec<String>, String> {
-    loot_rs::plugin::read_header(path)
+    loot_rs::api::read_plugin_header(path)
         .map(|header| header.masters)
         .map_err(|e| format!("{}: {e}", path.display()))
 }
@@ -371,34 +357,6 @@ mod tests {
             read_slots(dir.path()).unwrap(),
             [slot("A.esm", true), slot("B.esp", true)]
         );
-    }
-
-    #[test]
-    fn a_plugin_that_is_not_installed_follows_the_plugin_before_it() {
-        let current = [
-            slot("A.esm", true),
-            slot("Ghost.esp", true),
-            slot("B.esp", false),
-            slot("C.esp", true),
-        ];
-        let sorted = ["A.esm".to_owned(), "C.esp".to_owned(), "B.esp".to_owned()];
-        let names: Vec<_> = place_not_installed(&current, &sorted)
-            .into_iter()
-            .map(|s| (s.name, s.active))
-            .collect();
-        assert_eq!(
-            names,
-            [
-                ("A.esm".to_owned(), true),
-                ("Ghost.esp".to_owned(), true),
-                ("C.esp".to_owned(), true),
-                ("B.esp".to_owned(), false)
-            ]
-        );
-        // First in the list: stays first.
-        let current = [slot("Ghost.esp", false), slot("A.esm", true)];
-        let placed = place_not_installed(&current, &["A.esm".to_owned()]);
-        assert_eq!(placed[0].name, "Ghost.esp");
     }
 
     #[test]
