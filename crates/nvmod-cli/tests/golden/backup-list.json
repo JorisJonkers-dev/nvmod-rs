@@ -1,0 +1,26 @@
+{
+  "profile": "Default",
+  "schema_version": 1,
+  "snapshots": [
+    {
+      "bytes": 317,
+      "created": "20261114T130000Z",
+      "created_unix": 1794661200,
+      "files": 7,
+      "id": "20261114T130000Z",
+      "problem": null,
+      "source": "nvmod",
+      "with_saves": true
+    },
+    {
+      "bytes": 311,
+      "created": "20261114T120000Z",
+      "created_unix": 1794657600,
+      "files": 6,
+      "id": "20261114T120000Z",
+      "problem": null,
+      "source": "nvmod",
+      "with_saves": false
+    }
+  ]
+}
