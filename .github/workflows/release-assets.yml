@@ -35,7 +35,7 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - target: linux
@@ -51,9 +51,16 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
     steps:
+      # The tag's source goes to src/; the packaging scripts come from the workflow's own ref in tooling/, so a tag that
+      # predates them still builds.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: tooling
+          persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ inputs.tag }}
+          path: src
           persist-credentials: false
       - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
         with:
@@ -63,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n1)"
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' src/Cargo.toml | head -n1)"
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag $TAG is not vX.Y.Z"; exit 1; }
           [ "v$version" = "$TAG" ] || { echo "Cargo.toml is $version, the tag is $TAG"; exit 1; }
           echo "VERSION=$version" >>"$GITHUB_ENV"
@@ -71,21 +78,22 @@ jobs:
       # rust-toolchain.toml pins the compiler; rustup installs it on first use.
       - name: Build nvmod
         shell: bash
+        working-directory: src
         run: cargo build --release --locked -p nvmod-cli
 
       - name: Third-party notices
         shell: bash
         run: |
           set -euo pipefail
-          cargo metadata --locked --format-version 1 >"$RUNNER_TEMP/metadata.json"
-          python3 -I scripts/package_release.py notices --metadata "$RUNNER_TEMP/metadata.json" --out "$RUNNER_TEMP/notices.txt"
+          (cd src && cargo metadata --locked --format-version 1) >"$RUNNER_TEMP/metadata.json"
+          python3 -I tooling/scripts/package_release.py notices --metadata "$RUNNER_TEMP/metadata.json" --out "$RUNNER_TEMP/notices.txt"
 
       - name: Package
         shell: bash
         run: |
           set -euo pipefail
-          python3 -I scripts/package_release.py package --target "${{ matrix.target }}" --version "$VERSION" \
-            --binary "target/release/${{ matrix.exe }}" --notices "$RUNNER_TEMP/notices.txt" --out dist
+          python3 -I tooling/scripts/package_release.py package --target "${{ matrix.target }}" --version "$VERSION" \
+            --binary "src/target/release/${{ matrix.exe }}" --notices "$RUNNER_TEMP/notices.txt" --out dist
 
       # Run the packaged program from a folder of its own, as a user does.
       - name: Smoke test the archive
@@ -117,21 +125,29 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
     steps:
+      # The tag's source goes to src/; the packaging scripts come from the workflow's own ref in tooling/, so a tag that
+      # predates them still builds.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: tooling
+          persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ inputs.tag }}
+          path: src
           persist-credentials: false
       - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
         with:
           token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
       - name: CycloneDX SBOM of the nvmod binary
+        working-directory: src
         run: |
           set -euo pipefail
           (cd "$RUNNER_TEMP" && cargo install cargo-cyclonedx --locked --version 0.5.10)
           cargo cyclonedx --manifest-path crates/nvmod-cli/Cargo.toml --format json --spec-version 1.5 \
             --override-filename sbom
-          mkdir dist
-          mv crates/nvmod-cli/sbom.json "dist/nvmod-${TAG#v}.cdx.json"
+          mkdir ../dist
+          mv crates/nvmod-cli/sbom.json "../dist/nvmod-${TAG#v}.cdx.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist-sbom
@@ -156,11 +172,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: tooling
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
           ref: refs/tags/${{ inputs.tag }}
+          path: src
           fetch-depth: 0
           persist-credentials: false
       - name: Publishing is for release-please tags only
         if: ${{ env.PUBLISH == 'true' }}
+        working-directory: src
         run: |
           set -euo pipefail
           # The tag must be a release-please release: vX.Y.Z on main, on the commit of a merged release pull request.
@@ -178,10 +200,10 @@ jobs:
         run: |
           set -euo pipefail
           # The index is built from the archives; SHA256SUMS then covers the archives, the SBOM and the index.
-          python3 -I scripts/package_release.py index --dir dist --tag "$TAG" --repo "$REPO" \
+          python3 -I tooling/scripts/package_release.py index --dir dist --tag "$TAG" --repo "$REPO" \
             --date "$(date -u +%F)" --out "$RUNNER_TEMP/release-index.json"
           mv "$RUNNER_TEMP/release-index.json" dist/release-index.json
-          python3 -I scripts/package_release.py sums --dir dist --out "$RUNNER_TEMP/SHA256SUMS"
+          python3 -I tooling/scripts/package_release.py sums --dir dist --out "$RUNNER_TEMP/SHA256SUMS"
           mv "$RUNNER_TEMP/SHA256SUMS" dist/SHA256SUMS
           ls -l dist
           cat dist/SHA256SUMS
