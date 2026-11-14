@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod install-nv-rs`, run as a program against a scratch Instance made by `nvmod init` from a synthetic base
 //! copy. The nv-rs source is a tiny cargo workspace written by the test, the release is a fake local one, and
-//! `gh`, `curl` and the play-patch step are shell scripts that record how they were called. No network, no game.
+//! `gh` and `curl` are shell scripts that record how they were called, and the fake `nv-viewer` answers `--check`. No network, no game.
 
 use nvmod_install::sha256_hex;
 use nvmod_testkit::{
-    BaseBuilder, FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_RELEASE_BINARY, FakeNvRs, FakeRelease,
-    FakeServer, Reply, TempDir, snapshot, write_script,
+    BaseBuilder, FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FAKE_RELEASE_BINARY, FakeNvRs,
+    FakeRelease, FakeServer, Reply, TempDir, snapshot, write_script,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -81,20 +81,6 @@ impl Rig {
         log_lines(&self.tools.path().join("gh.log"))
     }
 
-    /// A play-patch step that records its arguments and exits with `code`.
-    fn patch_step(&self, code: i32) -> String {
-        let log = self.tools.path().join("patch.log");
-        let body = format!("echo \"$@\" >> {}\nexit {code}", log.display());
-        write_script(self.tools.path(), "play-patch", &body)
-            .to_str()
-            .unwrap()
-            .to_owned()
-    }
-
-    fn patch_calls(&self) -> Vec<String> {
-        log_lines(&self.tools.path().join("patch.log"))
-    }
-
     fn release(&self, release: &FakeRelease) -> String {
         let dir = self.tools.path().join("release");
         std::fs::create_dir_all(&dir).unwrap();
@@ -131,15 +117,7 @@ fn absent_cargo(rig: &Rig) -> String {
 #[test]
 fn with_a_toolchain_nv_rs_is_built_from_the_fake_workspace() {
     let rig = Rig::new();
-    let patch = rig.patch_step(0);
-    let (code, out, err) = rig.install(&[
-        "--source",
-        rig.source(),
-        "--cargo",
-        CARGO,
-        "--play-patch",
-        &patch,
-    ]);
+    let (code, out, err) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
     assert_eq!(code, 0, "{out}\n{err}");
     let run = Command::new(rig.bin()).output().unwrap();
     assert!(
@@ -154,7 +132,8 @@ fn with_a_toolchain_nv_rs_is_built_from_the_fake_workspace() {
         record["sha256"],
         sha256_hex(&std::fs::read(rig.bin()).unwrap())
     );
-    assert_eq!(record["play_patch"]["ran"], true);
+    assert_eq!(record["check"]["ran"], true);
+    assert_eq!(record["check"]["exit_code"], 0);
 }
 
 #[test]
@@ -182,41 +161,109 @@ fn the_toolchain_can_come_from_the_environment() {
 }
 
 #[test]
-fn the_play_patch_step_is_run_with_the_instance_the_base_and_the_binary() {
+fn the_check_is_run_against_the_data_folder_of_the_base_copy_and_reported() {
     let rig = Rig::new();
-    let patch = rig.patch_step(0);
+    let (code, out, err) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let data = std::fs::canonicalize(rig.base.path()).unwrap().join("Data");
+    assert!(
+        out.contains(&format!("fake check passed {} --check", data.display())),
+        "{out}"
+    );
+    assert!(out.contains("check passed"), "{out}");
+    let record = std::fs::read_to_string(rig.root().join("nv-rs/install.json")).unwrap();
+    assert!(record.contains("\"command\": \"nv-viewer\""), "{record}");
+    assert!(!record.contains("play_patch"), "{record}");
+}
+
+#[test]
+fn the_play_patch_option_is_gone() {
+    let rig = Rig::new();
+    let before = snapshot(&rig.root());
     let (code, ..) = rig.install(&[
         "--source",
         rig.source(),
         "--cargo",
         CARGO,
         "--play-patch",
-        &patch,
+        "x",
     ]);
-    assert_eq!(code, 0);
-    let calls = rig.patch_calls();
-    assert_eq!(calls.len(), 1, "{calls:?}");
-    let root = std::fs::canonicalize(rig.root()).unwrap();
-    let base = std::fs::canonicalize(rig.base.path()).unwrap();
-    assert_eq!(
-        calls[0],
-        format!(
-            "--nv-rs {} --base {} --instance {}",
-            root.join("nv-rs/bin/nv-viewer").display(),
-            base.display(),
-            root.display()
-        )
+    assert_eq!(code, 5);
+    assert_eq!(snapshot(&rig.root()), before);
+}
+
+#[test]
+fn a_failing_check_of_a_source_build_exits_4_shows_its_output_and_rolls_back() {
+    let rig = Rig::new();
+    FakeNvRs::new().failing_check().write(rig.source.path());
+    let before = snapshot(&rig.root());
+    let (code, _, err) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains(FAKE_CHECK_REFUSED), "{err}");
+    assert!(err.contains("check"), "{err}");
+    assert_eq!(snapshot(&rig.root()), before);
+}
+
+#[test]
+fn a_failing_check_of_a_release_exits_4_and_rolls_back() {
+    let rig = Rig::new();
+    let release = rig.release(&FakeRelease::new().failing_check());
+    let (gh, cargo) = (rig.gh(0), absent_cargo(&rig));
+    let before = snapshot(&rig.root());
+    let (code, _, err) = rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains(FAKE_CHECK_REFUSED), "{err}");
+    assert_eq!(snapshot(&rig.root()), before);
+}
+
+const MANIFEST: &str = r#"{"schema_version":1,"version":"0.0.0-synthetic",
+  "play_patch":{"standalone_step":false,"command":null,"arguments":[]},
+  "installation_check":{"command":"nv-viewer","arguments":["<data folder>","--check","--from-manifest"]}}"#;
+
+#[test]
+fn a_release_manifest_gives_the_check_command() {
+    let rig = Rig::new();
+    let release = rig.release(&FakeRelease::new().with_manifest(MANIFEST));
+    let (gh, cargo) = (rig.gh(0), absent_cargo(&rig));
+    let (code, out, err) =
+        rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let data = std::fs::canonicalize(rig.base.path()).unwrap().join("Data");
+    assert!(
+        out.contains(&format!("{} --check --from-manifest", data.display())),
+        "{out}"
     );
 }
 
 #[test]
-fn without_a_patch_step_to_run_the_install_says_so() {
+fn a_release_without_a_manifest_uses_the_default_check() {
     let rig = Rig::new();
-    let (code, out, _) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
-    assert_eq!(code, 0);
-    assert!(out.contains("no play-patch step"), "{out}");
-    let record = std::fs::read_to_string(rig.root().join("nv-rs/install.json")).unwrap();
-    assert!(record.contains("\"ran\": false"), "{record}");
+    let release = rig.release(&FakeRelease::new());
+    let (gh, cargo) = (rig.gh(0), absent_cargo(&rig));
+    let (code, out, err) =
+        rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    assert!(!out.contains("--from-manifest"), "{out}");
+    assert!(out.contains("--check"), "{out}");
+}
+
+#[test]
+fn a_manifest_that_names_another_program_or_is_unreadable_installs_nothing() {
+    for manifest in [
+        r#"{"installation_check":{"command":"/bin/sh","arguments":["-c","true"]}}"#,
+        r#"{"installation_check":{"command":"nv-viewer","arguments":"--check"}}"#,
+        "not json",
+    ] {
+        let rig = Rig::new();
+        let release = rig.release(&FakeRelease::new().with_manifest(manifest));
+        let (gh, cargo) = (rig.gh(0), absent_cargo(&rig));
+        let before = snapshot(&rig.root());
+        let (code, _, err) =
+            rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
+        assert!(code == 3 || code == 4, "{code} {err}");
+        assert!(err.contains("release-manifest.json"), "{err}");
+        assert_eq!(snapshot(&rig.root()), before);
+    }
 }
 
 #[test]
@@ -251,7 +298,7 @@ fn a_failed_build_exits_4_with_the_log_and_leaves_the_instance_alone() {
 #[test]
 fn without_a_toolchain_the_release_is_fetched_verified_and_installed() {
     let rig = Rig::new();
-    let release = rig.release(&FakeRelease::new().with_play_patch());
+    let release = rig.release(&FakeRelease::new());
     let gh = rig.gh(0);
     let cargo = absent_cargo(&rig);
     let (code, out, err) =
@@ -267,7 +314,7 @@ fn without_a_toolchain_the_release_is_fetched_verified_and_installed() {
     );
     let record = std::fs::read_to_string(rig.root().join("nv-rs/install.json")).unwrap();
     assert!(record.contains("\"method\": \"release\""), "{record}");
-    assert!(rig.root().join("nv-rs/bin/play-patch").is_file());
+    assert!(!rig.root().join("nv-rs/bin/play-patch").exists());
 }
 
 #[test]
@@ -461,55 +508,11 @@ fn every_fetch_has_a_60_second_timeout_and_a_timeout_is_retried() {
 }
 
 #[test]
-fn a_failing_play_patch_step_exits_4_and_rolls_the_install_back() {
-    let rig = Rig::new();
-    let patch = rig.patch_step(7);
-    let before = snapshot(&rig.root());
-    let (code, _, err) = rig.install(&[
-        "--source",
-        rig.source(),
-        "--cargo",
-        CARGO,
-        "--play-patch",
-        &patch,
-    ]);
-    assert_eq!(code, 4, "{err}");
-    assert!(err.contains("play-patch"), "{err}");
-    assert_eq!(rig.patch_calls().len(), 1);
-    assert_eq!(snapshot(&rig.root()), before);
-}
-
-#[test]
-fn a_missing_play_patch_program_exits_4_and_rolls_back() {
-    let rig = Rig::new();
-    let before = snapshot(&rig.root());
-    let missing = rig.tools.path().join("nope");
-    let (code, ..) = rig.install(&[
-        "--source",
-        rig.source(),
-        "--cargo",
-        CARGO,
-        "--play-patch",
-        missing.to_str().unwrap(),
-    ]);
-    assert_eq!(code, 4);
-    assert_eq!(snapshot(&rig.root()), before);
-}
-
-#[test]
 fn no_executable_bytes_are_copied_and_the_base_copy_is_untouched() {
     let rig = Rig::new();
     let base_before = snapshot(rig.base.path());
     let exe = std::fs::read(rig.base.path().join("FalloutNV.exe")).unwrap();
-    let patch = rig.patch_step(0);
-    let (code, ..) = rig.install(&[
-        "--source",
-        rig.source(),
-        "--cargo",
-        CARGO,
-        "--play-patch",
-        &patch,
-    ]);
+    let (code, ..) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
     assert_eq!(code, 0);
     assert_eq!(snapshot(rig.base.path()), base_before);
     for (name, bytes) in snapshot(&rig.root()) {

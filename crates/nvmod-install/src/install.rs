@@ -2,13 +2,13 @@
 //! The install itself: stage, move into place, run the play-patch step, record; undo everything on failure.
 
 use crate::build::{build_from_source, resolve_cargo};
+use crate::check::{self, Check};
 
 use crate::release::{self, Source};
-use nvmod_instance::NvmodInstance;
+use nvmod_instance::{NvmodInstance, find_ci};
 use nvmod_tools::{Curl, sha256_hex};
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
 /// The fork's release, used when none is given. Unverified: the fork has published no release yet.
@@ -72,8 +72,6 @@ pub struct Options {
     pub gh: PathBuf,
     /// The `curl` program.
     pub curl: PathBuf,
-    /// nv-rs's play-patch step; when `None`, a `play-patch` program shipped in the release is used.
-    pub play_patch: Option<PathBuf>,
     /// Wait between fetch retries.
     pub retry_delay: Duration,
 }
@@ -85,8 +83,8 @@ pub struct Installed {
     pub method: Method,
     /// The installed program.
     pub binary: PathBuf,
-    /// The play-patch program that ran, if any.
-    pub play_patch: Option<PathBuf>,
+    /// The installation check that passed.
+    pub check: Check,
 }
 
 const STAGING: &str = ".nv-rs-staging";
@@ -145,7 +143,7 @@ pub fn install(opts: &Options) -> Result<Installed, InstallError> {
     let _ = std::fs::remove_dir_all(&staging);
     let bin = staging.join("bin");
     let result = stage(opts, method, cargo.as_deref(), &staging, &bin)
-        .and_then(|()| commit(opts, method, &root, &instance, &staging));
+        .and_then(|arguments| commit(opts, method, &root, &instance, &staging, &arguments));
     if result.is_err() {
         let _ = std::fs::remove_dir_all(&staging);
     }
@@ -158,7 +156,7 @@ fn stage(
     cargo: Option<&Path>,
     staging: &Path,
     bin: &Path,
-) -> Result<(), InstallError> {
+) -> Result<Vec<String>, InstallError> {
     std::fs::create_dir_all(bin).map_err(|e| io(bin, &e))?;
     match method {
         Method::Source => {
@@ -166,6 +164,7 @@ fn stage(
             let built = build_from_source(cargo.unwrap_or(Path::new("cargo")), source)
                 .map_err(InstallError::Failed)?;
             install_file(&built, bin)?;
+            Ok(check::default_arguments())
         }
         Method::Release => {
             let curl = Curl {
@@ -187,14 +186,18 @@ fn stage(
                 InstallError::Failed(format!("the release archive holds no {viewer}"))
             })?;
             install_file(&found, bin)?;
-            if let Some(patch) = release::find_file(&unpacked, &exe_name("play-patch")) {
-                install_file(&patch, bin)?;
-            }
+            let arguments = match release::find_file(&unpacked, "release-manifest.json") {
+                Some(file) => {
+                    let text = std::fs::read_to_string(&file).map_err(|e| io(&file, &e))?;
+                    check::arguments_from_manifest(&text)?
+                }
+                None => check::default_arguments(),
+            };
             std::fs::remove_dir_all(&unpacked).map_err(|e| io(&unpacked, &e))?;
             std::fs::remove_file(&asset).map_err(|e| io(&asset, &e))?;
+            Ok(arguments)
         }
     }
-    Ok(())
 }
 
 fn commit(
@@ -203,24 +206,20 @@ fn commit(
     root: &Path,
     instance: &NvmodInstance,
     staging: &Path,
+    arguments: &[String],
 ) -> Result<Installed, InstallError> {
     let target = root.join(FINAL);
     std::fs::rename(staging, &target).map_err(|e| io(&target, &e))?;
     let finish = || -> Result<Installed, InstallError> {
         let binary = target.join("bin").join(exe_name("nv-viewer"));
-        let shipped = target.join("bin").join(exe_name("play-patch"));
-        let patch = opts
-            .play_patch
-            .clone()
-            .or_else(|| shipped.is_file().then_some(shipped));
-        if let Some(patch) = &patch {
-            run_patch_step(patch, &binary, &instance.config.base, root)?;
-        }
-        write_record(&target, method, &binary, patch.as_deref(), opts)?;
+        let data = find_ci(&instance.config.base, "Data")
+            .unwrap_or_else(|| instance.config.base.join("Data"));
+        let check = check::run(&binary, arguments, &data)?;
+        write_record(&target, method, &binary, &check, opts)?;
         Ok(Installed {
             method,
             binary,
-            play_patch: patch,
+            check,
         })
     };
     finish().inspect_err(|_| {
@@ -228,46 +227,11 @@ fn commit(
     })
 }
 
-/// Run nv-rs's play-patch step. nv-rs ships no standalone program for it yet (docs/DECISIONS.md), so the
-/// invocation is nvmod's: the installed program, the base copy (read only) and the Instance.
-fn run_patch_step(
-    patch: &Path,
-    binary: &Path,
-    base: &Path,
-    instance: &Path,
-) -> Result<(), InstallError> {
-    let out = Command::new(patch)
-        .arg("--nv-rs")
-        .arg(binary)
-        .arg("--base")
-        .arg(base)
-        .arg("--instance")
-        .arg(instance)
-        .output()
-        .map_err(|e| {
-            InstallError::Failed(format!(
-                "cannot run the play-patch step {}: {e}",
-                patch.display()
-            ))
-        })?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(InstallError::Failed(format!(
-            "the play-patch step {} failed ({}): {}{}",
-            patch.display(),
-            out.status,
-            String::from_utf8_lossy(&out.stdout),
-            String::from_utf8_lossy(&out.stderr)
-        )))
-    }
-}
-
 fn write_record(
     target: &Path,
     method: Method,
     binary: &Path,
-    patch: Option<&Path>,
+    check: &Check,
     opts: &Options,
 ) -> Result<(), InstallError> {
     let bytes = std::fs::read(binary).map_err(|e| io(binary, &e))?;
@@ -285,9 +249,11 @@ fn write_record(
     };
     let mut record = origin;
     record["sha256"] = sha256_hex(&bytes).into();
-    record["play_patch"] = serde_json::json!({
-        "ran": patch.is_some(),
-        "command": patch.map(|p| p.display().to_string()),
+    record["check"] = serde_json::json!({
+        "ran": true,
+        "command": "nv-viewer",
+        "arguments": check.command.iter().skip(1).collect::<Vec<_>>(),
+        "exit_code": 0,
     });
     let text =
         serde_json::to_string_pretty(&record).map_err(|e| InstallError::Failed(e.to_string()))?;

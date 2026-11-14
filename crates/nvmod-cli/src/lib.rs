@@ -58,9 +58,9 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               loot-rs, NVSE plugins against the catalogue), or the NVSE plugins of an MO2
                               profile (read only)
   nvmod install-nv-rs --instance <dir> [--source <dir>] [--release] [--release-url <url>] [--cargo <path>]
-                              [--gh <path>] [--curl <path>] [--play-patch <path>] [--asset <name>] [--repo <o/r>]
+                              [--gh <path>] [--curl <path>] [--asset <name>] [--repo <o/r>]
                               build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
-                              or PATH) or fetch and verify the fork's release; then run the play-patch step
+                              or PATH) or fetch and verify the fork's release; then run `nv-viewer <data> --check`
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
   nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
