@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! A source build of a tool is authenticated differently from a fetched release: by the lock's git tag and tree
-//! hash, and by the manifest's `source_tree_hash`. The executable hashes of a release cannot match a local build, so
+//! hash, and by the manifest's `source_tree_hash`. The executable section hashes of a release cannot match a local build, so
 //! that check is skipped, and the report says which checks ran and which did not.
 
 use crate::lock::ToolEntry;
@@ -77,7 +77,8 @@ pub fn verify_source_build(
     Ok(SourceCheck {
         ran,
         skipped: vec![
-            "executable_hashes (a source build cannot match the release's hashes)".to_owned(),
+            "executable (the section hashes; a source build cannot match the release's hashes)"
+                .to_owned(),
         ],
     })
 }
@@ -105,7 +106,7 @@ mod tests {
             text.contains("lock git tag v1") && text.contains("manifest source_tree_hash"),
             "{text}"
         );
-        assert!(text.contains("skipped: executable_hashes"), "{text}");
+        assert!(text.contains("skipped: executable"), "{text}");
     }
 
     #[test]
