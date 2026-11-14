@@ -13,6 +13,7 @@ nvmod-core = { workspace = true }
 nvmod-pe = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
+nvmod-stage = { workspace = true }
 nvmod-catalog = { workspace = true }
 serde = { workspace = true }
 

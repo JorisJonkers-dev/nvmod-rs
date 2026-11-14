@@ -126,6 +126,60 @@ impl NvmodInstance {
         })
     }
 
+    /// The folder of the mod `name`.
+    #[must_use]
+    pub fn mod_dir(&self, name: &str) -> PathBuf {
+        self.root.join("mods").join(name)
+    }
+
+    /// The folder of the profile `name`.
+    #[must_use]
+    pub fn profile_dir(&self, name: &str) -> PathBuf {
+        self.root.join("profiles").join(name)
+    }
+
+    /// The folder that holds the Staging tree of the profile `name` (its `data` folder is the tree).
+    #[must_use]
+    pub fn staging_dir(&self, name: &str) -> PathBuf {
+        self.root.join("staging").join(name)
+    }
+
+    /// The names of the profile folders, sorted.
+    #[must_use]
+    pub fn profiles(&self) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(self.root.join("profiles"))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.path().is_dir())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    /// The profile a command works on: `wanted` when given and present, else the only profile there is.
+    ///
+    /// # Errors
+    /// `Refused` when `wanted` names no profile, when there is none, or when there are several and none is named.
+    pub fn resolve_profile(&self, wanted: Option<&str>) -> Result<String, InstanceError> {
+        let names = self.profiles();
+        match (wanted, names.as_slice()) {
+            (Some(name), _) if names.iter().any(|n| n == name) => Ok(name.to_owned()),
+            (Some(name), _) => Err(InstanceError::Refused(format!(
+                "the Instance has no profile `{name}`"
+            ))),
+            (None, [only]) => Ok(only.clone()),
+            (None, []) => Err(InstanceError::Refused(
+                "the Instance has no profile yet".to_owned(),
+            )),
+            (None, _) => Err(InstanceError::Refused(format!(
+                "the Instance has several profiles ({}); name one with --profile",
+                names.join(", ")
+            ))),
+        }
+    }
+
     /// Whether `root` holds an Instance file.
     #[must_use]
     pub fn is_instance(root: &Path) -> bool {
@@ -189,6 +243,24 @@ mod tests {
         .unwrap();
         let why = NvmodInstance::open(dir.path()).unwrap_err().to_string();
         assert!(why.contains("schema 9"), "{why}");
+    }
+
+    #[test]
+    fn the_profile_is_the_named_one_or_the_only_one() {
+        let base = TempDir::new("inst-prof-base");
+        BaseBuilder::steam().write(base.path());
+        let scratch = TempDir::new("inst-prof");
+        let i = NvmodInstance::create(&scratch.path().join("i"), base.path()).unwrap();
+        assert!(i.resolve_profile(None).is_err());
+        std::fs::create_dir(i.profile_dir("A")).unwrap();
+        assert_eq!(i.resolve_profile(None).unwrap(), "A");
+        assert_eq!(i.resolve_profile(Some("A")).unwrap(), "A");
+        assert!(i.resolve_profile(Some("B")).is_err());
+        std::fs::create_dir(i.profile_dir("B")).unwrap();
+        let why = i.resolve_profile(None).unwrap_err().to_string();
+        assert!(why.contains("A, B"), "{why}");
+        assert_eq!(i.profiles(), ["A", "B"]);
+        assert!(i.mod_dir("M").ends_with("mods/M") && i.staging_dir("A").ends_with("staging/A"));
     }
 
     #[test]

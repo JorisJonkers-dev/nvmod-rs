@@ -60,7 +60,13 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let instance_dir = Path::new(args.option("instance").unwrap_or_default());
     if NvmodInstance::is_instance(instance_dir) {
         return match NvmodInstance::open(instance_dir) {
-            Ok(instance) => base_doctor(&instance.config.base, json, fail_on, out, err),
+            Ok(instance) => finish(
+                nvmod_doctor::check_instance(&instance, args.option("profile")),
+                json,
+                fail_on,
+                out,
+                err,
+            ),
             Err(why) => fail(why.to_string(), out, err),
         };
     }
@@ -113,7 +119,17 @@ fn base_doctor(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> u8 {
-    let report = match nvmod_doctor::check_base(base) {
+    finish(nvmod_doctor::check_base(base), json, fail_on, out, err)
+}
+
+fn finish(
+    result: Result<nvmod_doctor::BaseReport, String>,
+    json: bool,
+    fail_on: Severity,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let report = match result {
         Ok(report) => report,
         Err(reason) => {
             if json {
