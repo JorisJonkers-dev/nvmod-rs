@@ -542,8 +542,8 @@ fn refusals_exit_2_and_change_nothing() {
     ]);
     assert_eq!(code, 2, "{err}");
     // A command line that is not understood.
-    assert_eq!(rig.install(&["--nope"]).0, 2);
-    assert_eq!(nvmod(&["install-nv-rs"]).0, 2);
+    assert_eq!(rig.install(&["--nope"]).0, 5);
+    assert_eq!(nvmod(&["install-nv-rs"]).0, 5);
     assert_eq!(snapshot(&rig.root()), before);
 }
 
