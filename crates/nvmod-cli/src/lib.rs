@@ -10,6 +10,7 @@ mod init;
 mod install_mod;
 mod install_nvrs;
 mod pe;
+mod sort;
 mod stage;
 
 use std::io::Write;
@@ -42,11 +43,19 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               answered where its XML is unambiguous and otherwise exits 1 with the questions
                               (--json), which --answers completes; then stage the profile
   nvmod rollback --instance <dir> [--json]
-                              undo the last install: restore the three profile files, remove the Mod
+                              undo the last install or sort: restore the profile files (an install also
+                              removes the Mod)
+  nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]
+                              compute the Load order with loot-rs from the Staging tree and print it; with
+                              --apply write plugins.txt and loadorder.txt and set the plugin file times
+                              (needs `nvmod stage` first)
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
-  nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
-                              check an nvmod Instance, or the NVSE plugins of an MO2 profile (read only)
+  nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--masterlist <file>] [--catalog <file>]
+                [--json] [--fail-on <severity>]
+                              check an nvmod Instance (its Staging tree, missing masters, the Load order against
+                              loot-rs, NVSE plugins against the catalogue), or the NVSE plugins of an MO2
+                              profile (read only)
   nvmod install-nv-rs --instance <dir> [--source <dir>] [--release] [--release-url <url>] [--cargo <path>]
                               [--gh <path>] [--curl <path>] [--play-patch <path>] [--asset <name>] [--repo <o/r>]
                               build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
@@ -77,6 +86,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("import-mo2") => import::run(&args[1..], out, err),
         Some("install") => install_mod::run_install(&args[1..], out, err),
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
+        Some("sort") => sort::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));

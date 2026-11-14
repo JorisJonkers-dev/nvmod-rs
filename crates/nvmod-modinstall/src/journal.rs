@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// The kind of journal that an install writes.
+pub const KIND_INSTALL: &str = "install";
+/// The kind of journal that `nvmod sort --apply` writes: it restores `plugins.txt` and `loadorder.txt` and the
+/// Staging tree, and never touches a Mod folder or `modlist.txt`.
+pub const KIND_SORT: &str = "sort";
+
 const FILES: [&str; 3] = ["modlist.txt", "plugins.txt", "loadorder.txt"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,9 +23,16 @@ struct Journal {
     r#mod: String,
     profile: String,
     status: String,
+    /// `install` (also what a journal without this field is) or `sort`.
+    #[serde(default = "install_kind")]
+    kind: String,
     /// Which of the three profile files existed before.
     existed: Vec<bool>,
     staging_existed: bool,
+}
+
+fn install_kind() -> String {
+    KIND_INSTALL.to_owned()
 }
 
 /// An install in progress.
@@ -44,7 +57,9 @@ pub enum RollbackError {
 pub struct RollbackReport {
     /// The journal undone.
     pub journal: String,
-    /// The Mod removed.
+    /// What was undone: `install` or `sort`.
+    pub kind: String,
+    /// The Mod removed (empty for a sort).
     pub r#mod: String,
     /// The profile restored.
     pub profile: String,
@@ -87,6 +102,19 @@ fn staging_exists(instance: &NvmodInstance, profile: &str) -> bool {
 /// # Errors
 /// A reason, when the journal or a backup could not be written (nothing else was changed).
 pub fn begin(instance: &NvmodInstance, profile: &str, name: &str) -> Result<Entry, String> {
+    begin_kind(instance, profile, name, KIND_INSTALL)
+}
+
+/// Like [`begin`], for a journal of the given kind (`name` is empty for a sort).
+///
+/// # Errors
+/// A reason, when the journal or a backup could not be written (nothing else was changed).
+pub fn begin_kind(
+    instance: &NvmodInstance,
+    profile: &str,
+    name: &str,
+    kind: &str,
+) -> Result<Entry, String> {
     let millis = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_millis());
@@ -109,6 +137,7 @@ pub fn begin(instance: &NvmodInstance, profile: &str, name: &str) -> Result<Entr
         r#mod: name.to_owned(),
         profile: profile.to_owned(),
         status: "in-progress".to_owned(),
+        kind: kind.to_owned(),
         existed,
         staging_existed: staging_exists(instance, profile),
     };
@@ -133,13 +162,19 @@ pub fn complete(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
 pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
     let journal = &entry.journal;
     let root = journal_root(instance).join(&journal.id);
-    let mod_dir = instance.mod_dir(&journal.r#mod);
-    if mod_dir.exists() {
-        fs::remove_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
+    let sort = journal.kind == KIND_SORT;
+    if !sort {
+        let mod_dir = instance.mod_dir(&journal.r#mod);
+        if mod_dir.exists() {
+            fs::remove_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
+        }
     }
     let dir = instance.profile_dir(&journal.profile);
-    // plugins.txt before loadorder.txt, so loadorder.txt stays the newest.
+    // plugins.txt before loadorder.txt, so loadorder.txt stays the newest. A sort leaves modlist.txt alone.
     for (index, file) in FILES.iter().enumerate().rev() {
+        if sort && index == 0 {
+            continue;
+        }
         let target = dir.join(file);
         if journal.existed[index] {
             let bytes = fs::read(root.join("backup").join(file))
@@ -193,6 +228,7 @@ pub fn rollback(instance: &NvmodInstance) -> Result<RollbackReport, RollbackErro
         }
         let report = RollbackReport {
             journal: journal.id.clone(),
+            kind: journal.kind.clone(),
             r#mod: journal.r#mod.clone(),
             profile: journal.profile.clone(),
         };

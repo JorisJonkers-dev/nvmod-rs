@@ -9,7 +9,7 @@
 
 pub mod extract;
 pub mod fomod;
-mod journal;
+pub mod journal;
 mod lists;
 
 use fomod::{Answers, Env, FileState, Module, Outcome};

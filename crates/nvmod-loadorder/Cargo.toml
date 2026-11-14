@@ -1,0 +1,23 @@
+[package]
+name = "nvmod-loadorder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "The Load order of a Profile: sorted by loot-rs, written to plugins.txt and loadorder.txt, and encoded in plugin file modification times."
+
+[dependencies]
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+nvmod-modinstall = { workspace = true }
+nvmod-stage = { workspace = true }
+# Linked as a library, pinned to a release tag (ADR-0003 of nv-linux). GPL-3.0-only, like this repository.
+loot-rs = { workspace = true }
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true
