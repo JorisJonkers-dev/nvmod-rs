@@ -1,0 +1,136 @@
+# The GUI workspace (gui/, ADR-0004 of nv-linux) on its own: GPUI is a heavy build (a cold one peaks near 9 GB), so
+# it never runs in the main Pipeline and only runs when the GUI or the two toolkit-free crates it drives change.
+# Not a required check; read the result before merging a change that touches gui/.
+name: GUI
+
+on:
+  pull_request:
+    paths:
+      - "gui/**"
+      - "crates/nvmod-ui-model/**"
+      - "crates/nvmod-ui-service/**"
+      - "scripts/check-gui-pins.sh"
+      - ".github/workflows/gui.yml"
+      - "rust-toolchain.toml"
+  push:
+    branches: [main]
+    paths:
+      - "gui/**"
+      - "crates/nvmod-ui-model/**"
+      - "crates/nvmod-ui-service/**"
+      - "scripts/check-gui-pins.sh"
+      - ".github/workflows/gui.yml"
+      - "rust-toolchain.toml"
+  workflow_dispatch:
+
+concurrency:
+  group: gui-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux (checks, build, launch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: gui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+        with:
+          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
+
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libx11-dev libx11-xcb-dev libxcb1-dev libxcb-xkb-dev libfontconfig-dev \
+            libfreetype-dev libssl-dev libvulkan-dev libgl1-mesa-dev mesa-vulkan-drivers xvfb
+
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5
+        with:
+          cache: true
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: "gui -> target"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Pins
+        working-directory: .
+        run: scripts/check-gui-pins.sh
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Tests, including the click test
+        run: cargo test --locked --workspace
+      - name: Dependencies
+        working-directory: .
+        run: mise exec -- cargo deny --locked --manifest-path gui/Cargo.toml check --config gui/deny.toml
+      - name: Release build (GPUI window and egui canary)
+        run: cargo build --locked --release -p nvmod-gui-gpui -p nvmod-gui-egui
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nvmod-gui-linux-x86_64
+          path: |
+            gui/target/release/nvmod-gui
+            gui/target/release/nvmod-gui-egui
+          retention-days: 14
+
+      # Gate: the window opens and survives. GitHub's runners have no GPU, so this uses a software Vulkan device
+      # (lavapipe) under a virtual X display; it can fail for reasons of the runner, so it does not fail the job yet.
+      - name: Launch check (software Vulkan, virtual display)
+        continue-on-error: true
+        run: xvfb-run -a ./target/release/nvmod-gui --smoke=4000
+
+  windows:
+    name: Windows (build, click test, launch)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: gui
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+        with:
+          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: "gui -> target"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Release build of the GPUI window
+        run: cargo build --locked --release -p nvmod-gui-gpui
+
+      - name: Tests, including the click test
+        run: cargo test --locked -p nvmod-gui-shell -p nvmod-gui-gpui
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nvmod-gui-windows-x86_64
+          path: gui/target/release/nvmod-gui.exe
+          retention-days: 14
+
+      # Gate: the window opens and the process exits cleanly by itself.
+      - name: Launch check
+        run: ./target/release/nvmod-gui.exe --smoke=4000
