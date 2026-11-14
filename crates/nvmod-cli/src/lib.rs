@@ -5,6 +5,7 @@
 mod args;
 mod catalog;
 mod doctor;
+mod import;
 mod init;
 mod pe;
 mod stage;
@@ -31,6 +32,8 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]
                               build the Staging tree: a hard-link tree of lowercased paths (copies with --copy
                               or where links cannot be made)
+  nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
+                              import one MO2 profile into a new Instance (the MO2 instance is only read)
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
@@ -57,6 +60,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("doctor") => doctor::run(&args[1..], out, err),
         Some("stage") => stage::run(&args[1..], out, err),
         Some("init") => init::run(&args[1..], out, err),
+        Some("import-mo2") => import::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
             OK
