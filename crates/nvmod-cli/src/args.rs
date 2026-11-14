@@ -10,6 +10,7 @@ pub struct Args {
     pub positional: Vec<String>,
     flags: Vec<String>,
     options: BTreeMap<String, String>,
+    every: Vec<(String, String)>,
 }
 
 impl Args {
@@ -34,6 +35,7 @@ impl Args {
                         .next()
                         .ok_or_else(|| format!("--{name} needs a value"))?;
                     parsed.options.insert(name.to_owned(), value.clone());
+                    parsed.every.push((name.to_owned(), value.clone()));
                 } else {
                     return Err(format!("unknown option --{name}"));
                 }
@@ -54,6 +56,16 @@ impl Args {
     #[must_use]
     pub fn option(&self, name: &str) -> Option<&str> {
         self.options.get(name).map(String::as_str)
+    }
+
+    /// Every value of `--name`, in the order given (for an option that may be repeated).
+    #[must_use]
+    pub fn option_all(&self, name: &str) -> Vec<&str> {
+        self.every
+            .iter()
+            .filter(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
+            .collect()
     }
 }
 
@@ -77,6 +89,9 @@ mod tests {
         assert!(a.flag("json") && !a.flag("other"));
         assert_eq!(a.option("profile"), Some("Default"));
         assert_eq!(a.option("game"), None);
+        let b = Args::parse(&words("--m x --m y"), &[], &["m"]).unwrap();
+        assert_eq!(b.option_all("m"), ["x", "y"]);
+        assert_eq!(b.option("m"), Some("y"));
     }
 
     #[test]
