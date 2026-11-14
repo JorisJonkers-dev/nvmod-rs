@@ -14,7 +14,8 @@ pub use base::{BaseBuilder, Store, snapshot};
 pub use mo2::{Mo2Builder, ModSpec, TempDir, write_file};
 pub use nvrs::{
     FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FAKE_FAILING_RELEASE_BINARY,
-    FAKE_RELEASE_BINARY, FakeNvRs, FakeRelease, FakeServer, Reply, capabilities_json, write_script,
+    FAKE_RELEASE_BINARY, FakeNvRs, FakeRelease, FakeServer, Reply, capabilities_json,
+    write_executable, write_script,
 };
 pub use pe::{ExportSpec, PeBuilder};
 pub use plugin::{PluginBuilder, ScdaBuilder};
