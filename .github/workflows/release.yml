@@ -45,17 +45,17 @@ jobs:
       # release-please cannot edit Cargo.lock: its JSONPath filters match nothing in an array of tables. Without
       # the lock bump the release PR fails every `--locked` build. So refresh the workspace members' own entries
       # on the release branch, with the App token so that CI runs on the new commit.
-      - if: ${{ steps.rp.outputs.pr }}
+      - if: ${{ steps.rp.outputs.pr != '' && steps.rp.outputs.pr != 'null' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          ref: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
           persist-credentials: false
-      - if: ${{ steps.rp.outputs.pr }}
+      - if: ${{ steps.rp.outputs.pr != '' && steps.rp.outputs.pr != 'null' }}
         name: Refresh the lock entries of the workspace crates
         env:
           PUSH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          BRANCH: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          BRANCH: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
         run: |
           set -euo pipefail
           cargo update --workspace
