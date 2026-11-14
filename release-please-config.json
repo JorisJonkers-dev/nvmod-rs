@@ -96,6 +96,11 @@
         },
         {
           "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(@.name=='nvmod-ui-service')].version"
+        },
+        {
+          "type": "toml",
           "path": "fuzz/Cargo.lock",
           "jsonpath": "$.package[?(@.name=='nvmod-catalog')].version"
         },
