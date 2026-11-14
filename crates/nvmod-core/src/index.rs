@@ -72,6 +72,13 @@ impl FileIndex {
         self.files.is_empty()
     }
 
+    /// Every file as (normalised path, providers winner first), in path order.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &[Provider])> {
+        self.files
+            .iter()
+            .map(|(key, providers)| (key.as_str(), providers.as_slice()))
+    }
+
     /// The files directly inside `dir` whose name ends with `suffix` (both compared without case), with their
     /// providers, in path order. `dir` has no trailing slash, for example `nvse/plugins`.
     pub fn in_dir<'a>(
@@ -137,6 +144,16 @@ mod tests {
             .map(|(k, _)| k)
             .collect();
         assert_eq!(found, ["nvse/plugins/a.dll", "nvse/plugins/e.dll"]);
+    }
+
+    #[test]
+    fn iter_walks_every_file_in_path_order() {
+        let mut index = FileIndex::new();
+        index.insert("a", "B/x.nif");
+        index.insert("b", "a/y.nif");
+        index.insert("b", "b/X.nif");
+        let seen: Vec<_> = index.iter().map(|(k, p)| (k, p.len())).collect();
+        assert_eq!(seen, [("a/y.nif", 1), ("b/x.nif", 2)]);
     }
 
     #[test]

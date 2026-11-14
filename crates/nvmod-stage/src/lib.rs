@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub use plan::Collision;
+pub use plan::{Collision, is_mod_metadata, mod_files};
 
 /// How to build the tree.
 #[derive(Debug, Clone, Copy, Default)]
@@ -108,8 +108,16 @@ fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> 
             ));
         }
     }
+    // Overwrite, the folder that captures what programs write, sits above every Mod.
+    let overwrite = instance.root.join(OVERWRITE_DIR);
+    if overwrite.is_dir() {
+        plan.add_dir("Overwrite", &overwrite, false);
+    }
     Ok(plan)
 }
+
+/// Folder of the Instance that holds Overwrite, the highest layer.
+pub const OVERWRITE_DIR: &str = "overwrite";
 
 /// Mods of `profile` whose files collide after lowercasing.
 ///

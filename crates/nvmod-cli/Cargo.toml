@@ -23,6 +23,7 @@ nvmod-doctor = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-stage = { workspace = true }
+nvmod-conflicts = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
