@@ -16,6 +16,19 @@ pub const TOOL: &str = "ttw-installer";
 /// The contract the record must meet.
 pub const CONTRACT: &str = "ttw-installer-result";
 
+/// What the wrapper answers to the handshake for the installers, which cannot answer it themselves: the one contract
+/// it writes and the versions of it (the same document `contracts --json` prints for a tool that has the command).
+///
+/// # Panics
+/// Never: the contract's snapshot is compiled in.
+#[must_use]
+pub fn handshake() -> Value {
+    let versions = builtin(CONTRACT)
+        .expect("the ttw-installer-result snapshot is compiled in")
+        .accepted();
+    json!({"contracts": [{"name": CONTRACT, "versions": versions}]})
+}
+
 /// What nvmod knows about the run besides the installer's own words.
 #[derive(Debug, Clone, Copy)]
 pub struct Facts<'a> {
@@ -59,6 +72,7 @@ pub fn normalise(facts: &Facts, report: Option<&str>) -> Result<Value, ToolError
     };
     let ok = facts.exit_code == 0;
     record.insert("schema_version".to_owned(), json!(1));
+    record.insert("contract".to_owned(), json!(CONTRACT));
     record
         .entry("installer")
         .or_insert_with(|| json!({"name": facts.installer.0, "version": facts.installer.1}));

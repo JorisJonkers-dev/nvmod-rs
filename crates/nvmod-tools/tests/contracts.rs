@@ -185,3 +185,107 @@ fn the_names_of_the_earlier_proposal_no_longer_satisfy_the_contract() {
             .is_err()
     );
 }
+
+#[test]
+fn a_document_with_the_wrong_contract_name_is_refused() {
+    for (contract, recorded, _) in CASES {
+        let mut doc = sample(recorded);
+        doc["contract"] = json!("some-other-contract");
+        let why = builtin(contract).unwrap().check(&doc).unwrap_err();
+        assert!(
+            matches!(why, ContractError::WrongName { .. }),
+            "{contract}: {why}"
+        );
+        assert!(why.to_string().contains("some-other-contract"), "{why}");
+    }
+}
+
+#[test]
+fn the_recorded_samples_name_their_contract_where_the_tool_does() {
+    for contract in ["lodwright-plan", "loot-sort", "ttw-installer-result"] {
+        let doc = sample(contract);
+        assert_eq!(doc["contract"], contract);
+        assert_eq!(
+            builtin(contract).unwrap().check_at(&doc, Some(1), true),
+            Ok(1)
+        );
+    }
+}
+
+#[test]
+fn a_name_is_only_required_after_the_handshake() {
+    let mut doc = sample("loot-sort");
+    doc.as_object_mut().unwrap().remove("contract");
+    let c = builtin("loot-sort").unwrap();
+    assert_eq!(c.check(&doc), Ok(1));
+    assert!(matches!(
+        c.check_at(&doc, Some(1), true),
+        Err(ContractError::WrongName { found: None, .. })
+    ));
+}
+
+#[test]
+fn the_wrapper_answers_the_handshake_for_the_ttw_installers() {
+    use nvmod_tools::{Handshake, negotiate, ttw};
+    let handshake = Handshake::from_value(&ttw::handshake()).unwrap();
+    let contract = builtin(ttw::CONTRACT).unwrap();
+    // It lists what the vendored contract accepts, and the lock's version of it is negotiable.
+    assert_eq!(
+        handshake.versions(ttw::CONTRACT).unwrap(),
+        contract.accepted()
+    );
+    assert_eq!(
+        negotiate(
+            ttw::TOOL,
+            ttw::CONTRACT,
+            1,
+            &contract.accepted(),
+            &handshake
+        ),
+        Ok(1)
+    );
+}
+
+#[test]
+fn the_record_the_wrapper_builds_names_its_contract() {
+    use nvmod_tools::ttw::{Facts, normalise};
+    let dir = std::path::Path::new("/out");
+    let facts = Facts {
+        installer: ("synthetic", "0.0.0"),
+        exit_code: 0,
+        output_dir: dir,
+        files_found: 1,
+    };
+    let record = normalise(&facts, None).unwrap();
+    assert_eq!(record["contract"], "ttw-installer-result");
+}
+
+#[test]
+fn the_lock_agrees_with_what_the_built_in_contracts_accept() {
+    // `tools.lock.toml` keeps the version each pin was tested with; the handshake clamp is what "consistent"
+    // means, so every locked contract must be one nvmod reads at that version.
+    for tool in &nvmod_tools::builtin_lock().tools {
+        for (name, version) in &tool.contracts {
+            let contract = builtin(name).unwrap_or_else(|| panic!("{name} is not built in"));
+            assert!(contract.accepted().contains(version), "{name} {version}");
+        }
+    }
+}
+
+#[test]
+fn a_document_above_the_negotiated_version_is_refused() {
+    use nvmod_tools::Contract;
+    let v1 = r#"{"type":"object","properties":{"schema_version":{"const":1}}}"#;
+    let v2 = r#"{"type":"object","properties":{"schema_version":{"const":2}}}"#;
+    let c = Contract::new("demo", None, &[(1, v1), (2, v2)]).unwrap();
+    let doc = json!({"schema_version": 2, "contract": "demo"});
+    assert_eq!(c.check_at(&doc, Some(2), true), Ok(2));
+    assert!(matches!(
+        c.check_at(&doc, Some(1), true),
+        Err(ContractError::AboveNegotiated {
+            found: 2,
+            negotiated: 1,
+            ..
+        })
+    ));
+}

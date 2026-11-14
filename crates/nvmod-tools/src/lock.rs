@@ -69,6 +69,10 @@ pub struct ToolEntry {
     /// The contracts the tool speaks: contract name to schema version.
     #[serde(default)]
     pub contracts: BTreeMap<String, u32>,
+    /// The first release of the tool that answers `contracts --json`. A pin from this release on must answer the
+    /// handshake; an earlier pin is grandfathered and its `contracts` entry implies what it speaks (ADR-0006).
+    #[serde(default)]
+    pub handshake_from: Option<String>,
     /// The attestation identity.
     #[serde(default)]
     pub attestation: Option<AttestationPin>,
@@ -149,6 +153,25 @@ impl Lock {
 }
 
 impl ToolEntry {
+    /// Whether the pinned release must answer the handshake: `handshake_from` is set and the pinned version is that
+    /// release or a later one. Versions compare as dot-separated integers (a prerelease suffix is ignored).
+    #[must_use]
+    pub fn handshake_required(&self) -> bool {
+        fn parts(version: &str) -> Vec<u64> {
+            version
+                .trim_start_matches('v')
+                .split(['-', '+'])
+                .next()
+                .unwrap_or("")
+                .split('.')
+                .map(|p| p.parse().unwrap_or(0))
+                .collect()
+        }
+        self.handshake_from
+            .as_deref()
+            .is_some_and(|from| parts(&self.version) >= parts(from))
+    }
+
     fn check(&self) -> Result<(), String> {
         let bad = |why: &str| Err(format!("tools.lock.toml: tool {}: {why}", self.name));
         if self.name.is_empty() || self.name.contains(['/', '\\']) || self.name.starts_with('.') {
@@ -367,5 +390,20 @@ tag = "v0.1.0"
             "tools.lock.toml records tag {tag}, which Cargo.toml does not use"
         );
         assert_eq!(format!("v{}", loot.version), tag);
+    }
+
+    #[test]
+    fn the_handshake_is_required_from_the_release_that_has_it() {
+        let entry = |version: &str, from: Option<&str>| {
+            let mut tool = builtin_lock().tools.remove(0);
+            tool.version = version.to_owned();
+            tool.handshake_from = from.map(str::to_owned);
+            tool
+        };
+        assert!(!entry("0.2.0", None).handshake_required());
+        assert!(!entry("0.2.0", Some("0.3.0")).handshake_required());
+        assert!(entry("0.3.0", Some("0.3.0")).handshake_required());
+        assert!(entry("v0.10.1", Some("0.3.0")).handshake_required());
+        assert!(entry("1.0.0-rc.1", Some("0.3.0")).handshake_required());
     }
 }
