@@ -1,0 +1,18 @@
+[package]
+name = "nvmod-import"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Imports a Mod Organizer 2 profile into an nvmod Instance: reads the MO2 instance, never writes to it."
+
+[dependencies]
+nvmod-core = { workspace = true }
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true
