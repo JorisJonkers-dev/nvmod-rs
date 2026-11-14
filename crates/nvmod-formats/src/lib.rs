@@ -9,6 +9,7 @@ pub mod instance;
 pub mod modlist;
 pub mod plugins;
 pub mod scan;
+pub mod scripts;
 pub mod text;
 pub mod winpath;
 
