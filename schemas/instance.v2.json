@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Instance",
+  "description": "The contents of `nvmod-instance.json`: an Instance and the base copy it points at.",
+  "type": "object",
+  "properties": {
+    "base": {
+      "description": "The absolute path of the base copy. Never written to.",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "Version of this file's layout; see [`INSTANCE_SCHEMA_VERSION`].",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "storefront": {
+      "description": "The storefront found when the Instance was made.",
+      "$ref": "#/$defs/Storefront"
+    },
+    "target": {
+      "description": "What the Instance runs on. Absent in a file of schema 1, which migrates to `vanilla`.",
+      "$ref": "#/$defs/Target",
+      "default": "vanilla"
+    }
+  },
+  "required": [
+    "schema_version",
+    "base",
+    "storefront"
+  ],
+  "$defs": {
+    "Storefront": {
+      "description": "Where a base copy came from.",
+      "oneOf": [
+        {
+          "description": "Steam: `steam_api.dll` beside the executable.",
+          "type": "string",
+          "const": "steam"
+        },
+        {
+          "description": "GOG: `goggame-1454587428.info` or `goglog.ini`.",
+          "type": "string",
+          "const": "gog"
+        },
+        {
+          "description": "Epic: a `.egstore` folder. Not supported.",
+          "type": "string",
+          "const": "epic"
+        },
+        {
+          "description": "No marker of a known store. Not supported.",
+          "type": "string",
+          "const": "unknown"
+        }
+      ]
+    },
+    "Target": {
+      "description": "What the Instance runs on: the vanilla engine with the script extender DLLs, or nv-rs with them built in.",
+      "oneOf": [
+        {
+          "description": "The original engine (Proton on Linux, native on Windows); xNVSE and JIP LN are external DLLs.",
+          "type": "string",
+          "const": "vanilla"
+        },
+        {
+          "description": "The nv-rs engine port, which has xNVSE and JIP LN built in.",
+          "type": "string",
+          "const": "nv-rs"
+        }
+      ]
+    }
+  }
+}

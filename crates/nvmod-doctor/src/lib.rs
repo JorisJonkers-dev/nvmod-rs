@@ -18,7 +18,7 @@ pub use report::{ExeReport, GameReport, PluginReport, Report, Summary};
 
 use nvmod_catalog::Catalog;
 use nvmod_core::Finding;
-use nvmod_formats::{Instance, Profile};
+use nvmod_formats::{Mo2Instance, Mo2Profile};
 use nvmod_pe::Version4;
 use std::path::Path;
 
@@ -32,8 +32,8 @@ pub const SCHEMA_VERSION: u32 = 1;
 /// Run every check.
 #[must_use]
 pub fn run(
-    instance: &Instance,
-    profile: &Profile,
+    instance: &Mo2Instance,
+    profile: &Mo2Profile,
     game_dir: Option<&Path>,
     catalog: &Catalog,
 ) -> Report {

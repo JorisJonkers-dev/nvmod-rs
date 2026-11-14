@@ -386,3 +386,34 @@ fn mods_are_hard_linked_unless_copying_is_asked_for() {
     assert_eq!(w.import(&["--copy"]).0, 0);
     assert_eq!(nlink(&w.instance()), 1);
 }
+
+#[test]
+fn the_import_writes_a_profile_record_that_loads() {
+    let w = World::new();
+    assert_eq!(w.import(&[]).0, 0);
+    let text = std::fs::read_to_string(w.instance().join("profiles/Example Profile/profile.json"))
+        .unwrap();
+    let record = nvmod_core::load_profile(&text).unwrap();
+    assert_eq!(record.name, "Example Profile");
+    assert_eq!(
+        record.load_order,
+        nvmod_formats::plugins::parse_plugin_list(LOADORDER)
+    );
+    assert_eq!(
+        record.active_plugins,
+        nvmod_formats::plugins::parse_plugin_list(PLUGINS)
+    );
+    assert!(
+        record
+            .mods
+            .iter()
+            .any(|m| m.name == "Example Mod" && m.enabled)
+    );
+    assert!(
+        record
+            .mods
+            .iter()
+            .any(|m| m.name == "Disabled Example" && !m.enabled)
+    );
+    assert!(record.mods.iter().all(|m| !m.name.ends_with("_separator")));
+}

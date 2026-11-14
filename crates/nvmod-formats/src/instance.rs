@@ -15,7 +15,7 @@ pub const MAX_EXECUTABLES: usize = 1000;
 
 /// Why an instance or a profile could not be opened.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InstanceError {
+pub enum Mo2Error {
     /// The directory has no `ModOrganizer.ini`.
     NotAnInstance(PathBuf),
     /// A file could not be read.
@@ -26,26 +26,26 @@ pub enum InstanceError {
     NoSuchProfile(String),
 }
 
-impl fmt::Display for InstanceError {
+impl fmt::Display for Mo2Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            InstanceError::NotAnInstance(dir) => {
+            Mo2Error::NotAnInstance(dir) => {
                 write!(
                     f,
                     "{} has no ModOrganizer.ini: not a Mod Organizer 2 instance",
                     dir.display()
                 )
             }
-            InstanceError::Io(why) => f.write_str(why),
-            InstanceError::BadProfileName(name) => {
+            Mo2Error::Io(why) => f.write_str(why),
+            Mo2Error::BadProfileName(name) => {
                 write!(f, "`{name}` is not a profile folder name")
             }
-            InstanceError::NoSuchProfile(name) => write!(f, "the instance has no profile `{name}`"),
+            Mo2Error::NoSuchProfile(name) => write!(f, "the instance has no profile `{name}`"),
         }
     }
 }
 
-impl std::error::Error for InstanceError {}
+impl std::error::Error for Mo2Error {}
 
 /// One entry of `[customExecutables]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +62,7 @@ pub struct Executable {
 
 /// What `ModOrganizer.ini` says, with the folders resolved.
 #[derive(Debug, Clone)]
-pub struct Instance {
+pub struct Mo2Instance {
     /// The instance folder (where `ModOrganizer.ini` is).
     pub root: PathBuf,
     /// The MO2 game plugin name (`TTW`, `FalloutNV`).
@@ -89,7 +89,7 @@ pub struct Instance {
 
 /// A profile folder, read.
 #[derive(Debug, Clone)]
-pub struct Profile {
+pub struct Mo2Profile {
     /// The profile's name (its folder name).
     pub name: String,
     /// The profile folder.
@@ -142,21 +142,21 @@ impl ModMeta {
     }
 }
 
-fn read_text(path: &Path) -> Result<String, InstanceError> {
+fn read_text(path: &Path) -> Result<String, Mo2Error> {
     read_limited(path)
         .map(|b| decode(&b))
-        .map_err(|e| InstanceError::Io(format!("{}: {e}", path.display())))
+        .map_err(|e| Mo2Error::Io(format!("{}: {e}", path.display())))
 }
 
-impl Instance {
+impl Mo2Instance {
     /// Open the instance in `root`.
     ///
     /// # Errors
     /// `root` has no `ModOrganizer.ini`, or it cannot be read.
-    pub fn open(root: &Path) -> Result<Instance, InstanceError> {
+    pub fn open(root: &Path) -> Result<Mo2Instance, Mo2Error> {
         let ini_path = root.join("ModOrganizer.ini");
         if !ini_path.is_file() {
-            return Err(InstanceError::NotAnInstance(root.to_path_buf()));
+            return Err(Mo2Error::NotAnInstance(root.to_path_buf()));
         }
         let ini = Ini::parse(&read_text(&ini_path)?);
         let mut issues = Vec::new();
@@ -200,7 +200,7 @@ impl Instance {
         let downloads_dir = resolve("download_directory", "downloads");
         let overwrite_dir = resolve("overwrite_directory", "overwrite");
         let executables = read_executables(&ini, &mut host);
-        Ok(Instance {
+        Ok(Mo2Instance {
             root: root.to_path_buf(),
             game_name: ini.get_string("General", "gameName").unwrap_or_default(),
             game_path_raw,
@@ -221,9 +221,9 @@ impl Instance {
     ///
     /// # Errors
     /// The `profiles` folder cannot be read.
-    pub fn profile_names(&self) -> Result<Vec<String>, InstanceError> {
+    pub fn profile_names(&self) -> Result<Vec<String>, Mo2Error> {
         let entries = std::fs::read_dir(&self.profiles_dir)
-            .map_err(|e| InstanceError::Io(format!("{}: {e}", self.profiles_dir.display())))?;
+            .map_err(|e| Mo2Error::Io(format!("{}: {e}", self.profiles_dir.display())))?;
         let mut names: Vec<String> = entries
             .flatten()
             .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
@@ -237,20 +237,20 @@ impl Instance {
     ///
     /// # Errors
     /// The name is not a plain folder name, the folder does not exist, or `modlist.txt` cannot be read.
-    pub fn load_profile(&self, name: &str) -> Result<Profile, InstanceError> {
+    pub fn load_profile(&self, name: &str) -> Result<Mo2Profile, Mo2Error> {
         if name.is_empty() || name.contains(['/', '\\']) || name == "." || name == ".." {
-            return Err(InstanceError::BadProfileName(name.to_owned()));
+            return Err(Mo2Error::BadProfileName(name.to_owned()));
         }
         let dir = self.profiles_dir.join(name);
         if !dir.is_dir() {
-            return Err(InstanceError::NoSuchProfile(name.to_owned()));
+            return Err(Mo2Error::NoSuchProfile(name.to_owned()));
         }
         let list = |file: &str| {
             read_limited(&dir.join(file))
                 .ok()
                 .map(|b| parse_plugin_list(&b))
         };
-        Ok(Profile {
+        Ok(Mo2Profile {
             name: name.to_owned(),
             modlist: Modlist::parse(&read_text(&dir.join("modlist.txt"))?),
             plugins: list("plugins.txt"),
@@ -278,7 +278,7 @@ impl Instance {
     /// Mod names of `profile` (separators and foreign entries left out) whose folder is missing, and folders
     /// under `mods/` that the profile does not list. MO2 repairs both on its next start; nvmod only reports.
     #[must_use]
-    pub fn reconcile(&self, profile: &Profile) -> (Vec<String>, Vec<String>) {
+    pub fn reconcile(&self, profile: &Mo2Profile) -> (Vec<String>, Vec<String>) {
         let listed: std::collections::HashSet<&str> = profile
             .modlist
             .entries
@@ -361,20 +361,20 @@ mod tests {
     #[test]
     fn errors_say_what_is_wrong() {
         assert!(
-            InstanceError::NotAnInstance(PathBuf::from("/x"))
+            Mo2Error::NotAnInstance(PathBuf::from("/x"))
                 .to_string()
                 .contains("ModOrganizer.ini")
         );
         assert!(
-            InstanceError::BadProfileName("a/b".into())
+            Mo2Error::BadProfileName("a/b".into())
                 .to_string()
                 .contains("a/b")
         );
         assert!(
-            InstanceError::NoSuchProfile("p".into())
+            Mo2Error::NoSuchProfile("p".into())
                 .to_string()
                 .contains('p')
         );
-        assert_eq!(InstanceError::Io("boom".into()).to_string(), "boom");
+        assert_eq!(Mo2Error::Io("boom".into()).to_string(), "boom");
     }
 }

@@ -5,7 +5,7 @@
 use crate::SUPPORTED_GAME_VERSION;
 use crate::report::{ExeReport, GameReport};
 use nvmod_core::{Finding, Severity};
-use nvmod_formats::Instance;
+use nvmod_formats::Mo2Instance;
 use nvmod_pe::inspect_file;
 use std::path::{Path, PathBuf};
 
@@ -25,7 +25,7 @@ fn find_file(dir: &Path, name: &str) -> Option<PathBuf> {
 }
 
 pub(crate) fn check(
-    instance: &Instance,
+    instance: &Mo2Instance,
     game_dir: Option<&Path>,
     findings: &mut Vec<Finding>,
 ) -> GameReport {
@@ -154,7 +154,7 @@ fn check_exe(dir: &Path, path: &Path, findings: &mut Vec<Finding>) -> ExeReport 
 }
 
 /// Whether anything launches xNVSE: an executable entry for the loader, or an executable that links the Steam stub.
-pub(crate) fn launch_target(instance: &Instance, game: &GameReport) -> Vec<Finding> {
+pub(crate) fn launch_target(instance: &Mo2Instance, game: &GameReport) -> Vec<Finding> {
     let launches_loader = instance.executables.iter().any(|e| {
         e.binary
             .replace('\\', "/")

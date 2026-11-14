@@ -4,7 +4,7 @@
 use nvmod_catalog::{Catalog, NvRs};
 use nvmod_core::Severity;
 use nvmod_doctor::{Report, run};
-use nvmod_formats::Instance;
+use nvmod_formats::Mo2Instance;
 use nvmod_testkit::{Mo2Builder, ModSpec, PeBuilder, TempDir, write_file};
 use std::path::Path;
 
@@ -66,7 +66,7 @@ fn find<'a>(report: &'a Report, code: &str) -> &'a nvmod_core::Finding {
 fn diagnose(builder: &Mo2Builder, game: Option<&Path>, catalog: &Catalog) -> Report {
     let root = TempDir::new("doctor-mo2");
     builder.write(root.path());
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     run(&instance, &profile, game, catalog)
 }
@@ -230,7 +230,7 @@ fn overwrite_beats_every_mod() {
         "NVSE/Plugins/a.dll",
         &plugin(),
     );
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let report = run(&instance, &profile, None, &Catalog::builtin());
     assert_eq!(report.plugins[0].winner, nvmod_doctor::OVERWRITE);
@@ -305,7 +305,7 @@ fn the_known_mac_ten_id_mismatch_is_found() {
         "meta.ini",
         b"[General]\r\nmodid=0\r\n",
     );
-    let instance = Instance::open(root_dir.path()).unwrap();
+    let instance = Mo2Instance::open(root_dir.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let report = run(&instance, &profile, None, &Catalog::builtin());
     let mismatch = find(&report, "meta.modid-mismatch");
@@ -341,7 +341,7 @@ fn profile_problems_are_reported() {
     let mut permissions = std::fs::metadata(&ini).unwrap().permissions();
     permissions.set_readonly(true);
     std::fs::set_permissions(&ini, permissions).unwrap();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let report = run(&instance, &profile, None, &Catalog::builtin());
     assert_eq!(find(&report, "profile.mod-folder-missing").subject, "Ghost");
@@ -473,7 +473,7 @@ fn an_unusable_game_path_is_a_warning_not_a_failure() {
         b"[General]\r\ngamePath=@ByteArray(C:\\\\Games\\\\FNV)\r\n",
     );
     write_file(root.path(), "profiles/Default/modlist.txt", b"");
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let report = run(&instance, &profile, None, &Catalog::builtin());
     assert!(

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Profile",
+  "description": "The contents of a Profile's `profile.json`: a named Load order together with the list of enabled Mods.",
+  "type": "object",
+  "properties": {
+    "active_plugins": {
+      "description": "The Plugins that are active, in Load order.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "load_order": {
+      "description": "All Plugin file names in Load order, later wins.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mods": {
+      "description": "The Mods in priority order, highest first, as in MO2's `modlist.txt` (the first Mod wins a file conflict).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProfileMod"
+      }
+    },
+    "name": {
+      "description": "The Profile's name, which is also its folder name.",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "Version of this file's layout; see [`PROFILE_SCHEMA_VERSION`].",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "name",
+    "mods",
+    "load_order",
+    "active_plugins"
+  ],
+  "$defs": {
+    "ProfileMod": {
+      "description": "One Mod in a Profile's list.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Whether the Mod is enabled in this Profile.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The Mod's folder name in the Instance.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "enabled"
+      ]
+    }
+  }
+}

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The nvmod Instance: which storefront a base copy of the game came from, and the skeleton folder an Instance
-//! lives in. The base copy is only ever read here; an Instance is a separate folder (docs/DECISIONS.md).
+//! The nvmod Instance on disk: which storefront a base copy of the game came from, and the skeleton folder an
+//! Instance lives in. The base copy is only ever read here; an Instance is a separate folder (docs/DECISIONS.md).
+//! The Instance and Profile types themselves are owned by `nvmod-core`.
 
 mod instance;
 mod storefront;
 
-pub use instance::{Config, INSTANCE_FILE, InstanceError, NvmodInstance};
-pub use storefront::{Storefront, find_ci};
+pub use instance::{INSTANCE_FILE, InstanceError, KIND_MIGRATE, NvmodInstance, PROFILE_FILE};
+pub use nvmod_core::Storefront;
+pub use storefront::{detect_storefront, find_ci};

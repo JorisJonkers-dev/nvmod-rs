@@ -31,7 +31,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         return REFUSED;
     }
     let result = NvmodInstance::open(root)
-        .map_err(|e| StageError::Refused(e.to_string()))
+        .map_err(|e| StageError::Refused(crate::install_mod::describe_open_error(root, &e)))
         .and_then(|instance| {
             let profile = instance
                 .resolve_profile(args.option("profile"))

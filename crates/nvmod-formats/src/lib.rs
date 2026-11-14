@@ -12,5 +12,5 @@ pub mod scan;
 pub mod text;
 pub mod winpath;
 
-pub use instance::{Executable, Instance, InstanceError, ModMeta, Profile};
+pub use instance::{Executable, Mo2Error, Mo2Instance, Mo2Profile, ModMeta};
 pub use modlist::{EntryKind, ModState, Modlist, ModlistEntry};

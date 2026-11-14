@@ -2,7 +2,7 @@
 //! The journal and the backups of an install, under `<instance>/.nvmod/journal/<id>/`: `journal.json` and a copy
 //! of the three profile files as they were. `nvmod rollback` undoes the newest install that is not undone yet.
 
-use nvmod_instance::NvmodInstance;
+use nvmod_instance::{INSTANCE_FILE, KIND_MIGRATE, NvmodInstance};
 use nvmod_stage::Options;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -57,7 +57,7 @@ pub enum RollbackError {
 pub struct RollbackReport {
     /// The journal undone.
     pub journal: String,
-    /// What was undone: `install` or `sort`.
+    /// What was undone: `install`, `sort` or `migrate`.
     pub kind: String,
     /// The Mod removed (empty for a sort).
     pub r#mod: String,
@@ -162,6 +162,15 @@ pub fn complete(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
 pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
     let journal = &entry.journal;
     let root = journal_root(instance).join(&journal.id);
+    if journal.kind == KIND_MIGRATE {
+        // A schema migration only rewrote the Instance file: put the old file back.
+        let old = fs::read(root.join("backup").join(INSTANCE_FILE))
+            .map_err(|e| format!("backup of {INSTANCE_FILE}: {e}"))?;
+        write_atomic(&instance.root.join(INSTANCE_FILE), &old)?;
+        let mut done = journal.clone();
+        "rolled-back".clone_into(&mut done.status);
+        return save(&root, &done);
+    }
     let sort = journal.kind == KIND_SORT;
     if !sort {
         let mod_dir = instance.mod_dir(&journal.r#mod);

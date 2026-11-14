@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The instance reader on instances built in code.
 
-use nvmod_formats::{EntryKind, Instance, InstanceError, ModState};
+use nvmod_formats::{EntryKind, Mo2Error, Mo2Instance, ModState};
 use nvmod_testkit::{Mo2Builder, ModSpec, TempDir, write_file};
 
 fn sample() -> (TempDir, TempDir) {
@@ -36,7 +36,7 @@ fn sample() -> (TempDir, TempDir) {
 #[test]
 fn the_instance_is_read_with_wine_paths_mapped() {
     let (game, root) = sample();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     assert_eq!(instance.game_name, "TTW");
     assert_eq!(instance.game_path.as_deref(), Some(game.path()));
     assert_eq!(instance.selected_profile.as_deref(), Some("Second"));
@@ -55,7 +55,7 @@ fn the_instance_is_read_with_wine_paths_mapped() {
 #[test]
 fn a_profile_is_read_with_its_lists() {
     let (_game, root) = sample();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     assert_eq!(profile.modlist.entries.len(), 5);
     assert_eq!(profile.modlist.entries[2].kind, EntryKind::Separator);
@@ -78,7 +78,7 @@ fn a_profile_is_read_with_its_lists() {
 #[test]
 fn reconcile_reports_missing_and_unlisted_mods() {
     let (_game, root) = sample();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let (missing, unlisted) = instance.reconcile(&profile);
     assert_eq!(missing, ["Ghost"]);
@@ -92,7 +92,7 @@ fn a_read_only_fallout_ini_is_noticed() {
     let mut permissions = std::fs::metadata(&path).unwrap().permissions();
     permissions.set_readonly(true);
     std::fs::set_permissions(&path, permissions).unwrap();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     assert!(
         instance
             .load_profile("Default")
@@ -104,33 +104,33 @@ fn a_read_only_fallout_ini_is_noticed() {
 #[test]
 fn bad_input_is_refused_with_a_reason() {
     let (_game, root) = sample();
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     for name in ["", "..", ".", "a/b", "a\\b"] {
         assert!(
             matches!(
                 instance.load_profile(name),
-                Err(InstanceError::BadProfileName(_))
+                Err(Mo2Error::BadProfileName(_))
             ),
             "{name:?}"
         );
     }
     assert!(matches!(
         instance.load_profile("Nope"),
-        Err(InstanceError::NoSuchProfile(_))
+        Err(Mo2Error::NoSuchProfile(_))
     ));
     let empty = TempDir::new("empty");
     assert!(matches!(
-        Instance::open(empty.path()),
-        Err(InstanceError::NotAnInstance(_))
+        Mo2Instance::open(empty.path()),
+        Err(Mo2Error::NotAnInstance(_))
     ));
     std::fs::remove_file(root.path().join("profiles/Second/modlist.txt")).unwrap();
     assert!(matches!(
         instance.load_profile("Second"),
-        Err(InstanceError::Io(_))
+        Err(Mo2Error::Io(_))
     ));
     assert!(matches!(
-        Instance::open(&root.path().join("ModOrganizer.ini")),
-        Err(InstanceError::NotAnInstance(_))
+        Mo2Instance::open(&root.path().join("ModOrganizer.ini")),
+        Err(Mo2Error::NotAnInstance(_))
     ));
     let missing_profiles = TempDir::new("noprofiles");
     write_file(
@@ -138,8 +138,8 @@ fn bad_input_is_refused_with_a_reason() {
         "ModOrganizer.ini",
         b"[General]\r\n",
     );
-    let bare = Instance::open(missing_profiles.path()).unwrap();
-    assert!(matches!(bare.profile_names(), Err(InstanceError::Io(_))));
+    let bare = Mo2Instance::open(missing_profiles.path()).unwrap();
+    assert!(matches!(bare.profile_names(), Err(Mo2Error::Io(_))));
     assert_eq!(bare.game_path, None);
     assert_eq!(bare.executables.len(), 0);
 }
@@ -152,7 +152,7 @@ fn directory_overrides_and_unmapped_drives_are_honoured_or_reported() {
         "ModOrganizer.ini",
         b"[General]\r\ngamePath=@ByteArray(C:\\\\Games\\\\FNV)\r\n[Settings]\r\nbase_directory=@ByteArray(Z:/data/mo2)\r\nmod_directory=%BASE_DIR%/elsewhere/mods\r\ndownload_directory=dl\r\nprofiles_directory=\r\n[customExecutables]\r\nsize=2\r\n1\\binary=C:/x/tool.exe\r\n1\\title=Tool\r\n1\\arguments=-a \"b\"\r\n",
     );
-    let instance = Instance::open(root.path()).unwrap();
+    let instance = Mo2Instance::open(root.path()).unwrap();
     assert_eq!(
         instance.mods_dir,
         std::path::PathBuf::from("/data/mo2/elsewhere/mods")

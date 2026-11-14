@@ -6,7 +6,7 @@
 use crate::SUPPORTED_GAME_VERSION;
 use nvmod_catalog::Catalog;
 use nvmod_core::{Finding, Severity};
-use nvmod_instance::{NvmodInstance, Storefront, find_ci};
+use nvmod_instance::{NvmodInstance, Storefront, detect_storefront, find_ci};
 use nvmod_pe::{Version4, inspect_file};
 use serde::Serialize;
 use std::path::Path;
@@ -104,7 +104,7 @@ pub fn check_base(dir: &Path) -> Result<BaseReport, String> {
     if !dir.is_dir() {
         return Err(format!("{} is not a folder", dir.display()));
     }
-    let storefront = Storefront::detect(dir);
+    let storefront = detect_storefront(dir);
     if let Some(reason) = storefront.refusal() {
         return Err(reason.to_owned());
     }
