@@ -11,6 +11,7 @@ pub mod extract;
 pub mod fomod;
 pub mod journal;
 mod lists;
+pub mod mods;
 
 use fomod::{Answers, Env, FileState, Module, Outcome};
 use nvmod_instance::{NvmodInstance, find_ci};

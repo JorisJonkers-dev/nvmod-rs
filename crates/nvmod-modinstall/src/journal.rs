@@ -14,6 +14,10 @@ pub const KIND_INSTALL: &str = "install";
 /// Staging tree, and never touches a Mod folder or `modlist.txt`.
 pub const KIND_SORT: &str = "sort";
 
+/// The kind of journal that `nvmod mods enable|disable|reorder` writes: it restores `modlist.txt` and the Staging
+/// tree, and never touches a Mod folder, `plugins.txt` or `loadorder.txt`.
+pub const KIND_MODS: &str = "mods";
+
 const FILES: [&str; 3] = ["modlist.txt", "plugins.txt", "loadorder.txt"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,9 +61,9 @@ pub enum RollbackError {
 pub struct RollbackReport {
     /// The journal undone.
     pub journal: String,
-    /// What was undone: `install`, `sort` or `migrate`.
+    /// What was undone: `install`, `sort`, `mods` or `migrate`.
     pub kind: String,
-    /// The Mod removed (empty for a sort).
+    /// The Mod removed (empty for a sort or a mods change).
     pub r#mod: String,
     /// The profile restored.
     pub profile: String,
@@ -88,7 +92,7 @@ fn save(root: &Path, journal: &Journal) -> Result<(), String> {
     write_atomic(&root.join("journal.json"), text.as_bytes())
 }
 
-fn staging_exists(instance: &NvmodInstance, profile: &str) -> bool {
+pub(crate) fn staging_exists(instance: &NvmodInstance, profile: &str) -> bool {
     instance.staging_dir(profile).exists()
         || instance
             .root
@@ -172,7 +176,8 @@ pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
         return save(&root, &done);
     }
     let sort = journal.kind == KIND_SORT;
-    if !sort {
+    let mods = journal.kind == KIND_MODS;
+    if !sort && !mods {
         let mod_dir = instance.mod_dir(&journal.r#mod);
         if mod_dir.exists() {
             fs::remove_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
@@ -181,7 +186,8 @@ pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
     let dir = instance.profile_dir(&journal.profile);
     // plugins.txt before loadorder.txt, so loadorder.txt stays the newest. A sort leaves modlist.txt alone.
     for (index, file) in FILES.iter().enumerate().rev() {
-        if sort && index == 0 {
+        // A sort leaves modlist.txt alone; a mods change only touches modlist.txt.
+        if (sort && index == 0) || (mods && index != 0) {
             continue;
         }
         let target = dir.join(file);
