@@ -103,6 +103,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-doctor",
  "nvmod-formats",
+ "nvmod-instance",
  "nvmod-pe",
  "nvmod-testkit",
  "serde",
@@ -125,6 +126,7 @@ dependencies = [
  "nvmod-catalog",
  "nvmod-core",
  "nvmod-formats",
+ "nvmod-instance",
  "nvmod-pe",
  "nvmod-testkit",
  "serde",
@@ -138,6 +140,15 @@ dependencies = [
  "nvmod-core",
  "nvmod-testkit",
  "proptest",
+]
+
+[[package]]
+name = "nvmod-instance"
+version = "0.1.0"
+dependencies = [
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,21 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]`.
+//! `nvmod doctor --base <dir>` or `nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json]
+//! [--fail-on <severity>]`.
 
-use crate::{FOUND, OK, USAGE, args::Args};
+use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
 use nvmod_catalog::Catalog;
 use nvmod_core::Severity;
 use nvmod_formats::Instance;
+use nvmod_instance::NvmodInstance;
 use std::io::Write;
 use std::path::Path;
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    let parsed = Args::parse(args, &["json"], &["instance", "profile", "game", "fail-on"]);
+    let parsed = Args::parse(
+        args,
+        &["json"],
+        &["base", "instance", "profile", "game", "fail-on"],
+    );
     let args = match parsed {
-        Ok(args) if args.positional.is_empty() && args.option("instance").is_some() => args,
+        Ok(args)
+            if args.positional.is_empty()
+                && (args.option("instance").is_some() != args.option("base").is_some()) =>
+        {
+            args
+        }
         Ok(_) => {
             let _ = writeln!(
                 err,
-                "usage: nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]"
+                "usage: nvmod doctor (--base <dir> | --instance <dir> [--profile <name>] [--game <dir>]) [--json] [--fail-on <severity>]"
             );
             return USAGE;
         }
@@ -43,7 +54,17 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         }
         FOUND
     };
-    let instance = match Instance::open(Path::new(args.option("instance").unwrap_or_default())) {
+    if let Some(base) = args.option("base") {
+        return base_doctor(Path::new(base), json, fail_on, out, err);
+    }
+    let instance_dir = Path::new(args.option("instance").unwrap_or_default());
+    if NvmodInstance::is_instance(instance_dir) {
+        return match NvmodInstance::open(instance_dir) {
+            Ok(instance) => base_doctor(&instance.config.base, json, fail_on, out, err),
+            Err(why) => fail(why.to_string(), out, err),
+        };
+    }
+    let instance = match Instance::open(instance_dir) {
         Ok(instance) => instance,
         Err(why) => return fail(why.to_string(), out, err),
     };
@@ -68,6 +89,45 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         args.option("game").map(Path::new),
         &Catalog::builtin(),
     );
+    if json {
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&report).unwrap_or_default()
+        );
+    } else {
+        let _ = out.write_all(report.to_text().as_bytes());
+    }
+    if report.worst().is_some_and(|worst| worst >= fail_on) {
+        FOUND
+    } else {
+        OK
+    }
+}
+
+/// The Doctor on a base copy; a refused storefront exits 2 with the reason.
+fn base_doctor(
+    base: &Path,
+    json: bool,
+    fail_on: Severity,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let report = match nvmod_doctor::check_base(base) {
+        Ok(report) => report,
+        Err(reason) => {
+            if json {
+                let _ = writeln!(
+                    out,
+                    "{}",
+                    serde_json::json!({ "refused": true, "reason": reason })
+                );
+            } else {
+                let _ = writeln!(err, "nvmod doctor: refused: {reason}");
+            }
+            return REFUSED;
+        }
+    };
     if json {
         let _ = writeln!(
             out,

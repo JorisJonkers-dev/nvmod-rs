@@ -2,8 +2,10 @@
 //! Builders for test data. Every file the tests, golden files and fuzz seeds use is made here, in code: real game
 //! files and mod files never enter the repository (`scripts/repo_guards.py` enforces it).
 
+mod base;
 mod mo2;
 mod pe;
 
+pub use base::{BaseBuilder, Store, snapshot};
 pub use mo2::{Mo2Builder, ModSpec, TempDir, write_file};
 pub use pe::{ExportSpec, PeBuilder};

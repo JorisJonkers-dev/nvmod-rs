@@ -12,6 +12,7 @@ description = "The read-only NVSE doctor: composes PE inspection, the catalogue 
 nvmod-core = { workspace = true }
 nvmod-pe = { workspace = true }
 nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
 nvmod-catalog = { workspace = true }
 serde = { workspace = true }
 
