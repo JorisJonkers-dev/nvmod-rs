@@ -7,6 +7,11 @@
 # Nothing is pinned for download yet: nv-rs, lodwright-rs and the TTW installers have published no release asset
 # with a checksum and an attestation. The first one to appear is added here in the bump pull request that also
 # refreshes its contract snapshots.
+#
+# TTW installer, checked 2026-11-14: SulfurNitride/TTW_Linux_Installer 0.2.0 (tag a32b93d, GPL-3.0) is the newest
+# release, but it has no binary asset (the release page's two files are the source archives), no checksum and no
+# attestation. Its release workflow only runs for `v*` tags, and the 0.1.2 to 0.2.0 tags are not `v*`. The official
+# installer is a download behind a mod.pub account, with no stable URL. Pin the first release that carries a binary.
 schema_version = 1
 
 # loot-rs is linked, not fetched: its version is the tag Cargo.toml depends on (a test keeps the two equal).
