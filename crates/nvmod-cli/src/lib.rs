@@ -4,6 +4,7 @@
 
 mod args;
 mod catalog;
+mod conflicts;
 mod doctor;
 mod import;
 mod init;
@@ -66,6 +67,12 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               list them, enable or disable some, move one; a change edits only modlist.txt,
                               stages the profile again when it was staged, and is undone by `nvmod rollback`
                               (--dry-run writes nothing)
+  nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--json]
+                              the file-level conflicts of a profile (read only): who wins each contested path,
+                              and per Mod whether it overwrites, is overwritten, is mixed or redundant
+  nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]
+                              the virtual Data folder (read only): which Mod provides each path; the file set
+                              of `nvmod stage`
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--masterlist <file>] [--catalog <file>]
@@ -197,6 +204,8 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("pe") => pe::run(&args[1..], out, err),
         Some("catalog") => catalog::run(&args[1..], out, err),
         Some("doctor") => doctor::run(&args[1..], out, err),
+        Some("conflicts") => conflicts::run_conflicts(&args[1..], out, err),
+        Some("tree") => conflicts::run_tree(&args[1..], out, err),
         Some("stage") => stage::run(&args[1..], out, err),
         Some("init") => init::run(&args[1..], out, err),
         Some("import-mo2") => import::run(&args[1..], out, err),

@@ -704,6 +704,7 @@ dependencies = [
  "ctrlc",
  "loot-rs",
  "nvmod-catalog",
+ "nvmod-conflicts",
  "nvmod-core",
  "nvmod-doctor",
  "nvmod-formats",
@@ -716,6 +717,19 @@ dependencies = [
  "nvmod-stage",
  "nvmod-testkit",
  "nvmod-tools",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nvmod-conflicts"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
  "serde",
  "serde_json",
 ]
