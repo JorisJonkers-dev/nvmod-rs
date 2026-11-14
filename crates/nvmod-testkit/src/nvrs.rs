@@ -5,6 +5,9 @@
 //! that stand in for `gh` and `curl`. The fake `nv-viewer` answers `--check` like the real one (exit 0 when the game
 //! can start, 1 when not) and prints the arguments it got. Nothing here is a real nv-rs file or game file.
 
+// Test support: it builds fixtures with `tar` and `chmod`, which is not product code (ADR-0005).
+#![allow(clippy::disallowed_methods)]
+
 use crate::write_file;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};

@@ -12,6 +12,7 @@ description = "Installs a Mod from an archive into an nvmod Instance: extraction
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
+nvmod-runner = { workspace = true }
 nvmod-stage = { workspace = true }
 roxmltree = "0.21.2"
 serde = { workspace = true }

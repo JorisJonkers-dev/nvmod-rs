@@ -2,7 +2,6 @@
 //! `nvmod setup`, run as a program: a synthetic base copy, a fake nv-rs release served from a folder, a fake TTW
 //! installer script, fixture archives and a masterlist, all written in code. No network, no game data.
 #![cfg(unix)]
-
 use nvmod_testkit::{
     BaseBuilder, FakeRelease, Mo2Builder, ModSpec, PluginBuilder, TempDir, ZipBuilder, snapshot,
     write_file, write_script,

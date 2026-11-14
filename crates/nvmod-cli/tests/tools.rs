@@ -3,7 +3,6 @@
 //! that records how it was called, and the tool is a tiny shell script; the lock file is written by each test and
 //! points at the fake server. No network, no game data.
 #![cfg(unix)]
-
 use nvmod_testkit::{BaseBuilder, FakeServer, Reply, TempDir, write_script};
 use nvmod_tools::sha256_hex;
 use serde_json::Value;

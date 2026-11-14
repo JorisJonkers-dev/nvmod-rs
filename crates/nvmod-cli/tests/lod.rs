@@ -3,7 +3,6 @@
 //! how it was called and prints the plan lodwright-rs v0.1.0 prints for its synthetic worldspaces (a golden file
 //! copied from its tests). No network, no game data.
 #![cfg(unix)]
-
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file, write_script};
 use nvmod_tools::{platform, sha256_hex};
 use serde_json::Value;
