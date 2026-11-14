@@ -10,8 +10,11 @@ mod init;
 mod install_mod;
 mod install_nvrs;
 mod pe;
+mod profile;
+mod setup;
 mod sort;
 mod stage;
+mod target;
 mod tools;
 mod ttw;
 
@@ -68,6 +71,18 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               verify the base game, run the installer with the Fallout 3 folder (it verifies
                               Fallout 3), check its reported result, import the output as the Mod
                               `Tale of Two Wastelands`; a failure exits 4 and changes nothing
+  nvmod profile create --instance <dir> [--name <name>]
+                              make an empty profile (default name `Default`)
+  nvmod target <vanilla|nv-rs> --instance <dir>
+                              choose what the Instance runs on (the Doctor checks xNVSE's DLL on vanilla)
+  nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
+                [--fallout3 <dir> [--package <file>] [--installer <path>] [--lock <file>] [--store <dir>]]
+                [--release | --source <dir>] [--skip-nv-rs] [--profile <name>] [--answers <file>]
+                [--dry-run] [--json]
+                              base copy to a modded, Doctor-clean Instance in one run: init (or the MO2 import),
+                              nv-rs, TTW, each --mod, stage, `sort --apply`, then the Doctor. A failing step
+                              removes what the run made and exits with its code; --dry-run lists the steps and
+                              writes nothing; --json prints one event per line (plan, step, finished)
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
   nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
@@ -102,6 +117,9 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("import-mo2") => import::run(&args[1..], out, err),
         Some("install") => install_mod::run_install(&args[1..], out, err),
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
+        Some("profile") => profile::run(&args[1..], out, err),
+        Some("target") => target::run(&args[1..], out, err),
+        Some("setup") => setup::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
         Some("ttw") => ttw::run(&args[1..], out, err),
