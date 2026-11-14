@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures"]
+members = ["crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures", "crates/nvmod-ui-model"]
 # fuzz/ is its own workspace (libfuzzer-sys stays out of the shipped crates).
 exclude = ["fuzz"]
 
