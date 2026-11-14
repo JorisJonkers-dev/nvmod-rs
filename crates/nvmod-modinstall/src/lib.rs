@@ -278,6 +278,9 @@ fn clean(path: &str) -> Result<String, String> {
 /// reused). Returns the final relative paths.
 fn build(plan: &Plan, dest: &Path) -> Result<(), String> {
     for (source, relative) in plan {
+        if nvmod_core::cancel::requested() {
+            return Err(nvmod_core::cancel::INTERRUPTED.to_owned());
+        }
         let mut target = dest.to_path_buf();
         let parts: Vec<_> = relative.split('/').collect();
         for (i, part) in parts.iter().enumerate() {
@@ -345,11 +348,9 @@ fn read_answers(path: &Path) -> Result<Answers, String> {
     })
 }
 
+/// Where a step may fail: an injected failure (`NVMOD_FAIL_AT`) or a termination request.
 fn fail_point(step: &str) -> Result<(), String> {
-    if std::env::var("NVMOD_FAIL_AT").is_ok_and(|v| v == step) {
-        return Err(format!("injected failure at step `{step}` (NVMOD_FAIL_AT)"));
-    }
-    Ok(())
+    nvmod_core::cancel::step_point(step)
 }
 
 /// Extract the archive and work out what goes into the Mod.

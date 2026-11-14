@@ -3,6 +3,7 @@
 //! files that mods provide, and the Instance and Profile data model with its schema. No input or output happens
 //! here; the crates that read files fill these types.
 
+pub mod cancel;
 mod finding;
 mod index;
 mod model;

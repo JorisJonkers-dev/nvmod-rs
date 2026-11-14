@@ -247,11 +247,9 @@ fn differs(path: &Path, bytes: &[u8]) -> bool {
     fs::read(path).map_or(true, |old| old != bytes)
 }
 
+/// Where a step may fail: an injected failure (`NVMOD_FAIL_AT`) or a termination request.
 fn fail_point(step: &str) -> Result<(), String> {
-    if std::env::var("NVMOD_FAIL_AT").is_ok_and(|v| v == step) {
-        return Err(format!("injected failure at step `{step}` (NVMOD_FAIL_AT)"));
-    }
-    Ok(())
+    nvmod_core::cancel::step_point(step)
 }
 
 /// Write the proposed order: `plugins.txt` and `loadorder.txt` together, then the modification times of the

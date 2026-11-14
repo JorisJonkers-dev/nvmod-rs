@@ -516,3 +516,54 @@ fn the_help_lists_the_command() {
     assert_eq!(code, 0);
     assert!(out.contains("nvmod ttw"), "{out}");
 }
+
+/// Run `nvmod ttw` with a slow installer that creates `started` and then sleeps; send SIGTERM once it started.
+#[test]
+fn sigterm_while_the_installer_runs_stops_it_and_leaves_the_instance_as_it_was() {
+    use std::process::Stdio;
+    let rig = Rig::new();
+    let started = rig.work.path().join("started");
+    let installer = rig.installer(&format!("touch {}\nexec sleep 60\n", started.display()));
+    let lock = rig.lock_pinned(&installer);
+    let before = snapshot(&rig.root());
+    let root = rig.root();
+    let child = Command::new(env!("CARGO_BIN_EXE_nvmod"))
+        .args([
+            "ttw",
+            "--instance",
+            root.to_str().unwrap(),
+            "--fallout3",
+            rig.fo3.path().to_str().unwrap(),
+            "--installer",
+            &installer,
+            "--lock",
+            &lock,
+            "--json",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let start = std::time::Instant::now();
+    while !started.exists() {
+        assert!(
+            start.elapsed().as_secs() < 60,
+            "the installer never started"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    let status = Command::new("kill")
+        .args(["-TERM", &child.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let out = child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(4), "{out:?}");
+    let text = String::from_utf8_lossy(&out.stdout);
+    let record: Value = serde_json::from_str(text.lines().last().unwrap()).unwrap();
+    assert_eq!(record["event"], "finished");
+    assert_eq!(record["outcome"], "rolled-back");
+    assert_eq!(record["interrupted"], true);
+    assert!(!mod_installed(&rig));
+    assert_eq!(snapshot(&rig.root()), before, "the Instance is as it was");
+}

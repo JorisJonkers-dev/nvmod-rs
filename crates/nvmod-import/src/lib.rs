@@ -315,6 +315,7 @@ fn build(
     let mut counts = (0, 0);
     let mut mods = 0;
     for entry in &profile.modlist.entries {
+        nvmod_core::cancel::step_point("import-mod")?;
         if entry.state == ModState::Foreign {
             unmapped.push(Finding::new(
                 "import.foreign-entry",

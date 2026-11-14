@@ -9,6 +9,7 @@ publish.workspace = true
 description = "Runs the external tools nvmod drives: versioned contracts, schema validation of their output and the one subprocess runner."
 
 [dependencies]
+nvmod-core = { workspace = true }
 jsonschema = { version = "0.30", default-features = false }
 serde = { workspace = true }
 serde_json = { workspace = true }
