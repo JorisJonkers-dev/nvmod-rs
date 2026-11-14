@@ -47,6 +47,23 @@ fn walk(dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) {
     }
 }
 
+/// Whether a file at `relative` in a Mod folder is not a game file: the `meta.ini` at the top is MO2's metadata,
+/// and a file ending in `.mohidden` is one MO2 hid (it is not a provider, so the next Mod's file shows).
+#[must_use]
+pub fn is_mod_metadata(relative: &str) -> bool {
+    relative.eq_ignore_ascii_case("meta.ini") || relative.to_lowercase().ends_with(".mohidden")
+}
+
+/// The game files of a Mod (or Overwrite) folder as (path with `/` as the Mod spells it, full path), sorted,
+/// without what [`is_mod_metadata`] names. Symbolic links are skipped.
+#[must_use]
+pub fn mod_files(dir: &Path) -> Vec<(String, PathBuf)> {
+    let mut files = Vec::new();
+    walk(dir, "", &mut files);
+    files.retain(|(relative, _)| !is_mod_metadata(relative));
+    files
+}
+
 impl Plan {
     /// Add the files of `dir`, replacing what earlier calls put at the same path. `base` is the game's `Data`
     /// folder; a Mod's `meta.ini` at its top is MO2's metadata, not a game file.
@@ -56,7 +73,7 @@ impl Plan {
         let mut seen: BTreeMap<String, Vec<String>> = BTreeMap::new();
         let mut chosen: BTreeMap<String, PathBuf> = BTreeMap::new();
         for (relative, path) in files {
-            if !base && relative.eq_ignore_ascii_case("meta.ini") {
+            if !base && is_mod_metadata(&relative) {
                 continue;
             }
             let key = relative.to_lowercase();

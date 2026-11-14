@@ -209,6 +209,33 @@ fn a_plain_archive_is_placed_enabled_at_highest_priority_and_staged() {
 }
 
 #[test]
+fn a_nexus_named_archive_writes_its_provenance_into_meta_ini() {
+    let s = Scratch::new();
+    let zip = s.archive("Better Rocks-83815-1-10-2-1699999999.zip");
+    ZipBuilder::new()
+        .file("Meshes/Rock.nif", b"better rock")
+        .write(&zip);
+    let (code, report) = s.install_json(&zip, &["--name", "Better Rocks"]);
+    assert_eq!(code, 0, "{report}");
+    let meta = s.text("mods/Better Rocks/meta.ini");
+    assert_eq!(
+        meta,
+        "[General]\r\ngameName=newvegas\r\ninstallationFile=Better Rocks-83815-1-10-2-1699999999.zip\r\nmodid=83815\r\nversion=1.10.2\r\n"
+    );
+    assert!(!meta.contains(['/', '\\']), "no directory part: {meta}");
+    // The file is MO2's metadata, not game data.
+    assert!(!s.root().join("staging/Default/data/meta.ini").exists());
+    // A name that is not Nexus style writes no ids.
+    let plain = s.archive("Plain Mod.zip");
+    ZipBuilder::new().file("a.nif", b"x").write(&plain);
+    assert_eq!(s.install_json(&plain, &[]).0, 0);
+    assert_eq!(
+        s.text("mods/Plain Mod/meta.ini"),
+        "[General]\r\ngameName=newvegas\r\ninstallationFile=Plain Mod.zip\r\n"
+    );
+}
+
+#[test]
 fn a_folder_is_installed_like_an_archive_and_left_as_it_was() {
     let s = Scratch::new();
     let folder = s.archive("Generated Mod");

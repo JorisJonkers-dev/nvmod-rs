@@ -6,8 +6,8 @@
 
 use crate::fetch::{FetchError, Fetcher, get_with_retries};
 use crate::sha256_hex;
+use nvmod_runner::{Call, NETWORK_ENV, Runner, ToolError};
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
 /// Why a download was not accepted.
@@ -89,31 +89,54 @@ pub fn verify_attestation(
     file: &Path,
     identity: &Attestation,
 ) -> Result<(), VerifyError> {
-    let mut command = Command::new(gh);
-    command
-        .args(["attestation", "verify"])
-        .arg(file)
-        .args(["--repo", identity.repository]);
+    let mut args = vec![
+        "attestation".to_owned(),
+        "verify".to_owned(),
+        file.display().to_string(),
+        "--repo".to_owned(),
+        identity.repository.to_owned(),
+    ];
     if let Some(workflow) = identity.workflow {
-        command
-            .arg("--signer-workflow")
-            .arg(format!("{}/{workflow}", identity.repository));
+        args.push("--signer-workflow".to_owned());
+        args.push(format!("{}/{workflow}", identity.repository));
     }
     let name = file
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-    let out = command.output().map_err(|e| {
-        VerifyError::Verification(format!(
-            "attestation could not be checked, cannot run {} (install the GitHub CLI, `gh`, or pass its path): {e}",
-            gh.display()
-        ))
-    })?;
-    if out.status.success() {
+    // `gh` reads its login from the user's config folder or from a token variable.
+    let runner = Runner {
+        timeout: Duration::from_secs(120),
+        max_output: 4 * 1024 * 1024,
+        ..Runner::default()
+    }
+    .inherit(NETWORK_ENV)
+    .inherit(&[
+        "HOME",
+        "XDG_CONFIG_HOME",
+        "GH_CONFIG_DIR",
+        "GH_TOKEN",
+        "GITHUB_TOKEN",
+        "GH_HOST",
+    ]);
+    let out = runner
+        .run_any(&Call::new("gh", gh, &args))
+        .map_err(|e| match e {
+            ToolError::Failed { reason, .. } if reason.starts_with("cannot start") => {
+                VerifyError::Verification(format!(
+                    "attestation could not be checked, cannot run {} (install the GitHub CLI, `gh`, or pass its path): {reason}",
+                    gh.display()
+                ))
+            }
+            other => VerifyError::Verification(format!(
+                "attestation could not be checked: {other}"
+            )),
+        })?;
+    if out.exit_code == 0 {
         Ok(())
     } else {
         Err(VerifyError::Verification(format!(
             "attestation verification failed for {name} (a missing attestation counts as failed): {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            out.stderr.trim()
         )))
     }
 }

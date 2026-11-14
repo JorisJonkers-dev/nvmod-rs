@@ -10,10 +10,10 @@ description = "Runs the external tools nvmod drives: versioned contracts, schema
 
 [dependencies]
 nvmod-core = { workspace = true }
+nvmod-runner = { workspace = true }
 jsonschema = { version = "0.30", default-features = false }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sha2 = "0.10"
 toml = "1"
 
 [dev-dependencies]

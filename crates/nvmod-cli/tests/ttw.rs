@@ -4,7 +4,6 @@
 //! output folder and, when asked to, a report file. The lock file is written by each test. No network, no game
 //! data, no TTW package.
 #![cfg(unix)]
-
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file, write_script};
 use nvmod_tools::{Trust, platform, sha256_hex};
 use serde_json::Value;

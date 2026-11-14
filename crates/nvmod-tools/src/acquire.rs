@@ -151,7 +151,7 @@ impl Acquire<'_> {
             )));
         }
         let platform = platform();
-        let asset = entry.assets.get(&platform).ok_or_else(|| {
+        let asset = entry.asset_here().ok_or_else(|| {
             AcquireError::Refused(format!(
                 "{} {} pins no file for {platform}",
                 entry.name, entry.version

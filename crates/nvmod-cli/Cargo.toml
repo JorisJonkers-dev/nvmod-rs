@@ -23,6 +23,9 @@ nvmod-doctor = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-stage = { workspace = true }
+nvmod-conflicts = { workspace = true }
+nvmod-backup = { workspace = true }
+nvmod-plugins = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
@@ -36,6 +39,8 @@ ctrlc = { version = "3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
+nvmod-plugins = { workspace = true }
+jsonschema = { version = "0.30", default-features = false }
 
 [lints]
 workspace = true

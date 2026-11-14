@@ -349,6 +349,31 @@ fn read_answers(path: &Path) -> Result<Answers, String> {
 }
 
 /// Where a step may fail: an injected failure (`NVMOD_FAIL_AT`) or a termination request.
+/// The `gameName` of a `meta.ini` nvmod writes: the Nexus game domain of Fallout: New Vegas.
+const META_GAME_NAME: &str = "newvegas";
+
+/// Write the Mod's `meta.ini`: `gameName`, `modid` and `version` when the archive's file name is in Nexus style
+/// (`<name>-<modid>-<version>-<timestamp>`), and `installationFile` as the file name only. A `meta.ini` that the
+/// archive carried is edited in place, so its other lines stay as they were; a folder install has no archive
+/// name and writes only `gameName`.
+fn write_meta(mod_dir: &Path, archive: &Path) -> Result<(), String> {
+    let path = mod_dir.join("meta.ini");
+    let mut meta = nvmod_formats::metaini::MetaIni::parse(&fs::read(&path).unwrap_or_default());
+    meta.set("General", "gameName", META_GAME_NAME);
+    if archive.is_file() {
+        let file = archive
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        meta.set_installation_file(&file);
+        if let Some(nexus) = nvmod_formats::metaini::parse_nexus_name(&file) {
+            meta.set_modid(nexus.modid);
+            meta.set_version(&nexus.version);
+        }
+    }
+    journal::write_atomic(&path, &meta.to_bytes())
+}
+
 fn fail_point(step: &str) -> Result<(), String> {
     nvmod_core::cancel::step_point(step)
 }
@@ -478,6 +503,7 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
         let mod_dir = instance.mod_dir(&name);
         fs::create_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
         build(&plan, &mod_dir)?;
+        write_meta(&mod_dir, request.archive)?;
         fail_point("lists")?;
         journal::write_atomic(&dir.join("modlist.txt"), &new_modlist)?;
         if let Some((p, o)) = &new_lists {

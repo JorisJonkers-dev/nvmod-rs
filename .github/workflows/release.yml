@@ -1,15 +1,13 @@
 # release-please keeps a release pull request open; merging it tags vX.Y.Z, writes CHANGELOG.md and bumps the
-# version in Cargo.toml (release-please-config.json) and the lock files (the step below). Nothing is published: no crates.io, no
-# registry, no binaries (the game data needed to use the tool never leaves the owner's machine anyway).
+# version in Cargo.toml (release-please-config.json) and the lock files (the step below). Nothing goes to crates.io or a
+# registry. When a release is created, release-assets.yml builds the CLI archives and attaches them (ADR-0009).
 name: Release
 
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: release
@@ -18,6 +16,12 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
       # Author the release PR with the personal-stack-agents App token (not the
       # default GITHUB_TOKEN) so CI runs on the PR without a manual approval
@@ -41,17 +45,17 @@ jobs:
       # release-please cannot edit Cargo.lock: its JSONPath filters match nothing in an array of tables. Without
       # the lock bump the release PR fails every `--locked` build. So refresh the workspace members' own entries
       # on the release branch, with the App token so that CI runs on the new commit.
-      - if: ${{ steps.rp.outputs.pr }}
+      - if: ${{ steps.rp.outputs.pr != '' && steps.rp.outputs.pr != 'null' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          ref: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
           persist-credentials: false
-      - if: ${{ steps.rp.outputs.pr }}
+      - if: ${{ steps.rp.outputs.pr != '' && steps.rp.outputs.pr != 'null' }}
         name: Refresh the lock entries of the workspace crates
         env:
           PUSH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          BRANCH: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          BRANCH: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
         run: |
           set -euo pipefail
           cargo update --workspace
@@ -61,3 +65,19 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "chore(release): refresh the workspace lock entries"
           git push "https://x-access-token:${PUSH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/${BRANCH}"
+
+  # A tag created with the default token starts no workflow of its own, so the asset build is dispatched from here
+  # (a dispatch made with the default token does start a run).
+  release-assets:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the asset build for the new tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: gh workflow run release-assets.yml --repo "$REPO" --ref "$TAG" -f tag="$TAG" -f publish=true

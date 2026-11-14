@@ -12,8 +12,8 @@ use nvmod_instance::NvmodInstance;
 use nvmod_loadorder::{Error, read_slots, staging_data};
 use nvmod_tools::lodwright::{self, Request};
 use nvmod_tools::{
-    Call, Lock, Runner, Store, StoreState, ToolEntry, ToolError, builtin, builtin_lock,
-    call_contract, pin_of,
+    Call, Lock, Negotiation, Runner, Store, StoreState, ToolEntry, ToolError, builtin,
+    builtin_lock, call_negotiated, pin_of,
 };
 use serde_json::{Value, json};
 use std::io::Write;
@@ -270,7 +270,17 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         );
         return ROLLED_BACK;
     };
-    let (version, plan) = match call_contract(&runner, &call, &contract) {
+    // A pin from the release that has `contracts --json` on is negotiated, clamped to the lock's version; an
+    // earlier pin is grandfathered (ADR-0006).
+    let negotiation = Negotiation {
+        lock_version: entry
+            .contracts
+            .get(lodwright::PLAN_CONTRACT)
+            .copied()
+            .unwrap_or_else(|| contract.current()),
+        required: entry.handshake_required(),
+    };
+    let (version, plan) = match call_negotiated(&runner, &call, &contract, negotiation) {
         Ok(r) => r,
         Err(e) => return tool_failed(err, &e),
     };

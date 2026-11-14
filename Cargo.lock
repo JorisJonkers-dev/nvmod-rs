@@ -688,6 +688,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-backup"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nvmod-catalog"
 version = "0.3.0"
 dependencies = [
@@ -702,8 +715,11 @@ name = "nvmod-cli"
 version = "0.3.0"
 dependencies = [
  "ctrlc",
+ "jsonschema",
  "loot-rs",
+ "nvmod-backup",
  "nvmod-catalog",
+ "nvmod-conflicts",
  "nvmod-core",
  "nvmod-doctor",
  "nvmod-formats",
@@ -713,9 +729,23 @@ dependencies = [
  "nvmod-loadorder",
  "nvmod-modinstall",
  "nvmod-pe",
+ "nvmod-plugins",
  "nvmod-stage",
  "nvmod-testkit",
  "nvmod-tools",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nvmod-conflicts"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
  "serde",
  "serde_json",
 ]
@@ -782,6 +812,7 @@ name = "nvmod-install"
 version = "0.3.0"
 dependencies = [
  "nvmod-instance",
+ "nvmod-runner",
  "nvmod-testkit",
  "nvmod-tools",
  "serde",
@@ -818,6 +849,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-runner",
  "nvmod-stage",
  "nvmod-testkit",
  "roxmltree",
@@ -835,6 +867,31 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "nvmod-plugins"
+version = "0.3.0"
+dependencies = [
+ "nvmod-conflicts",
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-loadorder",
+ "nvmod-modinstall",
+ "nvmod-testkit",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nvmod-runner"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-testkit",
+ "sha2",
 ]
 
 [[package]]
@@ -860,10 +917,10 @@ dependencies = [
  "jsonschema",
  "loot-rs",
  "nvmod-core",
+ "nvmod-runner",
  "nvmod-testkit",
  "serde",
  "serde_json",
- "sha2",
  "toml",
 ]
 

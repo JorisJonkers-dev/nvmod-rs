@@ -1,0 +1,4 @@
+# ADR-0005: every subprocess goes through nvmod-runner, the only crate that may start one.
+disallowed-methods = [
+    { path = "std::process::Command::new", reason = "start programs through nvmod_runner::Runner (ADR-0005); integration tests that run the built binary are not linted for this (see the clippy task)" },
+]

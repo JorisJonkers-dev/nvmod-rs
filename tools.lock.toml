@@ -4,7 +4,7 @@
 # workflow) that built it. A third-party tool (`kind = "third-party"`) may lack the attestation, and may lack the
 # checksum too: it is then refused until the owner runs `nvmod tools trust <tool> <version>`.
 #
-# Nothing is pinned for download yet: nv-rs, lodwright-rs and the TTW installers have published no release asset
+# Apart from the masterlist data file at the end, nothing is pinned for download yet: nv-rs, lodwright-rs and the TTW installers have published no release asset
 # with a checksum and an attestation. The first one to appear is added here in the bump pull request that also
 # refreshes its contract snapshots.
 #
@@ -24,3 +24,16 @@ contracts = { loot-sort = 1 }
 [tool.source]
 git = "https://github.com/JorisJonkers-dev/loot-rs"
 tag = "v0.2.0"
+
+# The LOOT masterlist of Fallout: New Vegas, a data file that `nvmod sort --fetch-masterlist` fetches (checked
+# 2026-11-14). The URL names a commit of branch v0.29 of github.com/loot/falloutnv (CC0-1.0), not the branch, so the
+# bytes never change under the checksum. The file is published without an attestation, so only the checksum is
+# checked. It has the platform key `any`. Bump the commit and the checksum together.
+[[tool]]
+name = "loot-masterlist-falloutnv"
+version = "v0.29-79b2bb6"
+kind = "third-party"
+
+[tool.assets.any]
+url = "https://raw.githubusercontent.com/loot/falloutnv/79b2bb6db4ce560e8ecd80f66b375618d3e33405/masterlist.yaml"
+sha256 = "ec2d9f340f1ad308aef4fa8e4190408a9ddf0a2148131945fdd95ffd38064ad4"

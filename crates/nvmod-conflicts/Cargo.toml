@@ -1,0 +1,23 @@
+[package]
+name = "nvmod-conflicts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "File-level conflicts between the Mods of an nvmod profile and the virtual Data tree (read only)."
+
+[dependencies]
+nvmod-core = { workspace = true }
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+nvmod-stage = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true

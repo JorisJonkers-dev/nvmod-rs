@@ -10,6 +10,7 @@ description = "Installs nv-rs into an nvmod Instance: builds it from source or f
 
 [dependencies]
 nvmod-instance = { workspace = true }
+nvmod-runner = { workspace = true }
 nvmod-tools = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

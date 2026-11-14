@@ -6,10 +6,11 @@
 //! any other special entry, more entries than [`Limits::max_entries`] or more bytes than [`Limits::max_bytes`]
 //! refuses the whole archive. Everything is checked while reading, before it is written.
 
+use nvmod_runner::{Call, Runner};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
+use std::time::Duration;
 
 /// How much an archive may hold.
 #[derive(Debug, Clone, Copy)]
@@ -30,6 +31,11 @@ impl Default for Limits {
 }
 
 /// Tools tried in `PATH`, in order, for archives without a built-in reader.
+/// How long an extraction tool may run.
+const TOOL_TIMEOUT: Duration = Duration::from_hours(1);
+/// How much of a tool's chatter is kept (it writes files, not output).
+const TOOL_OUTPUT_CAP: usize = 16 * 1024 * 1024;
+
 const TOOLS: [&str; 4] = ["7zz", "7z", "7za", "bsdtar"];
 
 /// A relative path made of normal components only, with `\` read as a separator (Windows archivers write it).
@@ -238,26 +244,51 @@ fn extract_tar(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String
 }
 
 fn run_tool(tool: &Path, archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
+    // Archive member names are not ASCII: the tool must read and write them as UTF-8.
+    let runner = Runner {
+        timeout: TOOL_TIMEOUT,
+        max_output: TOOL_OUTPUT_CAP,
+        max_stderr: TOOL_OUTPUT_CAP,
+        ..Runner::default()
+    }
+    .with_env("LC_ALL", "C.UTF-8");
+    run_tool_with(&runner, tool, archive, dest, limits)
+}
+
+fn run_tool_with(
+    runner: &Runner,
+    tool: &Path,
+    archive: &Path,
+    dest: &Path,
+    limits: Limits,
+) -> Result<(), String> {
     let name = tool
         .file_name()
         .map(|n| n.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_default();
-    let mut command = Command::new(tool);
-    if name.contains("tar") {
-        command.arg("-xf").arg(archive).arg("-C").arg(dest);
+    let args: Vec<String> = if name.contains("tar") {
+        vec![
+            "-xf".to_owned(),
+            archive.display().to_string(),
+            "-C".to_owned(),
+            dest.display().to_string(),
+        ]
     } else {
-        let mut out = std::ffi::OsString::from("-o");
-        out.push(dest);
-        command.arg("x").arg("-y").arg(out).arg(archive);
-    }
-    let output = command
-        .output()
+        vec![
+            "x".to_owned(),
+            "-y".to_owned(),
+            format!("-o{}", dest.display()),
+            archive.display().to_string(),
+        ]
+    };
+    let output = runner
+        .run_any(&Call::new("extractor", tool, &args))
         .map_err(|e| format!("cannot run {}: {e}", tool.display()))?;
-    if !output.status.success() {
+    if output.exit_code != 0 {
         return Err(format!(
             "{} failed: {}",
             tool.display(),
-            String::from_utf8_lossy(&output.stderr).trim()
+            output.stderr.trim()
         ));
     }
     let mut budget = Budget {
@@ -291,4 +322,71 @@ fn check_tree(dir: &Path, budget: &mut Budget) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use nvmod_testkit::{TempDir, write_script};
+
+    /// Run a script standing in for `7zz` that is given `body`, through the same path the real tool takes.
+    fn run_script(body: &str, runner: &Runner) -> Result<(), String> {
+        let dir = TempDir::new("extract-runner");
+        let tool = write_script(dir.path(), "7zz", body);
+        let dest = dir.path().join("out");
+        fs::create_dir(&dest).unwrap();
+        run_tool_with(
+            runner,
+            &tool,
+            &dir.path().join("a.7z"),
+            &dest,
+            Limits::default(),
+        )
+    }
+
+    #[test]
+    fn the_extractor_is_stopped_when_it_runs_too_long() {
+        let runner = Runner {
+            timeout: Duration::from_millis(300),
+            ..Runner::default()
+        };
+        let why = run_script("exec sleep 30", &runner).unwrap_err();
+        assert!(why.contains("longer than"), "{why}");
+    }
+
+    #[test]
+    fn the_extractor_is_stopped_when_it_writes_past_the_cap() {
+        let runner = Runner {
+            max_output: 1000,
+            ..Runner::default()
+        };
+        let why = run_script("exec yes", &runner).unwrap_err();
+        assert!(why.contains("cap of 1000"), "{why}");
+    }
+
+    #[test]
+    fn the_extractor_sees_only_the_scrubbed_environment() {
+        let dir = TempDir::new("extract-env");
+        let seen = dir.path().join("seen");
+        let tool = write_script(dir.path(), "7zz", &format!("env > {}", seen.display()));
+        let dest = dir.path().join("out");
+        fs::create_dir(&dest).unwrap();
+        run_tool(&tool, &dir.path().join("a.7z"), &dest, Limits::default()).unwrap();
+        let text = fs::read_to_string(seen).unwrap();
+        let names: Vec<&str> = text.lines().filter_map(|l| l.split('=').next()).collect();
+        assert!(
+            names.contains(&"PATH") && names.contains(&"LC_ALL"),
+            "{text}"
+        );
+        assert!(
+            !names.contains(&"HOME") && !names.contains(&"USER"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_failing_extractor_reports_its_complaint() {
+        let why = run_script("echo corrupt >&2; exit 2", &Runner::default()).unwrap_err();
+        assert!(why.contains("failed: corrupt"), "{why}");
+    }
 }

@@ -121,23 +121,12 @@ impl ModMeta {
     /// Read the text of a `meta.ini`.
     #[must_use]
     pub fn parse(text: &str) -> ModMeta {
-        let ini = Ini::parse(text);
-        let general = |key| ini.get_string("General", key).filter(|v| !v.is_empty());
+        let fields = crate::metaini::MetaIni::parse(text.as_bytes()).fields();
         ModMeta {
-            modid: general("modid")
-                .and_then(|v| v.parse().ok())
-                .filter(|&id| id != 0),
-            version: general("version"),
-            installation_file: general("installationFile")
-                .map(|p| {
-                    p.replace('\\', "/")
-                        .rsplit('/')
-                        .next()
-                        .unwrap_or_default()
-                        .to_owned()
-                })
-                .filter(|n| !n.is_empty()),
-            repository: general("repository"),
+            modid: fields.modid,
+            version: fields.version,
+            installation_file: fields.installation_file,
+            repository: fields.repository,
         }
     }
 }

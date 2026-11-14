@@ -3,9 +3,10 @@
   "title": "ttw-installer-result v1",
   "description": "The normalised record nvmod's wrapper builds from a TTW installer's exit code and report file. The external installers cannot emit it themselves, so nvmod owns this schema.",
   "type": "object",
-  "required": ["schema_version", "installer", "outcome", "exit_code", "fallout3_verified", "messages"],
+  "required": ["schema_version", "contract", "installer", "outcome", "exit_code", "fallout3_verified", "messages"],
   "properties": {
     "schema_version": { "const": 1 },
+    "contract": { "const": "ttw-installer-result" },
     "installer": {
       "type": "object",
       "required": ["name", "version"],

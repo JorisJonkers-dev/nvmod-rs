@@ -1,0 +1,128 @@
+{
+  "profile": "Default",
+  "mods": [
+    {
+      "name": "A",
+      "kind": "mod",
+      "position": 1,
+      "files": 3,
+      "wins": 3,
+      "losses": 0,
+      "overwrites": true,
+      "overwritten": false,
+      "mixed": false,
+      "redundant": false,
+      "overwrites_mods": [
+        "B",
+        "C"
+      ],
+      "overwritten_by_mods": []
+    },
+    {
+      "name": "B",
+      "kind": "mod",
+      "position": 2,
+      "files": 4,
+      "wins": 2,
+      "losses": 2,
+      "overwrites": true,
+      "overwritten": true,
+      "mixed": true,
+      "redundant": false,
+      "overwrites_mods": [
+        "C"
+      ],
+      "overwritten_by_mods": [
+        "A"
+      ]
+    },
+    {
+      "name": "C",
+      "kind": "mod",
+      "position": 3,
+      "files": 5,
+      "wins": 0,
+      "losses": 4,
+      "overwrites": false,
+      "overwritten": true,
+      "mixed": false,
+      "redundant": false,
+      "overwrites_mods": [],
+      "overwritten_by_mods": [
+        "A",
+        "B"
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "path": "meshes/c.nif",
+      "winner": {
+        "mod": "B",
+        "path": "meshes/c.nif"
+      },
+      "losers": [
+        {
+          "mod": "C",
+          "path": "meshes/c.nif"
+        }
+      ]
+    },
+    {
+      "path": "meshes/rock.nif",
+      "winner": {
+        "mod": "A",
+        "path": "Meshes/Rock.nif"
+      },
+      "losers": [
+        {
+          "mod": "B",
+          "path": "meshes/rock.nif"
+        }
+      ]
+    },
+    {
+      "path": "scripts/s.pex",
+      "winner": {
+        "mod": "A",
+        "path": "scripts/s.pex"
+      },
+      "losers": [
+        {
+          "mod": "C",
+          "path": "scripts/s.pex"
+        }
+      ]
+    },
+    {
+      "path": "sound/x.wav",
+      "winner": {
+        "mod": "B",
+        "path": "sound/x.wav"
+      },
+      "losers": [
+        {
+          "mod": "C",
+          "path": "sound/x.wav"
+        }
+      ]
+    },
+    {
+      "path": "textures/a.dds",
+      "winner": {
+        "mod": "A",
+        "path": "textures/a.dds"
+      },
+      "losers": [
+        {
+          "mod": "B",
+          "path": "Textures/A.dds"
+        },
+        {
+          "mod": "C",
+          "path": "textures/a.dds"
+        }
+      ]
+    }
+  ]
+}

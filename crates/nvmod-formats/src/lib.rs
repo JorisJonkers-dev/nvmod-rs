@@ -6,12 +6,16 @@
 
 pub mod ini;
 pub mod instance;
+pub mod lockedorder;
+pub mod metaini;
 pub mod modlist;
 pub mod plugins;
 pub mod scan;
 pub mod scripts;
 pub mod text;
+pub mod version;
 pub mod winpath;
 
 pub use instance::{Executable, Mo2Error, Mo2Instance, Mo2Profile, ModMeta};
+pub use lockedorder::LockedOrder;
 pub use modlist::{EntryKind, ModState, Modlist, ModlistEntry};

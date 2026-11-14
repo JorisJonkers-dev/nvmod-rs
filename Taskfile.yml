@@ -15,7 +15,11 @@ tasks:
 
   clippy:
     desc: Clippy with warnings denied
-    cmd: cargo clippy --locked --workspace --all-targets -- -D warnings
+    cmds:
+      # Product code first, with the ADR-0005 rule (no std::process::Command outside nvmod-runner) in force ...
+      - cargo clippy --locked --workspace -- -D warnings
+      # ... then tests and examples, which start the built binary and so are exempt from that one lint.
+      - cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed-methods
 
   test:
     desc: Tests and the line-coverage gate ({{.COVERAGE_MIN}}%)
@@ -42,7 +46,7 @@ tasks:
       - zizmor --offline --no-progress .github/workflows/
 
   guards:
-    desc: Repository guards on the whole tree (SPDX headers, no game data or binaries, .gitignore)
+    desc: Repository guards on the whole tree (SPDX headers, no game data or binaries, .gitignore, release handling of every crate)
     cmd: python3 -I scripts/repo_guards.py all
 
   scripts:

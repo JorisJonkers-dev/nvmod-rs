@@ -5,13 +5,18 @@
 //! `installation_check` entry; without one the default above is used.
 
 use crate::install::InstallError;
+use nvmod_runner::{Call, Runner};
 use std::path::Path;
-use std::process::Command;
+use std::time::Duration;
 
 /// The placeholder the manifest uses for the base copy's Data folder.
 const DATA_PLACEHOLDER: &str = "<data folder>";
 /// The name the manifest's check command must have: the only program nvmod runs is the installed viewer.
 const VIEWER: &str = "nv-viewer";
+/// How long the check may take. It reads the whole Data folder, so it is generous, but it cannot hang.
+const CHECK_TIMEOUT: Duration = Duration::from_mins(30);
+/// How much of the check's output is kept, per stream.
+const CHECK_OUTPUT_CAP: usize = 16 * 1024 * 1024;
 
 /// The default arguments of the check.
 pub(crate) fn default_arguments() -> Vec<String> {
@@ -58,6 +63,21 @@ pub struct Check {
 
 /// Run `viewer` with `arguments` against `data` (the placeholder is replaced by it).
 pub(crate) fn run(viewer: &Path, arguments: &[String], data: &Path) -> Result<Check, InstallError> {
+    let runner = Runner {
+        timeout: CHECK_TIMEOUT,
+        max_output: CHECK_OUTPUT_CAP,
+        max_stderr: CHECK_OUTPUT_CAP,
+        ..Runner::default()
+    };
+    run_with(&runner, viewer, arguments, data)
+}
+
+fn run_with(
+    runner: &Runner,
+    viewer: &Path,
+    arguments: &[String],
+    data: &Path,
+) -> Result<Check, InstallError> {
     let arguments: Vec<String> = arguments
         .iter()
         .map(|a| {
@@ -70,27 +90,22 @@ pub(crate) fn run(viewer: &Path, arguments: &[String], data: &Path) -> Result<Ch
         .collect();
     let mut command = vec![viewer.display().to_string()];
     command.extend(arguments.iter().cloned());
-    let out = Command::new(viewer)
-        .args(&arguments)
-        .output()
+    let out = runner
+        .run_any(&Call::new(VIEWER, viewer, &arguments))
         .map_err(|e| {
             InstallError::Failed(format!(
                 "cannot run the installation check {}: {e}",
                 command.join(" ")
             ))
         })?;
-    let output = format!(
-        "{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    );
-    if out.status.success() {
+    let output = format!("{}{}", String::from_utf8_lossy(&out.stdout), out.stderr);
+    if out.exit_code == 0 {
         Ok(Check { command, output })
     } else {
         Err(InstallError::Failed(format!(
-            "the installation check {} failed ({}):\n{}",
+            "the installation check {} failed (exit status: {}):\n{}",
             command.join(" "),
-            out.status,
+            out.exit_code,
             output.trim_end()
         )))
     }
@@ -99,6 +114,54 @@ pub(crate) fn run(viewer: &Path, arguments: &[String], data: &Path) -> Result<Ch
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    fn run_script(body: &str, runner: &Runner) -> Result<Check, InstallError> {
+        let dir = nvmod_testkit::TempDir::new("check-runner");
+        let script = nvmod_testkit::write_script(dir.path(), "nv-viewer", body);
+        run_with(runner, &script, &default_arguments(), dir.path())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_check_runs_with_a_scrubbed_environment() {
+        let check = run_script("env", &Runner::default()).unwrap();
+        assert!(check.output.contains("LC_ALL=C"), "{}", check.output);
+        assert!(!check.output.contains("HOME="), "{}", check.output);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_check_is_stopped_when_it_runs_too_long() {
+        let runner = Runner {
+            timeout: Duration::from_millis(300),
+            ..Runner::default()
+        };
+        let why = run_script("exec sleep 30", &runner).unwrap_err();
+        assert!(why.to_string().contains("longer than"), "{why}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_check_is_stopped_when_it_writes_past_the_cap() {
+        let runner = Runner {
+            max_output: 1000,
+            ..Runner::default()
+        };
+        let why = run_script("exec yes", &runner).unwrap_err();
+        assert!(why.to_string().contains("cap of 1000"), "{why}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_failing_check_keeps_its_exit_status_and_output() {
+        let why = run_script("echo broken >&2; exit 1", &Runner::default()).unwrap_err();
+        let text = why.to_string();
+        assert!(
+            text.contains("failed (exit status: 1)") && text.contains("broken"),
+            "{text}"
+        );
+    }
 
     #[test]
     fn no_entry_gives_the_default() {

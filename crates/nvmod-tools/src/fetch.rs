@@ -2,8 +2,8 @@
 //! Fetching a URL behind a trait. The real client shells out to `curl`, which every supported system has and which
 //! gives `https`, redirects, a hard timeout and `file://` without a TLS stack in nvmod (`docs/DECISIONS.md`).
 
+use nvmod_runner::{Call, NETWORK_ENV, Runner, ToolError};
 use std::path::PathBuf;
-use std::process::Command;
 use std::time::Duration;
 
 /// The time one request may take.
@@ -64,23 +64,28 @@ impl Curl {
 
 impl Fetcher for Curl {
     fn get(&self, url: &str) -> Result<Vec<u8>, FetchError> {
-        let out = Command::new(&self.program)
-            .args(Self::args(url))
-            .output()
-            .map_err(|e| {
-                FetchError::Fatal(format!("cannot run {}: {e}", self.program.display()))
+        // curl has its own `--max-time`; the runner's timeout only backs it up.
+        let runner = Runner {
+            timeout: Duration::from_secs(u64::from(TIMEOUT_SECS) + 30),
+            max_output: usize::try_from(MAX_BYTES).unwrap_or(usize::MAX),
+            ..Runner::default()
+        }
+        .inherit(NETWORK_ENV)
+        .inherit(&["HOME"]);
+        let args = Self::args(url);
+        let out = runner
+            .run_any(&Call::new("curl", &self.program, &args))
+            .map_err(|e| match e {
+                ToolError::Failed { reason, .. } if reason.starts_with("cannot start") => {
+                    FetchError::Fatal(reason)
+                }
+                other => FetchError::Transient(format!("{url}: curl: {other}")),
             })?;
-        if out.status.success() {
+        if out.exit_code == 0 {
             return Ok(out.stdout);
         }
-        let why = format!(
-            "{url}: curl {}: {}",
-            out.status
-                .code()
-                .map_or_else(|| "was stopped".to_owned(), |c| format!("exit {c}")),
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-        Err(match out.status.code() {
+        let why = format!("{url}: curl exit {}: {}", out.exit_code, out.stderr.trim());
+        Err(match Some(out.exit_code) {
             // 1 unsupported or unparsable reply, 8 weird reply, 18 partial file, 61 bad encoding.
             Some(1 | 8 | 18 | 61) => FetchError::Malformed(why),
             // 3 bad URL, 37 a file:// that cannot be read.
