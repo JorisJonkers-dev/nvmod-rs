@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "nv-rs-release-manifest v1",
+  "description": "The release-manifest.json of an nv-rs fork release (docs/architecture/integration.md section 7). Unknown fields are ignored.",
+  "type": "object",
+  "required": ["schema_version", "version", "upstream_base_commit", "executable_hashes", "play_patch", "plugins_txt_ordering"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "upstream_base_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "executable_hashes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    },
+    "source_tree_hash": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+    "play_patch": {
+      "type": "object",
+      "required": ["program", "args"],
+      "properties": {
+        "program": { "type": "string", "minLength": 1 },
+        "args": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "plugins_txt_ordering": { "type": "boolean" }
+  }
+}

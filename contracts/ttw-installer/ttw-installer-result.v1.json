@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ttw-installer-result v1",
+  "description": "The normalised record nvmod's wrapper builds from a TTW installer's exit code and report file. The external installers cannot emit it themselves, so nvmod owns this schema.",
+  "type": "object",
+  "required": ["schema_version", "installer", "outcome", "exit_code", "fallout3_verified", "messages"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "installer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "outcome": { "enum": ["success", "failed"] },
+    "exit_code": { "type": "integer" },
+    "output_dir": { "type": "string" },
+    "fallout3_verified": { "type": "boolean" },
+    "files_written": { "type": "integer", "minimum": 0 },
+    "messages": { "type": "array", "items": { "type": "string" } }
+  }
+}

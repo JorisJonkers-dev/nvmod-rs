@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "loot-sort v1",
+  "description": "Output of `loot-rs sort --json`. A snapshot of the schema loot-rs owns; a document without schema_version is read as version 1.",
+  "type": "object",
+  "required": ["sorted", "general_messages", "generated_general_messages", "plugins", "dirty", "rules", "dropped_group_rules", "not_installed", "warnings", "hard_violations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sorted": { "type": "array", "items": { "type": "string" } },
+    "general_messages": { "$ref": "#/$defs/messages" },
+    "generated_general_messages": { "$ref": "#/$defs/messages" },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "position", "active", "group", "messages", "generated_messages", "bash_tags", "tags_add", "tags_remove", "findings"],
+        "properties": {
+          "name": { "type": "string" },
+          "position": { "type": "integer", "minimum": 0 },
+          "active": { "type": "boolean" },
+          "group": { "type": "string" },
+          "messages": { "$ref": "#/$defs/messages" },
+          "generated_messages": { "$ref": "#/$defs/messages" },
+          "bash_tags": { "$ref": "#/$defs/strings" },
+          "tags_add": { "$ref": "#/$defs/strings" },
+          "tags_remove": { "$ref": "#/$defs/strings" },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "hard", "text"],
+              "properties": {
+                "kind": { "type": "string" },
+                "hard": { "type": "boolean" },
+                "text": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dirty": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["plugin", "crc", "status", "utility", "itm", "udr", "nav"],
+        "properties": {
+          "plugin": { "type": "string" },
+          "crc": { "type": "integer", "minimum": 0 },
+          "status": { "enum": ["dirty", "clean"] },
+          "utility": { "type": "string" },
+          "itm": { "type": "integer", "minimum": 0 },
+          "udr": { "type": "integer", "minimum": 0 },
+          "nav": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["before", "after", "source"],
+        "properties": {
+          "before": { "type": "string" },
+          "after": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "dropped_group_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["later", "earlier"],
+        "properties": {
+          "later": { "type": "string" },
+          "earlier": { "type": "string" }
+        }
+      }
+    },
+    "not_installed": { "$ref": "#/$defs/strings" },
+    "warnings": { "$ref": "#/$defs/strings" },
+    "hard_violations": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "strings": { "type": "array", "items": { "type": "string" } },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "text"],
+        "properties": {
+          "type": { "type": "string" },
+          "text": { "type": "string" }
+        }
+      }
+    }
+  }
+}

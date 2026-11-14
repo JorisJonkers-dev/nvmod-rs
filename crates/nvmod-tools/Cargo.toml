@@ -1,0 +1,22 @@
+[package]
+name = "nvmod-tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Runs the external tools nvmod drives: versioned contracts, schema validation of their output and the one subprocess runner."
+
+[dependencies]
+jsonschema = { version = "0.30", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+
+[dev-dependencies]
+loot-rs = { workspace = true }
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true

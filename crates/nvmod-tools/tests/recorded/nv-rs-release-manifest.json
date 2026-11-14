@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "version": "0.0.0-synthetic",
+  "upstream_base_commit": "0123456789abcdef0123456789abcdef01234567",
+  "executable_hashes": {
+    "nv-viewer": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  },
+  "source_tree_hash": "fedcba9876543210fedcba9876543210fedcba98",
+  "play_patch": { "program": "play-patch", "args": ["--base", "{base}", "--instance", "{instance}"] },
+  "plugins_txt_ordering": false,
+  "extra_field_a_newer_tool_may_add": true
+}

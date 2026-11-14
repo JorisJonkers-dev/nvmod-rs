@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lodwright-plan v1",
+  "description": "Output of `lodwright plan --json`. A snapshot of the schema lodwright-rs owns; a document without schema_version is read as version 1.",
+  "type": "object",
+  "required": ["worlds"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "worlds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "form_id", "cells", "bounds", "max_seam_error", "settings_path", "levels"],
+        "properties": {
+          "name": { "type": "string" },
+          "form_id": { "type": "string", "pattern": "^[0-9A-F]{8}$" },
+          "cells": { "type": "integer", "minimum": 0 },
+          "bounds": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["min_x", "min_y", "max_x", "max_y"],
+                "properties": {
+                  "min_x": { "type": "integer" },
+                  "min_y": { "type": "integer" },
+                  "max_x": { "type": "integer" },
+                  "max_y": { "type": "integer" }
+                }
+              }
+            ]
+          },
+          "max_seam_error": { "type": "number", "minimum": 0 },
+          "settings_path": { "type": "string" },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["level", "blocks", "vertices", "triangles", "max_error"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0 },
+                "blocks": { "type": "integer", "minimum": 0 },
+                "vertices": { "type": "integer", "minimum": 0 },
+                "triangles": { "type": "integer", "minimum": 0 },
+                "max_error": { "type": "number", "minimum": 0 }
+              }
+            }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["level", "x", "y", "step", "vertices", "triangles", "max_error", "mesh", "diffuse", "normal", "texture_size", "mips"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 0 },
+                "x": { "type": "integer" },
+                "y": { "type": "integer" },
+                "step": { "type": "integer", "minimum": 1 },
+                "vertices": { "type": "integer", "minimum": 0 },
+                "triangles": { "type": "integer", "minimum": 0 },
+                "max_error": { "type": "number", "minimum": 0 },
+                "mesh": { "type": "string" },
+                "diffuse": { "type": "string" },
+                "normal": { "type": "string" },
+                "texture_size": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2, "maxItems": 2 },
+                "mips": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
