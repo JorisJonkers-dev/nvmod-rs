@@ -9,6 +9,7 @@ mod import;
 mod init;
 mod install_mod;
 mod install_nvrs;
+mod lod;
 mod mods;
 mod pe;
 mod profile;
@@ -105,6 +106,13 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               against its install record, and the launch plan of the vanilla plus xNVSE path
                               (a Linux entry that invokes Proton, a Windows entry that runs the game executable
                               directly); exit 3 when verification fails
+  nvmod lod plan --instance <dir> [--profile <name>] [--world <name>] [--blocks] [--lodwright <path>]
+                [--lock <file>] [--store <dir>] [--timeout-secs <n>] [--json]
+  nvmod lod generate --instance <dir> ...
+                              plan the LOD blocks of the Load order through the pinned lodwright-rs (read only:
+                              nothing is written into the Instance; the plan is checked against the vendored
+                              contract, a tool failure exits 4); generate exits 2 with the reason until
+                              lodwright-rs can generate
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
   nvmod tools contracts [--json]
                               the tool contracts this nvmod reads and the schema versions it accepts (the current
@@ -200,6 +208,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
+        Some("lod") => lod::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
         Some("ttw") => ttw::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
