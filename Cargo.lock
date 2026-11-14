@@ -688,6 +688,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-backup"
+version = "0.3.0"
+dependencies = [
+ "nvmod-core",
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nvmod-catalog"
 version = "0.3.0"
 dependencies = [
@@ -703,6 +716,7 @@ version = "0.3.0"
 dependencies = [
  "ctrlc",
  "loot-rs",
+ "nvmod-backup",
  "nvmod-catalog",
  "nvmod-conflicts",
  "nvmod-core",

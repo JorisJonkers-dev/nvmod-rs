@@ -3,6 +3,7 @@
 //! on a GUI.
 
 mod args;
+mod backup;
 mod catalog;
 mod conflicts;
 mod doctor;
@@ -73,6 +74,15 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]
                               the virtual Data folder (read only): which Mod provides each path; the file set
                               of `nvmod stage`
+  nvmod backup create|list|prune --instance <dir> [--profile <name>] [--with-saves] [--keep <n>] [--days <n>]
+                [--dry-run] [--json]
+  nvmod backup restore <id|latest> --instance <dir> [--profile <name>] [--json]
+                              snapshots of a profile's lists, INIs and profile.json under .nvmod/backups with a
+                              manifest of hashes (real copies; saves only with --with-saves); install, mods and
+                              sort --apply take one first when the newest is over an hour old (set it in
+                              .nvmod/backups.json); prune keeps the newest 10 and one per day for 14 days;
+                              restore verifies (exit 3 on a mismatch), snapshots the current state first and
+                              refuses while the game runs; it also reads MO2's own timestamped list backups
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--masterlist <file>] [--catalog <file>]
@@ -153,6 +163,7 @@ fn writes_instance(args: &[String]) -> bool {
             Some("enable" | "disable" | "reorder")
         ),
         Some("sort") => args.iter().any(|a| a == "--apply"),
+        Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
         _ => false,
     }
 }
@@ -196,6 +207,10 @@ pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
 pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    backup::around(args, err, |err| dispatch(args, out, err))
+}
+
+fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     match args.first().map(String::as_str) {
         None | Some("--help" | "-h") => {
             let _ = out.write_all(HELP.as_bytes());
@@ -217,6 +232,7 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
+        Some("backup") => backup::run(&args[1..], out, err),
         Some("lod") => lod::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
         Some("ttw") => ttw::run(&args[1..], out, err),
