@@ -395,8 +395,8 @@ fn stage_refuses_a_folder_that_is_not_an_instance_and_a_vanished_base() {
 }
 
 #[test]
-fn stage_usage_errors_exit_with_two() {
+fn stage_usage_errors_exit_with_five() {
     let (code, _, err) = nvmod(&["stage"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("usage: nvmod stage"), "{err}");
 }

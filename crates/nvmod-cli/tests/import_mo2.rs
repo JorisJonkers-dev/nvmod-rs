@@ -296,7 +296,7 @@ fn an_unmapped_game_path_needs_a_base_and_other_refusals_exit_two() {
     let (mo2, inst) = (w.mo2.path().to_str().unwrap(), w.instance());
     let inst = inst.to_str().unwrap();
     let (code, _, err) = nvmod(&["import-mo2", "--mo2", mo2, "--instance", inst]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("--base"), "{err}");
     assert!(!w.instance().exists());
 
@@ -352,9 +352,9 @@ fn an_unmapped_game_path_needs_a_base_and_other_refusals_exit_two() {
 }
 
 #[test]
-fn import_usage_errors_exit_with_two() {
+fn import_usage_errors_exit_with_five() {
     let (code, _, err) = nvmod(&["import-mo2"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("usage: nvmod import-mo2"), "{err}");
 }
 

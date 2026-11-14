@@ -32,7 +32,7 @@ fn no_arguments_print_the_help() {
 #[test]
 fn an_unknown_command_is_a_usage_error() {
     let (code, _, err) = nvmod(&["frobnicate"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("unknown command `frobnicate`"));
 }
 
@@ -108,11 +108,11 @@ fn pe_on_a_file_that_is_not_a_pe_file_exits_with_one() {
 }
 
 #[test]
-fn pe_usage_errors_exit_with_two() {
-    assert_eq!(nvmod(&["pe"]).0, 2);
-    assert_eq!(nvmod(&["pe", "a", "b"]).0, 2);
+fn pe_usage_errors_exit_with_five() {
+    assert_eq!(nvmod(&["pe"]).0, 5);
+    assert_eq!(nvmod(&["pe", "a", "b"]).0, 5);
     let (code, _, err) = nvmod(&["pe", "--bogus"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("unknown option"));
 }
 
@@ -242,11 +242,11 @@ mod doctor {
     fn problems_with_the_arguments_or_the_instance_are_reported() {
         let (_game, root) = setup();
         let dir = root.path().to_str().unwrap();
-        assert_eq!(nvmod(&["doctor"]).0, 2);
-        assert_eq!(nvmod(&["doctor", "--instance"]).0, 2);
-        assert_eq!(nvmod(&["doctor", "--instance", dir, "extra"]).0, 2);
+        assert_eq!(nvmod(&["doctor"]).0, 5);
+        assert_eq!(nvmod(&["doctor", "--instance"]).0, 5);
+        assert_eq!(nvmod(&["doctor", "--instance", dir, "extra"]).0, 5);
         let (code, _, err) = nvmod(&["doctor", "--instance", dir, "--fail-on", "fatal"]);
-        assert_eq!((code, err.contains("--fail-on")), (2, true));
+        assert_eq!((code, err.contains("--fail-on")), (5, true));
         let (code, _, err) = nvmod(&["doctor", "--instance", dir, "--profile", "Nope"]);
         assert_eq!(code, 1);
         assert!(err.contains("no profile `Nope`"), "{err}");
@@ -285,6 +285,6 @@ fn catalog_lists_plugins_as_text_and_json() {
     let json: serde_json::Value = serde_json::from_str(&out).unwrap();
     assert_eq!(json["schema"], 1);
     assert!(json["plugins"].as_array().unwrap().len() > 30 && json["mods"][0]["name"] == "MAC-TEN");
-    assert_eq!(nvmod(&["catalog", "x"]).0, 2);
-    assert_eq!(nvmod(&["catalog", "--nope"]).0, 2);
+    assert_eq!(nvmod(&["catalog", "x"]).0, 5);
+    assert_eq!(nvmod(&["catalog", "--nope"]).0, 5);
 }

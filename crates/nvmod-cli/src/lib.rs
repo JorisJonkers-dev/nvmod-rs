@@ -16,11 +16,11 @@ use std::io::Write;
 pub const OK: u8 = 0;
 /// Exit code for a command that ran and found a problem it was asked to fail on.
 pub const FOUND: u8 = 1;
-/// Exit code for a command that was refused before it changed anything: an unsupported base copy, an Instance
-/// that would be overwritten, or a command line that could not be understood.
+/// Exit code for a command that was refused before it changed anything: an unsupported base copy or an Instance
+/// that would be overwritten.
 pub const REFUSED: u8 = 2;
-/// Exit code for a command line that could not be understood (a refusal).
-pub const USAGE: u8 = REFUSED;
+/// Exit code for a command line that could not be understood (unknown command or option, missing argument).
+pub const USAGE: u8 = 5;
 /// Exit code for a verification that failed (a checksum, an attestation); nothing was installed.
 pub const VERIFICATION: u8 = 3;
 /// Exit code for a step that failed and was rolled back.
@@ -43,9 +43,10 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
 exit codes:
   0  success
   1  problems found
-  2  refused (nothing was changed) or a command line that is not understood
+  2  refused (nothing was changed)
   3  verification failure
-  4  step failed and rolled back\n";
+  4  step failed and rolled back
+  5  command line not understood\n";
 
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
