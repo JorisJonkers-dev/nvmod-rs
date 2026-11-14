@@ -715,6 +715,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-fixtures"
+version = "0.1.0"
+dependencies = [
+ "nvmod-testkit",
+ "nvmod-tools",
+ "serde_json",
+]
+
+[[package]]
 name = "nvmod-formats"
 version = "0.1.0"
 dependencies = [
