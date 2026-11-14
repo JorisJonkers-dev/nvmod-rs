@@ -12,6 +12,7 @@ mod init;
 mod install_mod;
 mod install_nvrs;
 mod lod;
+mod logging;
 mod mods;
 mod nvse_usage;
 mod pe;
@@ -26,6 +27,8 @@ mod target;
 mod tools;
 mod ttw;
 mod verify;
+
+pub use logging::{begin as begin_run_log, run_logged};
 
 use std::io::Write;
 
@@ -168,6 +171,11 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               it is made executable, then its attestation), confirm a third-party tool that pins
                               no checksum, or run one (its SHA-256 is re-checked at every call)
   nvmod --version | --help
+
+every command writes a run log to logs/<run id>.ndjson in the state directory ($NVMOD_STATE_DIR, else
+$XDG_STATE_HOME/nvmod or ~/.local/state/nvmod; %LOCALAPPDATA%\\nvmod on Windows), with paths and secrets redacted; the
+last 20 runs or 50 MB are kept and nothing is sent anywhere. --log-level <off|error|warn|info|debug|trace> (or
+NVMOD_LOG) sets the text on standard error (default warn) and, above info, the log file.
 
 exit codes:
   0  success

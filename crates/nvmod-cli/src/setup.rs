@@ -779,6 +779,15 @@ fn emit_skipped(events: &mut Events, step: &Step, i: usize, total: usize) {
     );
 }
 
+/// Run one step's command inside a `step` span, so its run log lines carry the step's name.
+fn run_step(step: &Step, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let _span = tracing::info_span!("step", step = %step.name).entered();
+    tracing::info!("step started");
+    let code = crate::run(&step.args, out, err);
+    tracing::info!(exit_code = u64::from(code), "step finished");
+    code
+}
+
 /// Run the steps in order. A failure with `keep` set (and something finished) leaves the Instance resumable;
 /// otherwise it undoes the run. Either way the run finishes with that step's code.
 fn execute(
@@ -827,7 +836,7 @@ fn execute(
         );
         let mods_before = state::mods_snapshot(&instance);
         let (mut so, mut se) = (Vec::new(), Vec::new());
-        let mut code = crate::run(&step.args, &mut so, &mut se);
+        let mut code = run_step(step, &mut so, &mut se);
         let mut shown = detail(&so, &se);
         if code == OK && step.name != "verify" {
             let witness = state::witness_for(&step.name, &instance, &profile, &mods_before);
