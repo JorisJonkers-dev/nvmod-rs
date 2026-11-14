@@ -1,7 +1,7 @@
 # Releasing and verifying a release
 
 release-please opens a release pull request; merging it creates the tag `vX.Y.Z` and the GitHub release. `release.yml`
-then calls `release-assets.yml`, which builds `nvmod` from that tag with `--locked` and the compiler pinned in
+then dispatches `release-assets.yml`, which builds `nvmod` from that tag with `--locked` and the compiler pinned in
 `rust-toolchain.toml`, and attaches:
 
 | Asset | What it is |

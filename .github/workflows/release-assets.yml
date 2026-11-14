@@ -4,23 +4,12 @@
 #   SHA256SUMS, nvmod-<v>.cdx.json (CycloneDX SBOM), release-index.json
 # plus one GitHub artifact attestation over all of them, made by this workflow. Tools are never bundled.
 #
-# release.yml calls this workflow when release-please creates a release (a tag made with the default token starts no
-# other workflow). A manual dispatch on an existing tag is the dry run: it builds and attests, and uploads to the
-# release only when `publish` is true. Verify an asset with docs/releasing.md.
+# release.yml dispatches this workflow when release-please creates a release (a tag made with the default token starts
+# no other workflow), with publish true. A manual dispatch on an existing tag is the dry run: it builds and attests,
+# and uploads to the release only when `publish` is left false. Verify an asset with docs/releasing.md.
 name: Release assets
 
 on:
-  workflow_call:
-    inputs:
-      tag:
-        description: The release tag, vX.Y.Z
-        required: true
-        type: string
-      publish:
-        description: Upload the assets to the release
-        required: false
-        default: true
-        type: boolean
   workflow_dispatch:
     inputs:
       tag:
