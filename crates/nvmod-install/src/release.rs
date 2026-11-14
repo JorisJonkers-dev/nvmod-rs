@@ -3,7 +3,7 @@
 
 use crate::fetch::{FetchError, Fetcher, get_with_retries};
 use crate::install::InstallError;
-use crate::sha256::sha256_hex;
+use nvmod_tools::sha256_hex;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;

@@ -4,8 +4,8 @@
 use crate::build::{build_from_source, resolve_cargo};
 use crate::fetch::Curl;
 use crate::release::{self, Source};
-use crate::sha256::sha256_hex;
 use nvmod_instance::NvmodInstance;
+use nvmod_tools::sha256_hex;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
