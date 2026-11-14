@@ -18,7 +18,27 @@ pub const KIND_SORT: &str = "sort";
 /// tree, and never touches a Mod folder, `plugins.txt` or `loadorder.txt`.
 pub const KIND_MODS: &str = "mods";
 
-const FILES: [&str; 3] = ["modlist.txt", "plugins.txt", "loadorder.txt"];
+/// The kind of journal that `nvmod plugins ...` writes: it restores `plugins.txt`, `loadorder.txt` and
+/// `lockedorder.txt` and the Staging tree, and never touches a Mod folder or `modlist.txt`.
+pub const KIND_PLUGINS: &str = "plugins";
+
+const FILES: [&str; 4] = [
+    "modlist.txt",
+    "plugins.txt",
+    "loadorder.txt",
+    "lockedorder.txt",
+];
+
+/// Whether a journal of `kind` changes (and so restores) `FILES[index]`: an install the first three, a sort the
+/// two plugin lists, a mods change `modlist.txt`, a plugins change the plugin lists and `lockedorder.txt`.
+fn restores(kind: &str, index: usize) -> bool {
+    match kind {
+        KIND_SORT => index == 1 || index == 2,
+        KIND_MODS => index == 0,
+        KIND_PLUGINS => index >= 1,
+        _ => index < 3,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Journal {
@@ -30,7 +50,7 @@ struct Journal {
     /// `install` (also what a journal without this field is) or `sort`.
     #[serde(default = "install_kind")]
     kind: String,
-    /// Which of the three profile files existed before.
+    /// Which of the profile files existed before (an older journal has three entries).
     existed: Vec<bool>,
     staging_existed: bool,
 }
@@ -61,7 +81,7 @@ pub enum RollbackError {
 pub struct RollbackReport {
     /// The journal undone.
     pub journal: String,
-    /// What was undone: `install`, `sort`, `mods` or `migrate`.
+    /// What was undone: `install`, `sort`, `mods`, `plugins` or `migrate`.
     pub kind: String,
     /// The Mod removed (empty for a sort or a mods change).
     pub r#mod: String,
@@ -192,21 +212,20 @@ pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
     }
     let sort = journal.kind == KIND_SORT;
     let mods = journal.kind == KIND_MODS;
-    if !sort && !mods {
+    if !sort && !mods && journal.kind != KIND_PLUGINS {
         let mod_dir = instance.mod_dir(&journal.r#mod);
         if mod_dir.exists() {
             fs::remove_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
         }
     }
     let dir = instance.profile_dir(&journal.profile);
-    // plugins.txt before loadorder.txt, so loadorder.txt stays the newest. A sort leaves modlist.txt alone.
+    // plugins.txt before loadorder.txt, so loadorder.txt stays the newest. Each kind restores only its own files.
     for (index, file) in FILES.iter().enumerate().rev() {
-        // A sort leaves modlist.txt alone; a mods change only touches modlist.txt.
-        if (sort && index == 0) || (mods && index != 0) {
+        if !restores(&journal.kind, index) {
             continue;
         }
         let target = dir.join(file);
-        if journal.existed[index] {
+        if journal.existed.get(index).copied().unwrap_or(false) {
             let bytes = fs::read(root.join("backup").join(file))
                 .map_err(|e| format!("backup of {file}: {e}"))?;
             write_atomic(&target, &bytes)?;

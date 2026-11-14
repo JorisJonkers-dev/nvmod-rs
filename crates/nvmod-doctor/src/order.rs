@@ -262,6 +262,15 @@ pub(crate) fn check(
         }
     };
     missing_masters(&order, &data, findings);
+    match nvmod_loadorder::read_locks(&instance.profile_dir(profile)) {
+        Ok(locks) => findings.extend(nvmod_loadorder::lock_findings(&order, &locks, Some(&data))),
+        Err(Error::Refused(why) | Error::Failed(why)) => findings.push(Finding::new(
+            "loadorder.locks-unreadable",
+            Severity::Warning,
+            profile,
+            why,
+        )),
+    }
     differs_from_loot(instance, profile, masterlist, findings);
     times(&order, &data, profile, findings);
 }

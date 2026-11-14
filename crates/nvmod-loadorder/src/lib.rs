@@ -11,6 +11,8 @@
 mod stamp;
 
 use loot_rs::api::{Masterlist, PluginSlot, SortError, SortOptions, SortOutput, sort};
+use nvmod_core::{Finding, Severity};
+use nvmod_formats::LockedOrder;
 use nvmod_formats::plugins::parse_plugin_list;
 use nvmod_formats::text::{encode_windows_1252, read_limited};
 use nvmod_instance::{NvmodInstance, find_ci};
@@ -194,7 +196,9 @@ pub fn propose(
         .collect();
     let output = sort(&slots, masterlist, &data, &SortOptions::default())
         .map_err(|e| Error::Refused(describe(&e)))?;
-    let proposed = place_not_installed(&current, &output, &slots);
+    let mut proposed = place_not_installed(&current, &output, &slots);
+    let locks = read_locks(&instance.profile_dir(profile))?;
+    enforce_locks(&mut proposed, &locks);
     Ok(Proposal {
         profile: profile.to_owned(),
         data,
@@ -246,12 +250,38 @@ fn fail_point(step: &str) -> Result<(), String> {
 /// # Errors
 /// `Refused` before any change; `Failed` when a step failed and was rolled back.
 pub fn apply(instance: &NvmodInstance, proposal: &Proposal) -> Result<Applied, Error> {
-    let dir = instance.profile_dir(&proposal.profile);
-    let (plugins, load_order) = list_bytes(&proposal.proposed)?;
+    write_order(
+        instance,
+        &proposal.profile,
+        Some(&proposal.data),
+        &proposal.proposed,
+        None,
+        journal::KIND_SORT,
+    )
+}
+
+/// Write `order` as the Load order of `profile` in one journaled step: `plugins.txt` and `loadorder.txt` (and
+/// `lockedorder.txt` when `locked` holds its bytes), then the file times of the plugins in the Staging tree
+/// `data` (none when it is `None`). `kind` is the journal kind. Nothing is written, and no journal made, when
+/// the files and times are already right.
+///
+/// # Errors
+/// `Refused` before any change; `Failed` when a step failed and was rolled back.
+pub fn write_order(
+    instance: &NvmodInstance,
+    profile: &str,
+    data: Option<&Path>,
+    order: &[Slot],
+    locked: Option<&[u8]>,
+    kind: &str,
+) -> Result<Applied, Error> {
+    let dir = instance.profile_dir(profile);
+    let (plugins, load_order) = list_bytes(order)?;
     let write_plugins = differs(&dir.join("plugins.txt"), &plugins);
     let write_order = differs(&dir.join("loadorder.txt"), &load_order);
-    let stamps = stamp::plan(&proposal.data, &proposal.proposed);
-    if !write_plugins && !write_order && stamps.is_empty() {
+    let write_locked = locked.is_some_and(|bytes| differs(&dir.join(LOCKED_FILE), bytes));
+    let stamps = data.map_or_else(Vec::new, |data| stamp::plan(data, order));
+    if !write_plugins && !write_order && !write_locked && stamps.is_empty() {
         return Ok(Applied {
             lists_written: false,
             stamped: 0,
@@ -259,10 +289,12 @@ pub fn apply(instance: &NvmodInstance, proposal: &Proposal) -> Result<Applied, E
             journal: None,
         });
     }
-    let entry = journal::begin_kind(instance, &proposal.profile, "", journal::KIND_SORT)
-        .map_err(Error::Refused)?;
+    let entry = journal::begin_kind(instance, profile, "", kind).map_err(Error::Refused)?;
     let outcome = (|| -> Result<usize, String> {
         fail_point("sort-lists")?;
+        if let (true, Some(bytes)) = (write_locked, locked) {
+            journal::write_atomic(&dir.join(LOCKED_FILE), bytes)?;
+        }
         // plugins.txt before loadorder.txt, so loadorder.txt stays the newest.
         if write_plugins {
             journal::write_atomic(&dir.join("plugins.txt"), &plugins)?;
@@ -277,7 +309,7 @@ pub fn apply(instance: &NvmodInstance, proposal: &Proposal) -> Result<Applied, E
         Ok(detached) => {
             journal::complete(instance, &entry).map_err(Error::Failed)?;
             Ok(Applied {
-                lists_written: write_plugins || write_order,
+                lists_written: write_plugins || write_order || write_locked,
                 stamped: stamps.len(),
                 detached,
                 journal: Some(entry.id),
@@ -292,6 +324,156 @@ pub fn apply(instance: &NvmodInstance, proposal: &Proposal) -> Result<Applied, E
             ))),
         },
     }
+}
+
+/// The file of the locks in a profile folder.
+pub const LOCKED_FILE: &str = "lockedorder.txt";
+
+/// The locks of the profile in `profile_dir`: empty when there is no `lockedorder.txt`.
+///
+/// # Errors
+/// `Refused` when the file cannot be read or has a line that is not `name|priority`.
+pub fn read_locks(profile_dir: &Path) -> Result<LockedOrder, Error> {
+    let path = profile_dir.join(LOCKED_FILE);
+    if !path.is_file() {
+        return Ok(LockedOrder::default());
+    }
+    let bytes =
+        read_limited(&path).map_err(|e| Error::Refused(format!("{}: {e}", path.display())))?;
+    LockedOrder::parse(&bytes).map_err(Error::Refused)
+}
+
+const FNV_PRIMARY: [&str; 1] = ["FalloutNV.esm"];
+const TTW_PRIMARY: [&str; 18] = [
+    "FalloutNV.esm",
+    "DeadMoney.esm",
+    "HonestHearts.esm",
+    "OldWorldBlues.esm",
+    "LonesomeRoad.esm",
+    "GunRunnersArsenal.esm",
+    "Fallout3.esm",
+    "Anchorage.esm",
+    "ThePitt.esm",
+    "BrokenSteel.esm",
+    "PointLookout.esm",
+    "Zeta.esm",
+    "CaravanPack.esm",
+    "ClassicPack.esm",
+    "MercenaryPack.esm",
+    "TribalPack.esm",
+    "TaleOfTwoWastelands.esm",
+    "YUPTTW.esm",
+];
+
+/// The forced primary plugins of the Load order `order`, in their fixed order: `FalloutNV.esm`, and for a TTW
+/// profile (one that lists `TaleOfTwoWastelands.esm`) the TTW list, as MO2's game plugins force them to the front.
+/// Only the ones that are in `order` are named.
+#[must_use]
+pub fn primary_plugins(order: &[Slot]) -> Vec<&'static str> {
+    let has = |name: &str| order.iter().any(|s| s.name.eq_ignore_ascii_case(name));
+    let list: &[&str] = if has("TaleOfTwoWastelands.esm") {
+        &TTW_PRIMARY
+    } else {
+        &FNV_PRIMARY
+    };
+    list.iter().copied().filter(|n| has(n)).collect()
+}
+
+/// Put the forced primary plugins first, then hold each locked plugin at its position: the locked ones leave the
+/// list and go back in by ascending priority, at their 0-based priority or the next free place after the forced
+/// plugins and the lock before it. A lock of a plugin that is not in `order` changes nothing.
+pub fn enforce_locks(order: &mut Vec<Slot>, locks: &LockedOrder) {
+    let forced = primary_plugins(order);
+    let mut rest: Vec<Slot> = std::mem::take(order);
+    let mut front = Vec::new();
+    for name in &forced {
+        if let Some(at) = rest.iter().position(|s| s.name.eq_ignore_ascii_case(name)) {
+            front.push(rest.remove(at));
+        }
+    }
+    let mut held: Vec<(u32, Slot)> = Vec::new();
+    for lock in &locks.entries {
+        if forced.iter().any(|f| f.eq_ignore_ascii_case(&lock.name)) {
+            continue;
+        }
+        if let Some(at) = rest
+            .iter()
+            .position(|s| s.name.eq_ignore_ascii_case(&lock.name))
+        {
+            held.push((lock.priority, rest.remove(at)));
+        }
+    }
+    held.sort_by_key(|(priority, _)| *priority);
+    let mut all = front;
+    all.extend(rest);
+    let floor = forced.len();
+    let mut next = floor;
+    for (priority, slot) in held {
+        let at = (priority as usize).max(next).min(all.len());
+        all.insert(at, slot);
+        next = at + 1;
+    }
+    *order = all;
+}
+
+/// What the Doctor says about the locks of `profile_dir` against `order` (the current Load order); `data` is the
+/// Staging tree to read plugin headers from, if there is one. Read only.
+#[must_use]
+pub fn lock_findings(order: &[Slot], locks: &LockedOrder, data: Option<&Path>) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let forced = primary_plugins(order);
+    let mut held = order.to_vec();
+    enforce_locks(&mut held, locks);
+    let position =
+        |list: &[Slot], name: &str| list.iter().position(|s| s.name.eq_ignore_ascii_case(name));
+    for lock in &locks.entries {
+        let Some(now) = position(order, &lock.name) else {
+            continue;
+        };
+        if forced.iter().any(|f| f.eq_ignore_ascii_case(&lock.name)) {
+            findings.push(Finding::new(
+                "loadorder.lock-on-forced",
+                Severity::Warning,
+                lock.name.clone(),
+                "is locked, but it is a forced primary plugin and always loads first; sort ignores the lock",
+            ));
+            continue;
+        }
+        let after = position(&held, &lock.name).unwrap_or(now);
+        if after != now {
+            findings.push(Finding::new(
+                "loadorder.lock-not-held",
+                Severity::Warning,
+                lock.name.clone(),
+                format!(
+                    "is locked at position {} but is at {} now; `nvmod sort --apply` moves it to {}",
+                    lock.priority + 1,
+                    now + 1,
+                    after + 1
+                ),
+            ));
+        }
+        let Some(path) = data.and_then(|d| staged_file(d, &lock.name)) else {
+            continue;
+        };
+        let Ok(masters) = masters_of(&path) else {
+            continue;
+        };
+        for master in masters {
+            if position(&held, &master).is_some_and(|m| m > after) {
+                findings.push(Finding::new(
+                    "loadorder.lock-before-master",
+                    Severity::Error,
+                    lock.name.clone(),
+                    format!(
+                        "is locked at position {}, before its master {master}; sort keeps the lock, so the master would load after it",
+                        after + 1
+                    ),
+                ));
+            }
+        }
+    }
+    findings
 }
 
 /// The file of `name` in the `Data` folder of a Staging tree (paths are lowercase there), ignoring case.
@@ -319,6 +501,61 @@ pub fn masters_of(path: &Path) -> Result<Vec<String>, String> {
 mod tests {
     use super::*;
     use nvmod_testkit::{TempDir, write_file};
+
+    fn names(order: &[Slot]) -> Vec<&str> {
+        order.iter().map(|s| s.name.as_str()).collect()
+    }
+
+    fn locks(text: &str) -> LockedOrder {
+        LockedOrder::parse(text.as_bytes()).unwrap()
+    }
+
+    #[test]
+    fn a_locked_plugin_goes_back_to_its_position_after_a_sort() {
+        let mut order = vec![
+            slot("FalloutNV.esm", true),
+            slot("A.esp", true),
+            slot("B.esp", true),
+            slot("C.esp", true),
+        ];
+        enforce_locks(&mut order, &locks("C.esp|1\r\n"));
+        assert_eq!(names(&order), ["FalloutNV.esm", "C.esp", "A.esp", "B.esp"]);
+    }
+
+    #[test]
+    fn locks_that_collide_take_the_next_free_place_and_forced_plugins_stay_first() {
+        let mut order = vec![
+            slot("A.esp", true),
+            slot("FalloutNV.esm", true),
+            slot("B.esp", true),
+            slot("C.esp", true),
+        ];
+        // Both want slot 0 (the forced plugin's); FalloutNV.esm itself cannot be locked.
+        enforce_locks(
+            &mut order,
+            &locks("B.esp|0\r\nC.esp|0\r\nFalloutNV.esm|3\r\nGone.esp|1\r\n"),
+        );
+        assert_eq!(names(&order), ["FalloutNV.esm", "B.esp", "C.esp", "A.esp"]);
+    }
+
+    #[test]
+    fn the_ttw_list_is_forced_only_when_the_list_has_the_ttw_master() {
+        let fnv = [
+            slot("A.esp", true),
+            slot("FalloutNV.esm", true),
+            slot("Fallout3.esm", true),
+        ];
+        assert_eq!(primary_plugins(&fnv), ["FalloutNV.esm"]);
+        let ttw = [
+            slot("TaleOfTwoWastelands.esm", true),
+            slot("Fallout3.esm", true),
+            slot("FalloutNV.esm", true),
+        ];
+        assert_eq!(
+            primary_plugins(&ttw),
+            ["FalloutNV.esm", "Fallout3.esm", "TaleOfTwoWastelands.esm"]
+        );
+    }
 
     fn slot(name: &str, active: bool) -> Slot {
         Slot {

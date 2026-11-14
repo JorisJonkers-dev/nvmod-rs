@@ -1,0 +1,26 @@
+[package]
+name = "nvmod-plugins"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Reads and edits the plugin list of an nvmod profile: enable, disable, move, lock."
+
+[dependencies]
+nvmod-conflicts = { workspace = true }
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+nvmod-loadorder = { workspace = true }
+nvmod-modinstall = { workspace = true }
+nvmod-core = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true

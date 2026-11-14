@@ -14,6 +14,7 @@ mod install_nvrs;
 mod lod;
 mod mods;
 mod pe;
+mod plugins;
 mod profile;
 mod setup;
 mod setup_state;
@@ -56,10 +57,12 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod rollback --instance <dir> [--json]
                               undo the last install, sort or mods change: restore the profile files (an install also
                               removes the Mod)
-  nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]
+  nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist) [--apply] [--json]
                               compute the Load order with loot-rs from the Staging tree and print it; with
                               --apply write plugins.txt and loadorder.txt and set the plugin file times
-                              (needs `nvmod stage` first)
+                              (needs `nvmod stage` first); --fetch-masterlist takes the masterlist pinned in tools.lock.toml
+                              (checksum verified, kept in the tool store) instead of a file; locked plugins
+                              (`nvmod plugins lock`) keep their position
   nvmod mods list --instance <dir> [--profile <name>] [--json]
   nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
@@ -83,6 +86,16 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               .nvmod/backups.json); prune keeps the newest 10 and one per day for 14 days;
                               restore verifies (exit 3 on a mismatch), snapshots the current state first and
                               refuses while the game runs; it also reads MO2's own timestamped list backups
+  nvmod plugins list --instance <dir> [--profile <name>] [--json]
+  nvmod plugins enable <plugin>... [--with-masters] --instance <dir> [--profile <name>] [--dry-run] [--json]
+  nvmod plugins disable <plugin>... --instance <dir> [--profile <name>] [--dry-run] [--json]
+  nvmod plugins move <plugin> (--top | --bottom | --before <p> | --after <p>) --instance <dir> [--dry-run]
+  nvmod plugins lock <plugin> <position> | unlock <plugin> --instance <dir> [--profile <name>] [--dry-run]
+                              the plugin list of a profile: list it (position, active, masters present or missing,
+                              lock, provider Mod), enable or disable plugins, move one, hold one at a position
+                              with `lockedorder.txt`; a write sets plugins.txt and loadorder.txt together and the
+                              plugin file times, and is undone by `nvmod rollback`; the forced primary plugins
+                              stay first
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--masterlist <file>] [--catalog <file>]
@@ -154,13 +167,17 @@ SIGTERM or SIGINT during setup, install, ttw, import-mo2, mods or sort --apply r
 (setup keeps a partial Instance with --keep-partial) and exits 4 with a `finished` record.\n";
 
 /// Whether `args` is a command that writes to an Instance and so rolls back when it is stopped: `setup`,
-/// `install`, `ttw`, `import-mo2`, `mods enable|disable|reorder` and `sort --apply`.
+/// `install`, `ttw`, `import-mo2`, `mods enable|disable|reorder`, `plugins enable|disable|move|lock|unlock` and `sort --apply`.
 fn writes_instance(args: &[String]) -> bool {
     match args.first().map(String::as_str) {
         Some("setup" | "install" | "ttw" | "import-mo2") => true,
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "reorder")
+        ),
+        Some("plugins") => matches!(
+            args.get(1).map(String::as_str),
+            Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
         Some("sort") => args.iter().any(|a| a == "--apply"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
@@ -220,6 +237,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("catalog") => catalog::run(&args[1..], out, err),
         Some("doctor") => doctor::run(&args[1..], out, err),
         Some("conflicts") => conflicts::run_conflicts(&args[1..], out, err),
+        Some("plugins") => plugins::run(&args[1..], out, err),
         Some("tree") => conflicts::run_tree(&args[1..], out, err),
         Some("stage") => stage::run(&args[1..], out, err),
         Some("init") => init::run(&args[1..], out, err),

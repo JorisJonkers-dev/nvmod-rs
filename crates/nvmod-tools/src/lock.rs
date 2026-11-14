@@ -201,10 +201,12 @@ impl ToolEntry {
         Ok(())
     }
 
-    /// The file of this machine's platform.
+    /// The file of this machine's platform, or the one under the key `any` (a data file such as a masterlist).
     #[must_use]
     pub fn asset_here(&self) -> Option<&Asset> {
-        self.assets.get(&platform())
+        self.assets
+            .get(&platform())
+            .or_else(|| self.assets.get("any"))
     }
 }
 

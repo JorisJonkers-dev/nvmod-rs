@@ -250,8 +250,8 @@ fn prune(cx: &Cx, config: &Config, dry_run: bool, out: &mut dyn Write, err: &mut
     }
 }
 
-/// Whether `args` is a command that changes a list of a profile: `install`, `mods enable|disable|reorder` and
-/// `sort --apply`, none of them as a dry run.
+/// Whether `args` is a command that changes a list of a profile: `install`, `mods enable|disable|reorder`,
+/// `plugins enable|disable|move|lock|unlock` and `sort --apply`, none of them as a dry run.
 fn changes_lists(args: &[String]) -> bool {
     if args.iter().any(|a| a == "--dry-run") {
         return false;
@@ -261,6 +261,10 @@ fn changes_lists(args: &[String]) -> bool {
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "reorder")
+        ),
+        Some("plugins") => matches!(
+            args.get(1).map(String::as_str),
+            Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
         Some("sort") => args.iter().any(|a| a == "--apply"),
         _ => false,

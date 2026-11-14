@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "profile": "Default",
+  "plugins": [
+    {
+      "name": "FalloutNV.esm",
+      "active": true,
+      "position": 1,
+      "locked": null,
+      "forced": true,
+      "installed": true,
+      "provider": "the base copy",
+      "masters": [],
+      "masters_missing": 0,
+      "header_error": null
+    },
+    {
+      "name": "A.esm",
+      "active": false,
+      "position": 2,
+      "locked": null,
+      "forced": false,
+      "installed": true,
+      "provider": "Core",
+      "masters": [],
+      "masters_missing": 0,
+      "header_error": null
+    },
+    {
+      "name": "B.esp",
+      "active": false,
+      "position": 3,
+      "locked": null,
+      "forced": false,
+      "installed": true,
+      "provider": "Core",
+      "masters": [
+        {
+          "name": "A.esm",
+          "present": true,
+          "active": false
+        }
+      ],
+      "masters_missing": 0,
+      "header_error": null
+    },
+    {
+      "name": "C.esp",
+      "active": false,
+      "position": 4,
+      "locked": null,
+      "forced": false,
+      "installed": true,
+      "provider": "Extra",
+      "masters": [
+        {
+          "name": "B.esp",
+          "present": true,
+          "active": false
+        }
+      ],
+      "masters_missing": 0,
+      "header_error": null
+    },
+    {
+      "name": "D.esp",
+      "active": true,
+      "position": 5,
+      "locked": null,
+      "forced": false,
+      "installed": true,
+      "provider": "Extra",
+      "masters": [],
+      "masters_missing": 0,
+      "header_error": null
+    },
+    {
+      "name": "Ghost.esp",
+      "active": false,
+      "position": 6,
+      "locked": null,
+      "forced": false,
+      "installed": false,
+      "provider": null,
+      "masters": [],
+      "masters_missing": 0,
+      "header_error": null
+    }
+  ],
+  "locks": []
+}

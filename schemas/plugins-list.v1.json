@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ListReport",
+  "description": "`nvmod plugins list --json`.",
+  "type": "object",
+  "properties": {
+    "locks": {
+      "description": "Every lock, including those of plugins that are not in the list.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LockRow"
+      }
+    },
+    "plugins": {
+      "description": "The plugins in load order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PluginRow"
+      }
+    },
+    "profile": {
+      "description": "The profile.",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "The version of this layout.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "plugins",
+    "locks"
+  ],
+  "$defs": {
+    "LockRow": {
+      "description": "One entry of `lockedorder.txt`.",
+      "type": "object",
+      "properties": {
+        "listed": {
+          "description": "The plugin is in the list (an entry for an absent plugin is kept).",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The plugin file name as the file spells it.",
+          "type": "string"
+        },
+        "position": {
+          "description": "The 1-based position it is held at.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "name",
+        "position",
+        "listed"
+      ]
+    },
+    "MasterRow": {
+      "description": "One master a plugin declares.",
+      "type": "object",
+      "properties": {
+        "active": {
+          "description": "The master is listed active in the profile.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The master's file name as the header spells it.",
+          "type": "string"
+        },
+        "present": {
+          "description": "A Mod or the base copy provides the file.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "present",
+        "active"
+      ]
+    },
+    "PluginRow": {
+      "description": "One plugin of the list.",
+      "type": "object",
+      "properties": {
+        "active": {
+          "description": "Listed in `plugins.txt`.",
+          "type": "boolean"
+        },
+        "forced": {
+          "description": "A forced primary plugin: always first, not movable.",
+          "type": "boolean"
+        },
+        "header_error": {
+          "description": "Why the header could not be read, if it could not.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "installed": {
+          "description": "A Mod or the base copy provides the file.",
+          "type": "boolean"
+        },
+        "locked": {
+          "description": "The 1-based position `lockedorder.txt` holds it at.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "masters": {
+          "description": "The masters its header declares; empty when it is not installed or its header cannot be read.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MasterRow"
+          }
+        },
+        "masters_missing": {
+          "description": "How many masters are not present.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "name": {
+          "description": "The file name as the lists spell it.",
+          "type": "string"
+        },
+        "position": {
+          "description": "1 is the first plugin to load.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "provider": {
+          "description": "The Mod (or `Overwrite`, or `the base copy`) whose file wins.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "active",
+        "position",
+        "forced",
+        "installed",
+        "masters",
+        "masters_missing"
+      ]
+    }
+  }
+}
