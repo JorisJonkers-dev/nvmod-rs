@@ -2,7 +2,7 @@
 //! `nvmod install <archive> --instance <dir> ...` and `nvmod rollback --instance <dir>`.
 
 use crate::{FOUND, OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
-use nvmod_instance::NvmodInstance;
+use nvmod_instance::{InstanceError, NvmodInstance};
 use nvmod_modinstall::{InstallError, Limits, Report, Request, RollbackError};
 use std::io::Write;
 use std::path::Path;
@@ -12,14 +12,28 @@ const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
 fn open(args: &Args, name: &str, err: &mut dyn Write) -> Result<NvmodInstance, u8> {
     let root = Path::new(args.option("instance").unwrap_or_default());
-    NvmodInstance::open(root).map_err(|e| {
+    // Rollback must not migrate: it may be undoing a migration.
+    let opened = if name == "rollback" {
+        NvmodInstance::open_read_only(root)
+    } else {
+        NvmodInstance::open(root)
+    };
+    opened.map_err(|e| {
         let _ = writeln!(
             err,
-            "nvmod {name}: refused: {} is not an nvmod Instance ({e})",
-            root.display()
+            "nvmod {name}: refused: {}",
+            describe_open_error(root, &e)
         );
         REFUSED
     })
+}
+
+/// Why an Instance did not open, in words: a newer schema says so, anything else says the folder is not an Instance.
+pub(crate) fn describe_open_error(root: &Path, e: &InstanceError) -> String {
+    match e {
+        InstanceError::Refused(why) => why.clone(),
+        _ => format!("{} is not an nvmod Instance ({e})", root.display()),
+    }
 }
 
 fn print_json(out: &mut dyn Write, value: &impl serde::Serialize) {
@@ -182,6 +196,11 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
         Ok(report) => {
             if args.flag("json") {
                 print_json(out, &report);
+            } else if report.kind == "migrate" {
+                let _ = writeln!(
+                    out,
+                    "nvmod rollback: restored the Instance file as it was before its schema migration"
+                );
             } else if report.kind == "sort" {
                 let _ = writeln!(
                     out,

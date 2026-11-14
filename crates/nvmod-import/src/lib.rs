@@ -6,9 +6,9 @@
 //! page), and every Mod folder the profile lists is mirrored with hard links, or copies where a link cannot be
 //! made. When the three profile files disagree the import is refused and nothing is written.
 
-use nvmod_core::{Finding, Severity};
-use nvmod_formats::{EntryKind, Instance as Mo2Instance, InstanceError, ModState, Profile};
-use nvmod_instance::{InstanceError as NvmodError, NvmodInstance};
+use nvmod_core::{Finding, PROFILE_SCHEMA_VERSION, Profile, ProfileMod, Severity};
+use nvmod_formats::{EntryKind, Mo2Error, Mo2Instance, Mo2Profile, ModState};
+use nvmod_instance::{InstanceError as NvmodError, NvmodInstance, PROFILE_FILE};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
@@ -67,7 +67,7 @@ fn refuse(why: &str) -> ImportError {
     ImportError::Refused(why.to_owned())
 }
 
-fn map_mo2(e: &InstanceError) -> ImportError {
+fn map_mo2(e: &Mo2Error) -> ImportError {
     refuse(&e.to_string())
 }
 
@@ -85,7 +85,7 @@ fn holds_plugin(mo2: &Mo2Instance, name: &str, plugin: &str) -> bool {
 /// in another order than in `loadorder.txt` (one finding for each plugin that stands in another place), and an
 /// active plugin that only a disabled Mod provides.
 #[must_use]
-pub fn disagreements(mo2: &Mo2Instance, profile: &Profile) -> Vec<Finding> {
+pub fn disagreements(mo2: &Mo2Instance, profile: &Mo2Profile) -> Vec<Finding> {
     let mut out = Vec::new();
     let (Some(active), Some(order)) = (&profile.plugins, &profile.load_order) else {
         for (file, list) in [
@@ -259,9 +259,33 @@ pub fn import(request: &Request<'_>) -> Result<Report, ImportError> {
     })
 }
 
+/// Write the Profile record `profile.json` next to the copied files: the Mods and the Load order as nvmod's
+/// data model holds them.
+fn write_record(profile: &Mo2Profile, dest: &Path) -> Result<(), String> {
+    let record = Profile {
+        schema_version: PROFILE_SCHEMA_VERSION,
+        name: profile.name.clone(),
+        mods: profile
+            .modlist
+            .entries
+            .iter()
+            .filter(|e| e.kind == EntryKind::Mod && e.state != ModState::Foreign)
+            .map(|e| ProfileMod {
+                name: e.name.clone(),
+                enabled: e.state == ModState::Enabled,
+            })
+            .collect(),
+        load_order: profile.load_order.clone().unwrap_or_default(),
+        active_plugins: profile.plugins.clone().unwrap_or_default(),
+    };
+    let text = serde_json::to_string_pretty(&record).map_err(|e| e.to_string())?;
+    let path = dest.join(PROFILE_FILE);
+    fs::write(&path, text + "\n").map_err(|e| io(&path, &e))
+}
+
 fn build(
     mo2: &Mo2Instance,
-    profile: &Profile,
+    profile: &Mo2Profile,
     instance: &NvmodInstance,
     copy_only: bool,
 ) -> Result<Report, String> {
@@ -272,6 +296,7 @@ fn build(
         let from = profile.dir.join(file);
         fs::copy(&from, dest.join(file)).map_err(|e| io(&from, &e))?;
     }
+    write_record(profile, &dest)?;
     let others = fs::read_dir(&profile.dir).map_err(|e| io(&profile.dir, &e))?;
     let mut left: Vec<String> = others
         .flatten()

@@ -2,25 +2,17 @@
 //! The Instance skeleton: a folder holding `nvmod-instance.json`, `mods/` and `profiles/`, separate from the base
 //! copy it points at.
 
-use crate::Storefront;
-use serde::{Deserialize, Serialize};
+use crate::detect_storefront;
+use nvmod_core::{Instance, LoadError, LoadedInstance, load_instance};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 /// The file that marks a folder as an nvmod Instance.
 pub const INSTANCE_FILE: &str = "nvmod-instance.json";
-const SCHEMA: u32 = 1;
-
-/// The contents of `nvmod-instance.json`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Config {
-    /// Version of this file's layout.
-    pub schema: u32,
-    /// The absolute path of the base copy. Never written to.
-    pub base: PathBuf,
-    /// The storefront found when the Instance was made.
-    pub storefront: Storefront,
-}
+/// The file in a profile folder that holds the Profile record (see `nvmod_core::Profile`).
+pub const PROFILE_FILE: &str = "profile.json";
+/// The kind of journal that a schema migration writes: `nvmod rollback` restores the old Instance file from it.
+pub const KIND_MIGRATE: &str = "migrate";
 
 /// Why an Instance could not be made or opened.
 #[derive(Debug, PartialEq, Eq)]
@@ -50,8 +42,8 @@ impl std::error::Error for InstanceError {}
 pub struct NvmodInstance {
     /// The Instance folder.
     pub root: PathBuf,
-    /// Its configuration.
-    pub config: Config,
+    /// Its configuration: the Instance record of `nvmod-instance.json`, at the current schema.
+    pub config: Instance,
 }
 
 /// `path` made absolute, with the part that exists resolved through symbolic links.
@@ -86,7 +78,7 @@ impl NvmodInstance {
                 base.display()
             )));
         }
-        let storefront = Storefront::detect(base);
+        let storefront = detect_storefront(base);
         if let Some(reason) = storefront.refusal() {
             return Err(InstanceError::Refused(reason.to_owned()));
         }
@@ -103,11 +95,7 @@ impl NvmodInstance {
                 root.display()
             )));
         }
-        let config = Config {
-            schema: SCHEMA,
-            base,
-            storefront,
-        };
+        let config = Instance::new(base, storefront);
         let io = |e: std::io::Error| InstanceError::Io(format!("{}: {e}", root.display()));
         let build = || -> Result<(), InstanceError> {
             std::fs::create_dir_all(root_abs.join("mods")).map_err(io)?;
@@ -186,26 +174,78 @@ impl NvmodInstance {
         root.join(INSTANCE_FILE).is_file()
     }
 
-    /// Open the Instance at `root`.
+    /// Open the Instance at `root`, migrating an older file forward on disk: the old file is backed up under
+    /// `.nvmod/journal/` first, so `nvmod rollback` restores it byte for byte.
     ///
     /// # Errors
-    /// `Invalid` when the Instance file is missing, unreadable or of another schema.
+    /// `Invalid` when the Instance file is missing, unreadable or malformed; `Refused` when its schema is newer
+    /// than this nvmod reads; `Io` when the migration could not be written (the old file is left as it was).
     pub fn open(root: &Path) -> Result<NvmodInstance, InstanceError> {
+        let (instance, loaded) = Self::read(root)?;
+        if let Some(from) = loaded.migrated_from {
+            instance.write_migration(from)?;
+        }
+        Ok(instance)
+    }
+
+    /// Open the Instance at `root` without writing anything: an older file is migrated in memory only.
+    ///
+    /// # Errors
+    /// `Invalid` when the Instance file is missing, unreadable or malformed; `Refused` when its schema is newer
+    /// than this nvmod reads.
+    pub fn open_read_only(root: &Path) -> Result<NvmodInstance, InstanceError> {
+        Self::read(root).map(|(instance, _)| instance)
+    }
+
+    fn read(root: &Path) -> Result<(NvmodInstance, LoadedInstance), InstanceError> {
         let file = root.join(INSTANCE_FILE);
         let text = std::fs::read_to_string(&file)
             .map_err(|e| InstanceError::Invalid(format!("{}: {e}", file.display())))?;
-        let config: Config = serde_json::from_str(&text)
-            .map_err(|e| InstanceError::Invalid(format!("{}: {e}", file.display())))?;
-        if config.schema != SCHEMA {
-            return Err(InstanceError::Invalid(format!(
-                "{}: schema {} is not supported (this nvmod reads schema {SCHEMA})",
-                file.display(),
-                config.schema
-            )));
-        }
-        Ok(NvmodInstance {
+        let loaded = load_instance(&text).map_err(|e| match e {
+            LoadError::Newer { .. } => InstanceError::Refused(format!("{}: {e}", file.display())),
+            LoadError::Malformed(_) => InstanceError::Invalid(format!("{}: {e}", file.display())),
+        })?;
+        let instance = NvmodInstance {
             root: root.to_path_buf(),
-            config,
+            config: loaded.instance.clone(),
+        };
+        Ok((instance, loaded))
+    }
+
+    /// Back up the Instance file as it is, journal the migration, then replace the file with the current schema.
+    fn write_migration(&self, from: u32) -> Result<(), InstanceError> {
+        let file = self.root.join(INSTANCE_FILE);
+        let io = |e: std::io::Error| InstanceError::Io(format!("{}: {e}", file.display()));
+        let millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis());
+        let id = format!("{millis:016}-{}", std::process::id());
+        let journal_dir = self.root.join(".nvmod").join("journal").join(&id);
+        let write = || -> Result<(), InstanceError> {
+            std::fs::create_dir_all(journal_dir.join("backup")).map_err(io)?;
+            std::fs::copy(&file, journal_dir.join("backup").join(INSTANCE_FILE)).map_err(io)?;
+            let journal = serde_json::json!({
+                "schema": 1,
+                "id": id,
+                "mod": "",
+                "profile": "",
+                "status": "complete",
+                "kind": KIND_MIGRATE,
+                "existed": [],
+                "staging_existed": false,
+                "from_schema": from,
+            });
+            let text = serde_json::to_string_pretty(&journal)
+                .map_err(|e| InstanceError::Io(e.to_string()))?;
+            std::fs::write(journal_dir.join("journal.json"), text + "\n").map_err(io)?;
+            let text = serde_json::to_string_pretty(&self.config)
+                .map_err(|e| InstanceError::Io(e.to_string()))?;
+            let tmp = file.with_extension("nvmod-tmp");
+            std::fs::write(&tmp, text + "\n").map_err(io)?;
+            std::fs::rename(&tmp, &file).map_err(io)
+        };
+        write().inspect_err(|_| {
+            let _ = std::fs::remove_dir_all(&journal_dir);
         })
     }
 }
@@ -224,7 +264,7 @@ mod tests {
         assert!(NvmodInstance::is_instance(&made.root));
         let opened = NvmodInstance::open(&made.root).unwrap();
         assert_eq!(opened.config, made.config);
-        assert_eq!(opened.config.storefront, Storefront::Gog);
+        assert_eq!(opened.config.storefront, nvmod_core::Storefront::Gog);
     }
 
     #[test]
@@ -238,11 +278,12 @@ mod tests {
         assert!(NvmodInstance::open(dir.path()).is_err());
         std::fs::write(
             dir.path().join(INSTANCE_FILE),
-            r#"{"schema":9,"base":"/x","storefront":"steam"}"#,
+            r#"{"schema_version":9,"base":"/x","storefront":"steam"}"#,
         )
         .unwrap();
-        let why = NvmodInstance::open(dir.path()).unwrap_err().to_string();
-        assert!(why.contains("schema 9"), "{why}");
+        let why = NvmodInstance::open(dir.path()).unwrap_err();
+        assert!(matches!(why, InstanceError::Refused(_)), "{why}");
+        assert!(why.to_string().contains("schema 9"), "{why}");
     }
 
     #[test]
@@ -281,5 +322,56 @@ mod tests {
         let root = scratch.path().join("blocker").join("i");
         let why = NvmodInstance::create(&root, base.path()).unwrap_err();
         assert!(matches!(why, InstanceError::Io(_)), "{why}");
+    }
+
+    #[test]
+    fn a_schema_1_file_opens_read_only_and_migrates_on_open_with_a_backup() {
+        let dir = TempDir::new("inst-v1");
+        let old = r#"{"schema":1,"base":"/x","storefront":"gog"}"#;
+        std::fs::write(dir.path().join(INSTANCE_FILE), old).unwrap();
+        let ro = NvmodInstance::open_read_only(dir.path()).unwrap();
+        assert_eq!(ro.config.schema_version, 2);
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(INSTANCE_FILE)).unwrap(),
+            old
+        );
+        assert!(!dir.path().join(".nvmod").exists());
+        let rw = NvmodInstance::open(dir.path()).unwrap();
+        assert_eq!(rw.config, ro.config);
+        let text = std::fs::read_to_string(dir.path().join(INSTANCE_FILE)).unwrap();
+        assert!(text.contains("\"schema_version\": 2"), "{text}");
+        let journal = std::fs::read_dir(dir.path().join(".nvmod/journal"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(
+            std::fs::read_to_string(journal.join("backup").join(INSTANCE_FILE)).unwrap(),
+            old
+        );
+        // Opened again at the current schema: no second migration.
+        NvmodInstance::open(dir.path()).unwrap();
+        assert_eq!(
+            std::fs::read_dir(dir.path().join(".nvmod/journal"))
+                .unwrap()
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_failed_migration_leaves_the_old_file_and_no_journal() {
+        let dir = TempDir::new("inst-v1-fail");
+        let old = r#"{"schema":1,"base":"/x","storefront":"gog"}"#;
+        std::fs::write(dir.path().join(INSTANCE_FILE), old).unwrap();
+        // A file where the journal folder must go makes the backup fail.
+        std::fs::write(dir.path().join(".nvmod"), b"x").unwrap();
+        let why = NvmodInstance::open(dir.path()).unwrap_err();
+        assert!(matches!(why, InstanceError::Io(_)), "{why}");
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(INSTANCE_FILE)).unwrap(),
+            old
+        );
     }
 }

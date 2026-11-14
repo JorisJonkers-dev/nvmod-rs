@@ -3,9 +3,13 @@
 
 use nvmod_catalog::Catalog;
 use nvmod_core::{Finding, Severity};
-use nvmod_formats::{Instance, Profile};
+use nvmod_formats::{Mo2Instance, Mo2Profile};
 
-pub(crate) fn check(instance: &Instance, profile: &Profile, catalog: &Catalog) -> Vec<Finding> {
+pub(crate) fn check(
+    instance: &Mo2Instance,
+    profile: &Mo2Profile,
+    catalog: &Catalog,
+) -> Vec<Finding> {
     let mut findings = Vec::new();
     for issue in &instance.issues {
         findings.push(Finding::new(

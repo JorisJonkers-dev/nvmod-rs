@@ -6,7 +6,7 @@ use crate::report::PluginReport;
 use nvmod_catalog::{Catalog, NvRs};
 use nvmod_core::{FileIndex, Finding, Severity};
 use nvmod_formats::scan::files_under;
-use nvmod_formats::{Instance, Profile};
+use nvmod_formats::{Mo2Instance, Mo2Profile};
 use nvmod_pe::{PeReport, inspect_file};
 use std::collections::BTreeSet;
 
@@ -71,8 +71,8 @@ fn pe_findings(dll: &str, pe: &PeReport, findings: &mut Vec<Finding>) {
 }
 
 pub(crate) fn check(
-    instance: &Instance,
-    profile: &Profile,
+    instance: &Mo2Instance,
+    profile: &Mo2Profile,
     catalog: &Catalog,
     findings: &mut Vec<Finding>,
 ) -> Vec<PluginReport> {

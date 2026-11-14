@@ -5,10 +5,36 @@
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
 use nvmod_catalog::Catalog;
 use nvmod_core::Severity;
-use nvmod_formats::Instance;
-use nvmod_instance::NvmodInstance;
+use nvmod_formats::Mo2Instance;
+use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::Path;
+
+/// The Doctor is read only: an older Instance file is read as migrated, but not rewritten.
+fn open_and_check(
+    dir: &Path,
+    args: &Args,
+    fail_on: Severity,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let json = args.flag("json");
+    match NvmodInstance::open_read_only(dir) {
+        Ok(instance) => nvmod_instance_doctor(&instance, args, json, fail_on, out, err),
+        Err(InstanceError::Refused(why)) => {
+            let _ = writeln!(err, "nvmod doctor: refused: {why}");
+            REFUSED
+        }
+        Err(why) => {
+            if json {
+                let _ = writeln!(out, "{}", serde_json::json!({ "error": why.to_string() }));
+            } else {
+                let _ = writeln!(err, "nvmod doctor: {why}");
+            }
+            FOUND
+        }
+    }
+}
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
@@ -67,12 +93,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     }
     let instance_dir = Path::new(args.option("instance").unwrap_or_default());
     if NvmodInstance::is_instance(instance_dir) {
-        return match NvmodInstance::open(instance_dir) {
-            Ok(instance) => nvmod_instance_doctor(&instance, &args, json, fail_on, out, err),
-            Err(why) => fail(why.to_string(), out, err),
-        };
+        return open_and_check(instance_dir, &args, fail_on, out, err);
     }
-    let instance = match Instance::open(instance_dir) {
+    let instance = match Mo2Instance::open(instance_dir) {
         Ok(instance) => instance,
         Err(why) => return fail(why.to_string(), out, err),
     };

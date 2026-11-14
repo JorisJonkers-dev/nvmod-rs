@@ -175,10 +175,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let instance = match NvmodInstance::open(root) {
         Ok(i) => i,
         Err(e) => {
-            return refused(
-                &format!("{} is not an nvmod Instance ({e})", root.display()),
-                err,
-            );
+            return refused(&crate::install_mod::describe_open_error(root, &e), err);
         }
     };
     let profile = match instance.resolve_profile(args.option("profile")) {
