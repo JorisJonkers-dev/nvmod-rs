@@ -27,6 +27,7 @@ nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
 nvmod-loadorder = { workspace = true }
+nvmod-tools = { workspace = true }
 loot-rs = { workspace = true }
 nvmod-pe = { workspace = true }
 serde = { workspace = true }

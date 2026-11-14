@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Fetching the fork's release, checking its checksum and attestation, and unpacking it.
 
-use crate::fetch::{FetchError, Fetcher, get_with_retries};
 use crate::install::InstallError;
-use nvmod_tools::sha256_hex;
+use nvmod_tools::{
+    Attestation, Fetcher, VerifyError, check_sha256, fetch_bytes, verify_attestation,
+};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -18,16 +19,16 @@ pub(crate) struct Source<'a> {
     pub delay: Duration,
 }
 
+fn to_install(e: VerifyError) -> InstallError {
+    match e {
+        VerifyError::Verification(why) => InstallError::Verification(why),
+        VerifyError::Failed(why) => InstallError::Failed(why),
+    }
+}
+
 fn fetch(src: &Source, name: &str) -> Result<Vec<u8>, InstallError> {
     let url = format!("{}/{name}", src.base_url.trim_end_matches('/'));
-    get_with_retries(src.fetcher, &url, src.delay).map_err(|e| match e {
-        FetchError::Malformed(why) => {
-            InstallError::Verification(format!("malformed response: {why}"))
-        }
-        FetchError::Transient(why) | FetchError::Fatal(why) => {
-            InstallError::Failed(format!("fetch failed: {why}"))
-        }
-    })
+    fetch_bytes(src.fetcher, &url, src.delay).map_err(to_install)
 }
 
 /// The hash `SHA256SUMS` lists for `asset`.
@@ -58,34 +59,15 @@ pub(crate) fn fetch_verified(src: &Source, dir: &Path) -> Result<PathBuf, Instal
     let sums = fetch(src, "SHA256SUMS")?;
     let listed = listed_hash(&sums, src.asset)?;
     let bytes = fetch(src, src.asset)?;
-    let actual = sha256_hex(&bytes);
-    if actual != listed {
-        return Err(InstallError::Verification(format!(
-            "checksum mismatch for {}: SHA256SUMS says {listed}, the download is {actual}",
-            src.asset
-        )));
-    }
+    check_sha256(src.asset, "SHA256SUMS", &bytes, &listed).map_err(to_install)?;
     let path = dir.join(src.asset);
     std::fs::write(&path, &bytes)
         .map_err(|e| InstallError::Failed(format!("{}: {e}", path.display())))?;
-    let out = Command::new(src.gh)
-        .args(["attestation", "verify"])
-        .arg(&path)
-        .args(["--repo", src.repo])
-        .output()
-        .map_err(|e| {
-            InstallError::Verification(format!(
-                "attestation could not be checked, cannot run {}: {e}",
-                src.gh.display()
-            ))
-        })?;
-    if !out.status.success() {
-        return Err(InstallError::Verification(format!(
-            "attestation verification failed for {} (a missing attestation counts as failed): {}",
-            src.asset,
-            String::from_utf8_lossy(&out.stderr).trim()
-        )));
-    }
+    let identity = Attestation {
+        repository: src.repo,
+        workflow: None,
+    };
+    verify_attestation(src.gh, &path, &identity).map_err(to_install)?;
     Ok(path)
 }
 
