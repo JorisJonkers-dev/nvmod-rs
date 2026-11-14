@@ -3,21 +3,55 @@
 //! already exist (`init` or `import-mo2`, `install-nv-rs`, `ttw`, `install`, `stage`, `sort --apply`, `doctor`)
 //! through the command line seam, so no step has logic of its own here and each keeps its exit code.
 //!
-//! The run is all or nothing. It only starts on a path that holds no Instance, so the state before the run is
-//! "nothing here"; a failing step removes what the run made and exits with the step's code (3 verification
-//! failure, 4 step failed). `--json` prints one JSON object per line: a `plan`, the `step` events and a final
-//! `finished` event, each with an increasing `seq`, so a wizard can show progress while the run goes.
+//! By default the run is all or nothing. It only starts on a path that holds no Instance, so the state before the
+//! run is "nothing here"; a failing step removes what the run made and exits with the step's code (3 verification
+//! failure, 4 step failed). With `--keep-partial` a failing step leaves the Instance where it is instead (the
+//! commands roll back their own work, so only the failed step is undone) and `--resume` continues from the first
+//! unfinished step, using the state file the run keeps in the Instance (`setup_state`). `--restart --yes` removes
+//! a partial Instance. `--json` prints one JSON object per line: a `plan`, the `step` events (and, after a
+//! resume, `resumed` and `skipped` events) and a final `finished` event, each with an increasing `seq`, so a
+//! wizard can show progress while the run goes.
 //!
 //! The last two steps matter for the Load order: `install` and `stage` lose the plugin file times, so the run
 //! ends with `sort --apply`, which stamps them, and then the Doctor checks that they encode the order.
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
+use crate::setup_state::{self as state, Completed, Failure, LoadError, PlanEntry, State};
+use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
 use nvmod_core::Severity;
 use std::io::Write;
 use std::path::Path;
 
-const USAGE_LINE: &str = "usage: nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]... [--fallout3 <dir> [--package <file>] [--installer <path>]] [--release | --source <dir>] [--skip-nv-rs] [--dry-run] [--json]";
-const FLAGS: &[&str] = &["json", "dry-run", "release", "skip-nv-rs", "copy"];
+const USAGE_LINE: &str = "usage: nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]... [--fallout3 <dir> [--package <file>] [--installer <path>]] [--release | --source <dir>] [--skip-nv-rs] [--keep-partial] [--dry-run] [--json]\n       nvmod setup --resume --instance <dir> [--json]\n       nvmod setup --restart --instance <dir> --yes";
+const FLAGS: &[&str] = &[
+    "json",
+    "dry-run",
+    "release",
+    "skip-nv-rs",
+    "copy",
+    "keep-partial",
+    "resume",
+    "restart",
+    "yes",
+];
+/// The options whose value is a path: made absolute when a run starts, so a resume from another folder works.
+const PATH_OPTIONS: &[&str] = &[
+    "base",
+    "instance",
+    "masterlist",
+    "import-mo2",
+    "mod",
+    "answers",
+    "extract-tool",
+    "fallout3",
+    "package",
+    "installer",
+    "lock",
+    "store",
+    "source",
+    "catalog",
+];
+/// The flags that belong to one invocation and are not part of the recorded command line.
+const INVOCATION_FLAGS: &[&str] = &["--json", "--dry-run", "--keep-partial"];
 const OPTIONS: &[&str] = &[
     "base",
     "instance",
@@ -185,9 +219,7 @@ fn plan_finish(args: &Args) -> Vec<Step> {
         ));
     }
     for archive in args.option_all("mod") {
-        let file = Path::new(archive)
-            .file_name()
-            .map_or_else(|| archive.to_owned(), |n| n.to_string_lossy().into_owned());
+        let file = archive_name(archive);
         steps.push(step(
             &format!("mod:{file}"),
             &format!("install the Mod {file}"),
@@ -231,6 +263,12 @@ fn plan_finish(args: &Args) -> Vec<Step> {
     steps
 }
 
+fn archive_name(archive: &str) -> String {
+    Path::new(archive)
+        .file_name()
+        .map_or_else(|| archive.to_owned(), |n| n.to_string_lossy().into_owned())
+}
+
 fn plan(args: &Args) -> Vec<Step> {
     let mut steps = plan_start(args);
     steps.extend(plan_finish(args));
@@ -255,6 +293,20 @@ impl Events<'_> {
         }
     }
 
+    fn plan(&mut self, args: &Args, steps: &[Step], dry: bool, resume: bool) {
+        let total = steps.len();
+        self.emit(
+            serde_json::json!({
+                "event": "plan", "dry_run": dry, "resume": resume, "instance": args.option("instance"),
+                "steps": steps.iter().map(|s| serde_json::json!({ "step": s.name, "description": s.what })).collect::<Vec<_>>(),
+            }),
+            &format!(
+                "nvmod setup: {total} step(s){}",
+                if dry { " (dry run: nothing is written)" } else { "" }
+            ),
+        );
+    }
+
     fn step(
         &mut self,
         step: &Step,
@@ -275,26 +327,57 @@ impl Events<'_> {
     }
 }
 
-fn refuse(args: &Args, why: &str, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    let _ = writeln!(err, "nvmod setup: refused: {why}");
-    if args.flag("json") {
-        let _ = writeln!(
-            out,
-            "{}",
-            serde_json::json!({ "seq": 1, "event": "finished", "status": "refused", "exit_code": REFUSED, "rolled_back": false, "reason": why })
-        );
+/// Stop before running anything: print why (and, with `--json`, a `finished` event) and return `code`.
+fn stop(
+    json: bool,
+    code: u8,
+    status: &str,
+    why: &str,
+    extra: &serde_json::Value,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let _ = writeln!(err, "nvmod setup: {status}: {why}");
+    if json {
+        let mut event = serde_json::json!({
+            "seq": 1, "event": "finished", "status": status, "exit_code": code,
+            "rolled_back": false, "reason": why,
+        });
+        if let (Some(o), Some(e)) = (event.as_object_mut(), extra.as_object()) {
+            o.extend(e.clone());
+        }
+        let _ = writeln!(out, "{event}");
     }
-    REFUSED
+    code
 }
 
-/// Everything that can be checked before anything is written. Returns the reason for a refusal.
-fn preflight(args: &Args) -> Result<(), String> {
+fn refuse(json: bool, why: &str, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    stop(
+        json,
+        REFUSED,
+        "refused",
+        why,
+        &serde_json::json!({}),
+        out,
+        err,
+    )
+}
+
+/// Everything that can be checked before anything is written. Returns the reason for a refusal. `done` names the
+/// steps a resume will skip, whose inputs are not needed again; `fresh` is a run that starts a new Instance.
+fn preflight(args: &Args, done: &[String], fresh: bool) -> Result<(), String> {
     let instance = Path::new(args.option("instance").unwrap_or_default());
-    if instance.exists()
+    if fresh
+        && instance.exists()
         && (!instance.is_dir() || std::fs::read_dir(instance).is_ok_and(|mut d| d.next().is_some()))
     {
+        let hint = if state::path(instance).is_file() {
+            "; it holds an unfinished setup: continue it with --resume or remove it with --restart --yes"
+        } else {
+            ""
+        };
         return Err(format!(
-            "{} already exists and is not an empty folder; setup only starts from a path that holds nothing",
+            "{} already exists and is not an empty folder; setup only starts from a path that holds nothing{hint}",
             instance.display()
         ));
     }
@@ -320,20 +403,25 @@ fn preflight(args: &Args) -> Result<(), String> {
             Err(format!("{what} {path} does not exist"))
         }
     };
+    let finished = |name: &str| done.iter().any(|d| d == name);
     need(
         args.option("masterlist").unwrap_or_default(),
         "the masterlist",
         false,
     )?;
     for archive in args.option_all("mod") {
-        if !Path::new(archive).exists() {
+        if !finished(&format!("mod:{}", archive_name(archive))) && !Path::new(archive).exists() {
             return Err(format!("the archive {archive} does not exist"));
         }
     }
-    if let Some(dir) = args.option("fallout3") {
+    if let Some(dir) = args.option("fallout3")
+        && !finished("ttw")
+    {
         need(dir, "the Fallout 3 folder", true)?;
     }
-    if let Some(dir) = args.option("import-mo2") {
+    if let Some(dir) = args.option("import-mo2")
+        && !finished("import-mo2")
+    {
         need(dir, "the MO2 instance folder", true)?;
     }
     for option in ["package", "installer", "lock"] {
@@ -378,43 +466,67 @@ fn detail(stdout: &[u8], stderr: &[u8]) -> String {
     text.trim().chars().take(4000).collect()
 }
 
+/// `args` with every path-valued option made absolute, so the recorded command line means the same from any folder.
+fn absolutize(args: &[String]) -> Vec<String> {
+    let mut out = Vec::with_capacity(args.len());
+    let mut words = args.iter();
+    while let Some(word) = words.next() {
+        out.push(word.clone());
+        let is_path = word
+            .strip_prefix("--")
+            .is_some_and(|n| PATH_OPTIONS.contains(&n));
+        if is_path && let Some(value) = words.next() {
+            {
+                out.push(
+                    std::path::absolute(value)
+                        .map_or_else(|_| value.clone(), |p| p.to_string_lossy().into_owned()),
+                );
+            }
+        }
+    }
+    out
+}
+
+fn same_path(a: &Path, b: &Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(x), Ok(y)) => x == y,
+        _ => a == b,
+    }
+}
+
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    let args = match Args::parse(args, FLAGS, OPTIONS) {
-        Ok(a)
-            if a.positional.is_empty()
-                && ["base", "instance", "masterlist"]
-                    .iter()
-                    .all(|n| a.option(n).is_some()) =>
-        {
-            a
-        }
-        Ok(_) => {
-            let _ = writeln!(err, "{USAGE_LINE}");
-            return USAGE;
-        }
+    let parsed = match Args::parse(args, FLAGS, OPTIONS) {
+        Ok(a) => a,
         Err(why) => {
             let _ = writeln!(err, "nvmod setup: {why}\n{USAGE_LINE}");
             return USAGE;
         }
     };
-    if let Err(why) = preflight(&args) {
-        return refuse(&args, &why, out, err);
+    if parsed.flag("resume") || parsed.flag("restart") {
+        return lifecycle(&parsed, out, err);
+    }
+    let complete = parsed.positional.is_empty()
+        && !parsed.flag("yes")
+        && ["base", "instance", "masterlist"]
+            .iter()
+            .all(|n| parsed.option(n).is_some());
+    if !complete {
+        let _ = writeln!(err, "{USAGE_LINE}");
+        return USAGE;
+    }
+    let absolute = absolutize(args);
+    let Ok(args) = Args::parse(&absolute, FLAGS, OPTIONS) else {
+        return USAGE;
+    };
+    let json = args.flag("json");
+    if let Err(why) = preflight(&args, &[], true) {
+        return refuse(json, &why, out, err);
     }
     let steps = plan(&args);
     let total = steps.len();
-    let mut events = Events {
-        out,
-        json: args.flag("json"),
-        seq: 0,
-    };
+    let mut events = Events { out, json, seq: 0 };
     let dry = args.flag("dry-run");
-    events.emit(
-        serde_json::json!({
-            "event": "plan", "dry_run": dry, "instance": args.option("instance"),
-            "steps": steps.iter().map(|s| serde_json::json!({ "step": s.name, "description": s.what })).collect::<Vec<_>>(),
-        }),
-        &format!("nvmod setup: {} step(s){}", total, if dry { " (dry run: nothing is written)" } else { "" }),
-    );
+    events.plan(&args, &steps, dry, false);
     if dry {
         for (i, s) in steps.iter().enumerate() {
             events.step(
@@ -432,15 +544,251 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         );
         return OK;
     }
-    execute(&args, &steps, &mut events, err)
+    let recorded: Vec<String> = absolute
+        .iter()
+        .filter(|a| !INVOCATION_FLAGS.contains(&a.as_str()))
+        .cloned()
+        .collect();
+    let mut run = Run {
+        keep: args.flag("keep-partial"),
+        state: State {
+            schema_version: state::SCHEMA_VERSION,
+            nvmod_version: env!("CARGO_PKG_VERSION").to_owned(),
+            args: recorded,
+            plan: plan_entries(&steps),
+            completed: Vec::new(),
+            failure: None,
+            complete: false,
+        },
+        done: 0,
+        resumed: false,
+    };
+    execute(&args, &steps, &mut events, err, &mut run)
 }
 
-/// Run the steps in order; on the first failure undo the run and finish with that step's code.
-fn execute(args: &Args, steps: &[Step], events: &mut Events, err: &mut dyn Write) -> u8 {
+fn plan_entries(steps: &[Step]) -> Vec<PlanEntry> {
+    steps
+        .iter()
+        .map(|s| PlanEntry {
+            step: s.name.clone(),
+            description: s.what.clone(),
+        })
+        .collect()
+}
+
+/// `--resume` and `--restart`: they take the Instance and nothing else (`--restart` also `--yes`).
+fn lifecycle(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let restart = args.flag("restart");
+    let stray_option = OPTIONS
+        .iter()
+        .any(|o| *o != "instance" && args.option(o).is_some());
+    let stray_flag = ["dry-run", "release", "skip-nv-rs", "copy", "keep-partial"]
+        .iter()
+        .any(|f| args.flag(f));
+    let misplaced = (args.flag("resume") && restart) || (args.flag("yes") && !restart);
+    if stray_option
+        || stray_flag
+        || misplaced
+        || !args.positional.is_empty()
+        || args.option("instance").is_none()
+    {
+        let _ = writeln!(err, "{USAGE_LINE}");
+        return USAGE;
+    }
+    let instance = std::path::absolute(args.option("instance").unwrap_or_default())
+        .unwrap_or_else(|_| Path::new(args.option("instance").unwrap_or_default()).to_owned());
+    let json = args.flag("json");
+    let state = match state::load(&instance) {
+        Ok(s) => s,
+        Err(LoadError::Missing) => {
+            let why = format!(
+                "{} holds no unfinished setup (there is no .nvmod/setup.json)",
+                instance.display()
+            );
+            return refuse(json, &why, out, err);
+        }
+        Err(LoadError::Newer(v)) => {
+            let why = format!(
+                "the setup state of {} is schema version {v}, newer than the {} this nvmod reads",
+                instance.display(),
+                state::SCHEMA_VERSION
+            );
+            return refuse(json, &why, out, err);
+        }
+        Err(LoadError::Bad(why)) => return refuse(json, &why, out, err),
+    };
+    if restart {
+        restart_setup(args, &instance, &state, out, err)
+    } else {
+        resume(args, &instance, state, out, err)
+    }
+}
+
+/// Remove a partial Instance. Only one that holds an unfinished setup, and only with `--yes`.
+fn restart_setup(
+    args: &Args,
+    instance: &Path,
+    state: &State,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let json = args.flag("json");
+    if state.complete {
+        let why = format!(
+            "{} is a finished Instance, not a partial one; setup will not remove it",
+            instance.display()
+        );
+        return refuse(json, &why, out, err);
+    }
+    if !args.flag("yes") {
+        let why = format!(
+            "--restart removes {} and everything in it; add --yes to confirm",
+            instance.display()
+        );
+        return refuse(json, &why, out, err);
+    }
+    if std::fs::remove_dir_all(instance).is_err() && instance.exists() {
+        return stop(
+            json,
+            ROLLED_BACK,
+            "failed",
+            &format!(
+                "cannot remove {}; remove the folder by hand",
+                instance.display()
+            ),
+            &serde_json::json!({}),
+            out,
+            err,
+        );
+    }
+    let mut events = Events { out, json, seq: 0 };
+    events.emit(
+        serde_json::json!({ "event": "finished", "status": "restarted", "exit_code": OK, "rolled_back": false, "removed": instance }),
+        &format!(
+            "nvmod setup: removed {}; start again with a new `nvmod setup`",
+            instance.display()
+        ),
+    );
+    OK
+}
+
+/// Continue a recorded run: re-check the finished steps, skip them, run the rest.
+fn resume(
+    args: &Args,
+    instance: &Path,
+    state: State,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let json = args.flag("json");
+    let Ok(recorded) = Args::parse(&state.args, FLAGS, OPTIONS) else {
+        return refuse(json, "the recorded command line cannot be read", out, err);
+    };
+    let there = recorded.option("instance").unwrap_or_default();
+    if !same_path(Path::new(there), instance) {
+        let why = format!(
+            "the setup was started for {there}, not {}",
+            instance.display()
+        );
+        return refuse(json, &why, out, err);
+    }
+    let finished: Vec<String> = state.completed.iter().map(|c| c.step.clone()).collect();
+    if let Err(why) = preflight(&recorded, &finished, false) {
+        return refuse(json, &why, out, err);
+    }
+    let steps = plan(&recorded);
+    let names: Vec<&str> = steps.iter().map(|s| s.name.as_str()).collect();
+    let was: Vec<&str> = state.plan.iter().map(|p| p.step.as_str()).collect();
+    let in_order = finished
+        .iter()
+        .zip(&names)
+        .all(|(done, planned)| done == planned);
+    if names != was || !in_order || finished.len() > names.len() {
+        let why =
+            "the recorded plan does not match this nvmod's plan for the recorded command line";
+        return refuse(json, why, out, err);
+    }
+    let profile = recorded.option("profile").unwrap_or("Default");
+    for done in &state.completed {
+        if let Err(why) = state::verify_witness(&done.step, &done.witness, instance, profile) {
+            let text = format!(
+                "cannot resume: step `{}` no longer holds ({why}); nothing was run. Start again with `nvmod setup --restart --instance {} --yes`",
+                done.step,
+                instance.display()
+            );
+            return stop(
+                json,
+                VERIFICATION,
+                "failed",
+                &text,
+                &serde_json::json!({ "failed_step": done.step, "resumable": false }),
+                out,
+                err,
+            );
+        }
+    }
+    let mut events = Events { out, json, seq: 0 };
+    events.plan(&recorded, &steps, false, true);
+    let mut run = Run {
+        keep: true,
+        done: state.completed.len(),
+        state,
+        resumed: true,
+    };
+    execute(&recorded, &steps, &mut events, err, &mut run)
+}
+
+/// What one invocation does about the state file.
+struct Run {
+    /// A failing step leaves the Instance resumable instead of removing it.
+    keep: bool,
+    state: State,
+    /// Steps already finished and verified: they are skipped.
+    done: usize,
+    resumed: bool,
+}
+
+/// Run the steps in order. A failure with `keep` set (and something finished) leaves the Instance resumable;
+/// otherwise it undoes the run. Either way the run finishes with that step's code.
+fn execute(
+    args: &Args,
+    steps: &[Step],
+    events: &mut Events,
+    err: &mut dyn Write,
+    run: &mut Run,
+) -> u8 {
     let total = steps.len();
     let instance = Path::new(args.option("instance").unwrap_or_default()).to_owned();
+    let profile = args.option("profile").unwrap_or("Default").to_owned();
     let pre_existing = instance.is_dir();
+    if run.resumed {
+        events.emit(
+            serde_json::json!({
+                "event": "resumed", "instance": instance, "total": total,
+                "completed": run.state.completed.iter().map(|c| c.step.clone()).collect::<Vec<_>>(),
+                "next": steps.get(run.done).map(|s| s.name.clone()),
+            }),
+            &format!(
+                "nvmod setup: resuming at step {} of {total}",
+                run.done.min(total - 1) + 1
+            ),
+        );
+    }
     for (i, step) in steps.iter().enumerate() {
+        if i < run.done {
+            events.emit(
+                serde_json::json!({
+                    "event": "skipped", "step": step.name, "index": i + 1, "total": total,
+                    "description": step.what, "reason": "finished earlier and still holds",
+                }),
+                &format!(
+                    "[{}/{total}] {}: finished earlier, skipped",
+                    i + 1,
+                    step.name
+                ),
+            );
+            continue;
+        }
         events.step(
             step,
             i,
@@ -449,9 +797,23 @@ fn execute(args: &Args, steps: &[Step], events: &mut Events, err: &mut dyn Write
             &serde_json::json!({}),
             &format!("[{}/{total}] {}: {}", i + 1, step.name, step.what),
         );
+        let mods_before = state::mods_snapshot(&instance);
         let (mut so, mut se) = (Vec::new(), Vec::new());
-        let code = crate::run(&step.args, &mut so, &mut se);
-        let shown = detail(&so, &se);
+        let mut code = crate::run(&step.args, &mut so, &mut se);
+        let mut shown = detail(&so, &se);
+        if code == OK && step.name != "verify" {
+            let witness = state::witness_for(&step.name, &instance, &profile, &mods_before);
+            run.state.completed.push(Completed {
+                step: step.name.clone(),
+                witness,
+            });
+            run.state.failure = None;
+            if let Err(e) = state::save(&instance, &run.state) {
+                run.state.completed.pop();
+                code = ROLLED_BACK;
+                shown = format!("cannot write the setup state file: {e}");
+            }
+        }
         if code == OK {
             events.step(
                 step,
@@ -468,45 +830,100 @@ fn execute(args: &Args, steps: &[Step], events: &mut Events, err: &mut dyn Write
             continue;
         }
         let code = step_code(code);
-        let undone = roll_back(&instance, pre_existing);
-        events.step(
-            step,
-            i,
-            total,
-            "failed",
-            &serde_json::json!({ "code": code, "detail": shown }),
-            &format!(
-                "{}\nstep `{}` failed (exit {code})",
-                indent(&shown),
-                step.name
-            ),
-        );
-        let (final_code, note) = if undone {
-            (
+        return fail(
+            &Failed {
+                step,
+                index: i,
+                total,
                 code,
-                "rolled back: the Instance was removed and nothing is left behind",
-            )
-        } else {
-            (
-                ROLLED_BACK,
-                "the rollback could not remove the Instance; remove the folder by hand",
-            )
-        };
-        events.emit(
-            serde_json::json!({
-                "event": "finished", "status": "failed", "exit_code": final_code,
-                "rolled_back": undone, "failed_step": step.name,
-            }),
-            note,
+                shown: &shown,
+            },
+            &instance,
+            pre_existing,
+            events,
+            err,
+            run,
         );
-        let _ = writeln!(err, "nvmod setup: step `{}` failed; {note}", step.name);
-        return final_code;
     }
+    run.state.complete = true;
+    run.state.failure = None;
+    let _ = state::save(&instance, &run.state);
     events.emit(
-        serde_json::json!({ "event": "finished", "status": "ok", "exit_code": OK, "rolled_back": false, "instance": instance }),
+        serde_json::json!({ "event": "finished", "status": "ok", "exit_code": OK, "rolled_back": false, "resumable": false, "instance": instance }),
         &format!("nvmod setup: done; the Instance at {} passes the Doctor", instance.display()),
     );
     OK
+}
+
+/// A step that failed.
+struct Failed<'a> {
+    step: &'a Step,
+    index: usize,
+    total: usize,
+    code: u8,
+    shown: &'a str,
+}
+
+/// Finish a run whose step failed: keep the Instance resumable, or undo the run.
+fn fail(
+    f: &Failed,
+    instance: &Path,
+    pre_existing: bool,
+    events: &mut Events,
+    err: &mut dyn Write,
+    run: &mut Run,
+) -> u8 {
+    let (step, code) = (f.step, f.code);
+    let resumable = run.keep && !run.state.completed.is_empty();
+    let undone = !resumable && roll_back(instance, pre_existing);
+    if resumable {
+        run.state.failure = Some(Failure {
+            step: step.name.clone(),
+            code,
+            detail: f.shown.to_owned(),
+        });
+        let _ = state::save(instance, &run.state);
+    }
+    events.step(
+        step,
+        f.index,
+        f.total,
+        "failed",
+        &serde_json::json!({ "code": code, "detail": f.shown }),
+        &format!(
+            "{}\nstep `{}` failed (exit {code})",
+            indent(f.shown),
+            step.name
+        ),
+    );
+    let (final_code, note) = if resumable {
+        (
+            code,
+            format!(
+                "the Instance is kept: continue with `nvmod setup --resume --instance {0}` or remove it with `nvmod setup --restart --instance {0} --yes`",
+                instance.display()
+            ),
+        )
+    } else if undone {
+        (
+            code,
+            "rolled back: the Instance was removed and nothing is left behind".to_owned(),
+        )
+    } else {
+        (
+            ROLLED_BACK,
+            "the rollback could not remove the Instance; remove the folder by hand".to_owned(),
+        )
+    };
+    events.emit(
+        serde_json::json!({
+            "event": "finished", "status": "failed", "exit_code": final_code,
+            "rolled_back": undone, "resumable": resumable, "failed_step": step.name,
+        }),
+        &note,
+    );
+    let _ = writeln!(err, "nvmod setup: step `{}` failed; {note}", step.name);
+    final_code
 }
 
 fn indent(text: &str) -> String {

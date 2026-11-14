@@ -510,3 +510,268 @@ fn the_target_command_sets_the_target_and_refuses_what_it_cannot() {
     let n = none.path().to_str().unwrap();
     assert_eq!(nvmod(&strings(&["target", "nv-rs", "--instance", n])).0, 2);
 }
+
+// ---- resumable setup ----
+
+fn state_path(rig: &Rig) -> PathBuf {
+    rig.root().join(".nvmod/setup.json")
+}
+
+fn state(rig: &Rig) -> Value {
+    serde_json::from_str(&std::fs::read_to_string(state_path(rig)).unwrap()).unwrap()
+}
+
+fn with(mut args: Vec<String>, extra: &[&str]) -> Vec<String> {
+    args.extend(strings(extra));
+    args
+}
+
+fn resume_args(rig: &Rig) -> Vec<String> {
+    strings(&[
+        "setup",
+        "--resume",
+        "--instance",
+        rig.root().to_str().unwrap(),
+        "--json",
+    ])
+}
+
+fn names(events: &[Value], kind: &str, status: &str) -> Vec<String> {
+    events
+        .iter()
+        .filter(|e| {
+            e["event"] == kind && (kind != "step" || e["status"] == status) && e["step"].is_string()
+        })
+        .map(|e| e["step"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+/// A run whose last Mod is not an archive yet, kept resumable. Returns the path of the bad archive.
+fn failed_at_the_last_mod(rig: &Rig) -> (String, i32, String) {
+    let bad = rig.work("bad.zip");
+    std::fs::write(&bad, b"this is not an archive").unwrap();
+    let args = with(rig.full_args(), &["--mod", &bad, "--keep-partial"]);
+    let (code, out, err) = nvmod(&args);
+    assert!(code == 2 || code == 4, "{code}: {out}\n{err}");
+    (bad, code, out)
+}
+
+fn fix_the_bad_mod(rig: &Rig) {
+    let good = rig.zip("Late.zip", &[("Late.esp", PluginBuilder::new().build())]);
+    std::fs::copy(good, rig.work("bad.zip")).unwrap();
+}
+
+#[test]
+fn a_failed_step_keeps_the_instance_resumable_when_asked() {
+    let rig = Rig::new();
+    let (_, code, out) = failed_at_the_last_mod(&rig);
+    assert!(rig.root().is_dir(), "the Instance stays");
+    let events = events(&out);
+    let last = events.last().unwrap();
+    assert_eq!(last["status"], "failed");
+    assert_eq!(last["exit_code"], code);
+    assert_eq!(last["rolled_back"], false);
+    assert_eq!(last["resumable"], true);
+    assert_eq!(last["failed_step"], "mod:bad.zip");
+    let st = state(&rig);
+    assert_eq!(st["schema_version"], 1);
+    let done: Vec<&str> = st["completed"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["step"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        done,
+        ["init", "profile", "nv-rs", "target", "ttw", "mod:Core.zip"]
+    );
+    assert_eq!(st["failure"]["step"], "mod:bad.zip");
+    assert_eq!(st["plan"].as_array().unwrap().len(), 10);
+    assert!(
+        std::fs::read_dir(rig.root().join(".nvmod"))
+            .unwrap()
+            .all(|e| !e.unwrap().file_name().to_string_lossy().ends_with(".tmp")),
+        "written atomically"
+    );
+}
+
+#[test]
+fn a_failed_first_step_leaves_nothing_even_when_asked_to_keep() {
+    let rig = Rig::new();
+    let mut args = with(rig.full_args(), &["--keep-partial"]);
+    args.extend(strings(&["--import-mo2", &rig.work("no-such-mo2")]));
+    let (code, _, _) = nvmod(&args);
+    assert_eq!(code, 2);
+    assert!(!rig.root().exists());
+}
+
+#[test]
+fn resume_continues_from_the_first_unfinished_step_and_skips_the_rest() {
+    let rig = Rig::new();
+    failed_at_the_last_mod(&rig);
+    let ttw_file = rig
+        .root()
+        .join("mods/Tale of Two Wastelands/Meshes/ttw.nif");
+    std::fs::write(&ttw_file, b"marker").unwrap();
+    fix_the_bad_mod(&rig);
+    let (code, out, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 0, "{out}\n{err}");
+    let events = events(&out);
+    assert_eq!(
+        names(&events, "skipped", ""),
+        ["init", "profile", "nv-rs", "target", "ttw", "mod:Core.zip"]
+    );
+    assert_eq!(
+        names(&events, "step", "done"),
+        ["mod:bad.zip", "stage", "sort", "verify"]
+    );
+    assert_eq!(
+        std::fs::read(&ttw_file).unwrap(),
+        b"marker",
+        "TTW was not run again"
+    );
+    let resumed = events.iter().find(|e| e["event"] == "resumed").unwrap();
+    assert_eq!(resumed["next"], "mod:bad.zip");
+    assert_eq!(resumed["completed"].as_array().unwrap().len(), 6);
+    let seqs: Vec<u64> = events.iter().map(|e| e["seq"].as_u64().unwrap()).collect();
+    assert!(seqs.windows(2).all(|w| w[0] < w[1]), "{seqs:?}");
+    assert_eq!(events.last().unwrap()["status"], "ok");
+    assert!(
+        rig.root().join("mods/Late/Late.esp").is_file() || rig.root().join("mods/bad").is_dir()
+    );
+    let (code, out, err) = rig.doctor();
+    assert_eq!(code, 0, "{out}\n{err}");
+    assert_eq!(state(&rig)["complete"], true);
+}
+
+#[test]
+fn a_resumed_run_that_fails_again_stays_resumable_with_the_steps_code() {
+    let rig = Rig::new();
+    let (_, code, _) = failed_at_the_last_mod(&rig);
+    let (again, out, _) = nvmod(&resume_args(&rig));
+    assert_eq!(again, code, "{out}");
+    let events = events(&out);
+    assert!(rig.root().is_dir());
+    assert_eq!(events.last().unwrap()["resumable"], true);
+    assert_eq!(names(&events, "skipped", "").len(), 6);
+    fix_the_bad_mod(&rig);
+    let (code, out, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 0, "{out}\n{err}");
+}
+
+#[test]
+fn resume_does_not_trust_the_file_and_refuses_when_a_finished_step_no_longer_holds() {
+    let rig = Rig::new();
+    failed_at_the_last_mod(&rig);
+    fix_the_bad_mod(&rig);
+    std::fs::remove_dir_all(rig.root().join("mods/Core")).unwrap();
+    let before = snapshot(&rig.root());
+    let (code, out, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 3, "{out}\n{err}");
+    assert!(err.contains("mod:Core.zip"), "{err}");
+    assert!(err.contains("--restart"), "{err}");
+    assert_eq!(snapshot(&rig.root()), before, "nothing was run or changed");
+    let last = events(&out).pop().unwrap();
+    assert_eq!(last["status"], "failed");
+    assert_eq!(last["exit_code"], 3);
+}
+
+#[test]
+fn resume_notices_a_changed_nv_rs_binary() {
+    let rig = Rig::new();
+    failed_at_the_last_mod(&rig);
+    fix_the_bad_mod(&rig);
+    let viewer = rig.root().join("nv-rs/bin/nv-viewer");
+    let mut bytes = std::fs::read(&viewer).unwrap();
+    bytes.push(b'!');
+    std::fs::write(&viewer, bytes).unwrap();
+    let (code, _, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 3, "{err}");
+    assert!(err.contains("nv-rs"), "{err}");
+}
+
+#[test]
+fn resume_without_state_a_newer_state_or_a_missing_instance_is_refused() {
+    let rig = Rig::new();
+    let (code, _, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 2, "{err}");
+    write_file(&rig.root(), "keep.txt", b"mine");
+    let (code, _, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 2, "{err}");
+    assert!(rig.root().join("keep.txt").is_file());
+    std::fs::remove_dir_all(rig.root()).unwrap();
+    failed_at_the_last_mod(&rig);
+    let mut st = state(&rig);
+    st["schema_version"] = 2.into();
+    std::fs::write(state_path(&rig), st.to_string()).unwrap();
+    let (code, _, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains('2'), "{err}");
+}
+
+#[test]
+fn resume_of_a_finished_setup_skips_everything_and_checks_it_again() {
+    let rig = Rig::new();
+    let (code, out, err) = nvmod(&with(rig.full_args(), &["--keep-partial"]));
+    assert_eq!(code, 0, "{out}\n{err}");
+    let (code, out, err) = nvmod(&resume_args(&rig));
+    assert_eq!(code, 0, "{out}\n{err}");
+    let events = events(&out);
+    assert_eq!(names(&events, "skipped", "").len(), 8);
+    assert_eq!(names(&events, "step", "done"), ["verify"]);
+}
+
+#[test]
+fn resume_cannot_be_combined_with_a_new_plan() {
+    let rig = Rig::new();
+    let (code, _, err) = nvmod(&with(resume_args(&rig), &["--mod", "x.zip"]));
+    assert_eq!(code, 5, "{err}");
+    let (code, _, _) = nvmod(&strings(&["setup", "--resume"]));
+    assert_eq!(code, 5);
+    let (code, _, _) = nvmod(&strings(&[
+        "setup",
+        "--resume",
+        "--restart",
+        "--instance",
+        "/x",
+        "--yes",
+    ]));
+    assert_eq!(code, 5);
+}
+
+#[test]
+fn restart_removes_a_partial_instance_only_after_the_confirmation_flag() {
+    let rig = Rig::new();
+    failed_at_the_last_mod(&rig);
+    let root = rig.root();
+    let r = root.to_str().unwrap();
+    let before = snapshot(&root);
+    let (code, _, err) = nvmod(&strings(&["setup", "--restart", "--instance", r]));
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains("--yes"), "{err}");
+    assert_eq!(snapshot(&root), before);
+    let (code, out, err) = nvmod(&strings(&["setup", "--restart", "--instance", r, "--yes"]));
+    assert_eq!(code, 0, "{out}\n{err}");
+    assert!(!root.exists());
+    // A fresh run now works again.
+    fix_the_bad_mod(&rig);
+    let (code, out, err) = nvmod(&rig.full_args());
+    assert_eq!(code, 0, "{out}\n{err}");
+}
+
+#[test]
+fn restart_refuses_what_is_not_a_partial_setup() {
+    let rig = Rig::new();
+    write_file(&rig.root(), "keep.txt", b"mine");
+    let r = rig.root();
+    let r = r.to_str().unwrap();
+    let (code, _, err) = nvmod(&strings(&["setup", "--restart", "--instance", r, "--yes"]));
+    assert_eq!(code, 2, "{err}");
+    assert!(rig.root().join("keep.txt").is_file());
+    std::fs::remove_dir_all(rig.root()).unwrap();
+    let (code, out, err) = nvmod(&with(rig.full_args(), &["--keep-partial"]));
+    assert_eq!(code, 0, "{out}\n{err}");
+    let (code, _, err) = nvmod(&strings(&["setup", "--restart", "--instance", r, "--yes"]));
+    assert_eq!(code, 2, "a finished Instance is not removed: {err}");
+    assert!(rig.root().join("mods/Core").is_dir());
+}

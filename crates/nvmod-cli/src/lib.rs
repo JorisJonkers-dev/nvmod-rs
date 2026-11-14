@@ -12,6 +12,7 @@ mod install_nvrs;
 mod pe;
 mod profile;
 mod setup;
+mod setup_state;
 mod sort;
 mod stage;
 mod target;
@@ -79,11 +80,16 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
                 [--fallout3 <dir> [--package <file>] [--installer <path>] [--lock <file>] [--store <dir>]]
                 [--release | --source <dir>] [--skip-nv-rs] [--profile <name>] [--answers <file>]
-                [--dry-run] [--json]
+                [--keep-partial] [--dry-run] [--json]
+  nvmod setup --resume --instance <dir> [--json]
+  nvmod setup --restart --instance <dir> --yes
                               base copy to a modded, Doctor-clean Instance in one run: init (or the MO2 import),
                               nv-rs, TTW, each --mod, stage, `sort --apply`, then the Doctor. A failing step
-                              removes what the run made and exits with its code; --dry-run lists the steps and
-                              writes nothing; --json prints one event per line (plan, step, finished)
+                              removes what the run made and exits with its code, unless --keep-partial leaves
+                              the Instance resumable: --resume then continues from the first unfinished step
+                              (finished steps are checked again, not trusted) and --restart --yes removes the
+                              partial Instance; --dry-run lists the steps and writes nothing; --json prints one
+                              event per line (plan, resumed, skipped, step, finished)
   nvmod verify --instance <dir> [--profile <name>] [--masterlist <file>] [--catalog <file>] [--proton <program>]
                 [--fail-on <severity>] [--json]
                               confirm an install (read only): the Doctor on the Instance, the installed nv-rs
