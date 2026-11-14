@@ -166,10 +166,10 @@ fn doctor_never_writes_to_the_base_copy() {
 #[test]
 fn doctor_needs_exactly_one_of_base_and_instance() {
     let (code, _, err) = nvmod(&["doctor"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
     assert!(err.contains("--base"), "{err}");
     let (code, _, _) = nvmod(&["doctor", "--base", "a", "--instance", "b"]);
-    assert_eq!(code, 2);
+    assert_eq!(code, 5);
 }
 
 #[test]
@@ -272,7 +272,7 @@ mod init {
     #[test]
     fn init_without_its_arguments_is_a_usage_error() {
         let (code, _, err) = nvmod(&["init"]);
-        assert_eq!(code, 2);
+        assert_eq!(code, 5);
         assert!(err.contains("usage: nvmod init"), "{err}");
     }
 
