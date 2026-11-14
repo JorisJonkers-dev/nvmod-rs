@@ -106,6 +106,9 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               (a Linux entry that invokes Proton, a Windows entry that runs the game executable
                               directly); exit 3 when verification fails
   nvmod tools list|verify [--lock <file>] [--store <dir>] [--instance <dir>] [--json]
+  nvmod tools contracts [--json]
+                              the tool contracts this nvmod reads and the schema versions it accepts (the current
+                              one and the one before it)
   nvmod tools fetch <tool> [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>]
   nvmod tools trust <tool> <version> --instance <dir> [--sha256 <hex>]
   nvmod tools run <tool> [--lock <file>] [--store <dir>] [--instance <dir>] -- <args...>
