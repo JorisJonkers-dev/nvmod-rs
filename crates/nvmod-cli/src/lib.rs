@@ -76,9 +76,11 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               list them, enable or disable some, move one; a change edits only modlist.txt,
                               stages the profile again when it was staged, and is undone by `nvmod rollback`
                               (--dry-run writes nothing)
-  nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--json]
+  nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]
                               the file-level conflicts of a profile (read only): who wins each contested path,
-                              and per Mod whether it overwrites, is overwritten, is mixed or redundant
+                              and per Mod whether it overwrites, is overwritten, is mixed or redundant;
+                              --archives adds the BSA axes: the archives the game loads and where a loose file
+                              or another archive collides with an archive (rules marked unverified)
   nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]
                               the virtual Data folder (read only): which Mod provides each path; the file set
                               of `nvmod stage`

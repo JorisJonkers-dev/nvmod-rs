@@ -6,6 +6,8 @@
 //! `.mohidden` files and its `meta.ini` are not providers. The base copy takes part in the tree but not in the
 //! conflicts (MO2 does not count a Mod that replaces a game file as a conflict).
 
+pub mod archives;
+
 use nvmod_core::FileIndex;
 use nvmod_instance::{NvmodInstance, find_ci};
 use serde::Serialize;
@@ -107,6 +109,9 @@ pub struct Report {
     pub mods: Vec<ModConflict>,
     /// Every contested path once, in path order.
     pub conflicts: Vec<Contested>,
+    /// The archive axes (`conflicts --archives`); absent otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub archives: Option<archives::ArchiveReport>,
 }
 
 /// One path of the virtual Data folder.
@@ -314,6 +319,7 @@ pub fn analyze(profile: &str, layers: &[Layer]) -> Report {
         profile: profile.to_owned(),
         mods,
         conflicts,
+        archives: None,
     }
 }
 
@@ -357,6 +363,36 @@ pub fn provider_file(
 /// See [`scan`].
 pub fn conflicts(instance: &NvmodInstance, profile: &str) -> Result<Report, ConflictError> {
     Ok(analyze(profile, &scan(instance, profile, false)?))
+}
+
+/// The conflicts of `profile` with the archive axes: which archives load, and where an archive and a loose file or
+/// another archive collide.
+///
+/// # Errors
+/// See [`scan`].
+pub fn conflicts_with_archives(
+    instance: &NvmodInstance,
+    profile: &str,
+) -> Result<Report, ConflictError> {
+    let layers = scan(instance, profile, false)?;
+    let mut report = analyze(profile, &layers);
+    report.archives = Some(archives::archive_report(instance, profile, &layers));
+    Ok(report)
+}
+
+/// The archive audit of `profile` (see [`archives::audit`]).
+///
+/// # Errors
+/// See [`scan`].
+pub fn audit_archives(
+    instance: &NvmodInstance,
+    profile: &str,
+) -> Result<Vec<nvmod_core::Finding>, ConflictError> {
+    Ok(archives::audit(
+        instance,
+        profile,
+        &scan(instance, profile, true)?,
+    ))
 }
 
 /// The virtual Data folder of `profile`, read from disk.

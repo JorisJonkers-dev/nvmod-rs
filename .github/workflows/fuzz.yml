@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [severity, pe_inspect, modlist, ini, plugin_list, winpath, catalog_parse, capabilities_parse]
+        target: [severity, pe_inspect, bsa_directory, modlist, ini, plugin_list, winpath, catalog_parse, capabilities_parse]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
