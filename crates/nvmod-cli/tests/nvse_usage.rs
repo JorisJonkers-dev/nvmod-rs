@@ -62,6 +62,10 @@ impl Scratch {
                     .call_on(1, 0x2201)
                     .set_to(&[0x2202])
                     .call(0x3101)
+                    .call(0x3922)
+                    .call(0x21c4)
+                    .call(0x3d80)
+                    .call(0x32a0)
                     .call(0x0100)
                     .build(),
                 &format!("ScriptName {MARKER}\nGetNVSEVersion"),
@@ -236,6 +240,11 @@ fn planted_opcodes_are_counted_with_plugins_and_status() {
         (Some("johnnyguitar"), Some("no-table"))
     );
     assert_eq!(row(&report, "0x3C93")["block"], "showoff");
+    // Blocks are the registered ranges only: a gap between two plugins is unknown, not the lower one's.
+    assert_eq!(row(&report, "0x3922")["block"], "knvse");
+    assert_eq!(row(&report, "0x21C4")["block"], "mcm");
+    assert_eq!(row(&report, "0x3D80")["block"], "unknown");
+    assert_eq!(row(&report, "0x32A0")["block"], "unknown");
     let r = row(&report, "0x5000");
     assert_eq!(
         (r["block"].as_str(), r["status"].as_str()),

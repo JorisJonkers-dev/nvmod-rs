@@ -27,7 +27,9 @@ const MAX_PLUGIN_BYTES: u64 = 1 << 30;
 enum Block {
     Xnvse,
     JipLn,
+    Mcm,
     JohnnyGuitar,
+    Knvse,
     ShowOff,
     Unknown,
 }
@@ -39,8 +41,10 @@ impl Block {
             ..XNVSE_FIRST => None,
             0x1400..=0x1fff => Some(Block::Xnvse),
             0x2200..=0x233a | 0x2600..=0x2942 => Some(Block::JipLn),
-            0x3100..=0x3c92 => Some(Block::JohnnyGuitar),
-            0x3c93..=0x3fff => Some(Block::ShowOff),
+            0x21c0..=0x21c8 => Some(Block::Mcm),
+            0x3100..=0x329b => Some(Block::JohnnyGuitar),
+            0x3920..=0x3929 => Some(Block::Knvse),
+            0x3c93..=0x3d74 => Some(Block::ShowOff),
             _ => Some(Block::Unknown),
         }
     }
@@ -49,7 +53,9 @@ impl Block {
         match self {
             Block::Xnvse => "xnvse",
             Block::JipLn => "jip-ln",
+            Block::Mcm => "mcm",
             Block::JohnnyGuitar => "johnnyguitar",
+            Block::Knvse => "knvse",
             Block::ShowOff => "showoff",
             Block::Unknown => "unknown",
         }
