@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-catalog"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
  "toml",
@@ -79,14 +79,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "nvmod-formats"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "nvmod-core",
 ]
@@ -105,14 +105,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-pe"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "nvmod-testkit"
-version = "0.0.0"
+version = "0.1.0"
 
 [[package]]
 name = "proc-macro2"
