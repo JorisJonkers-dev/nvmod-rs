@@ -671,3 +671,64 @@ fn a_catalogue_that_cannot_be_read_is_refused() {
     ]);
     assert_eq!(code, 2, "{out}");
 }
+
+#[test]
+fn the_proposal_counts_the_positions_it_would_change_and_names_none() {
+    let scratch = Scratch::new();
+    scratch.stage();
+    let report = scratch.sort_json(&[]);
+    let changed = report["positions"]["changed"].as_u64().unwrap();
+    let total = report["positions"]["total"].as_u64().unwrap();
+    assert!(changed <= total && total > 0, "{report}");
+    let (code, out, _) = scratch.sort(&[]);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains(&format!("{changed} of {total} position(s) would change")),
+        "{out}"
+    );
+}
+
+#[test]
+fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
+    let scratch = Scratch::new();
+    scratch.stage();
+    let before = (
+        scratch.profile_file("loadorder.txt"),
+        scratch.profile_file("plugins.txt"),
+    );
+    let (code, out, err) = nvmod(&[
+        "sort",
+        "--instance",
+        scratch.root().to_str().unwrap(),
+        "--keep-order",
+    ]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let order: Vec<String> = String::from_utf8(scratch.profile_file("loadorder.txt"))
+        .unwrap()
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let old: Vec<String> = String::from_utf8(before.0)
+        .unwrap()
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+        .map(str::to_owned)
+        .collect();
+    assert_eq!(order, old);
+    let times: Vec<_> = order
+        .iter()
+        .filter(|n| scratch.staged(n).is_file())
+        .map(|n| mtime(&scratch.staged(n)))
+        .collect();
+    assert!(times.len() >= 3, "{order:?}");
+    assert!(times.windows(2).all(|w| w[0] < w[1]), "{times:?}");
+    let (code, _, _) = nvmod(&[
+        "sort",
+        "--instance",
+        scratch.root().to_str().unwrap(),
+        "--keep-order",
+        "--apply",
+    ]);
+    assert_eq!(code, 5);
+}
