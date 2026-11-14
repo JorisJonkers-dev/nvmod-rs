@@ -217,6 +217,8 @@ fn a_failing_check_of_a_release_exits_4_and_rolls_back() {
 }
 
 const MANIFEST: &str = r#"{"schema_version":1,"version":"0.0.0-synthetic",
+  "executable":{"file_name":"FalloutNV.exe","game_version":"1.4.0.525","hash_algorithm":"fnv1a-64","sections":[{"name":".text","virtual_address":"0x00001000","virtual_size":"0x00200000","hash":"0123456789abcdef"}]},
+  "upstream_base_commit":"0123456789abcdef0123456789abcdef01234567","plugins_txt_ordering_switch":false,
   "play_patch":{"standalone_step":false,"command":null,"arguments":[]},
   "installation_check":{"command":"nv-viewer","arguments":["<data folder>","--check","--from-manifest"]}}"#;
 

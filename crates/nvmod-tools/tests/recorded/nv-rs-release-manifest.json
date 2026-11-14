@@ -2,11 +2,20 @@
   "schema_version": 1,
   "version": "0.0.0-synthetic",
   "upstream_base_commit": "0123456789abcdef0123456789abcdef01234567",
-  "executable_hashes": {
-    "nv-viewer": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-  },
+  "source_commit": "89abcdef0123456789abcdef0123456789abcdef",
   "source_tree_hash": "fedcba9876543210fedcba9876543210fedcba98",
-  "play_patch": { "program": "play-patch", "args": ["--base", "{base}", "--instance", "{instance}"] },
-  "plugins_txt_ordering": false,
+  "executable": {
+    "file_name": "FalloutNV.exe",
+    "game_version": "1.4.0.525",
+    "hash_algorithm": "fnv1a-64",
+    "hashed_bytes": "raw bytes of each listed section, as the file stores them",
+    "sections": [
+      { "name": ".text", "virtual_address": "0x00001000", "virtual_size": "0x00200000", "hash": "0123456789abcdef" }
+    ]
+  },
+  "play_patch": { "standalone_step": false, "command": null, "arguments": [], "description": "synthetic" },
+  "installation_check": { "command": "nv-viewer", "arguments": ["<data folder>", "--check"], "description": "synthetic" },
+  "plugins_txt_ordering_switch": false,
+  "files": { "capabilities": "capabilities.json", "checksums": "SHA256SUMS" },
   "extra_field_a_newer_tool_may_add": true
 }
