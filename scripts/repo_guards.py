@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Repository guards: SPDX headers, no game data or binaries, .gitignore.
 
-    repo_guards.py [--root DIR] {spdx,data,gitignore,all}
+    repo_guards.py [--root DIR] {spdx,data,gitignore,release,all}
 
 Every tracked file is checked. Exit status 0 when clean, 1 when a rule is broken (one line per violation).
 
@@ -10,14 +10,22 @@ Every tracked file is checked. Exit status 0 when clean, 1 when a rule is broken
   data       no file with a game-data, mod-archive or Windows-binary extension, no file over MAX_BYTES and no file
              with NUL bytes. Test files are built in code (crates/nvmod-testkit); there is no allow-list.
   gitignore  .gitignore lists every one of those extensions.
+  release    every workspace crate is covered by release handling: its Cargo.toml inherits
+             `version.workspace = true` (so the one `workspace.package.version` that release-please bumps is its
+             version, and release.yml's `cargo update --workspace` then refreshes its Cargo.lock entry),
+             release-please-config.json bumps that workspace version, and no extra-files entry names a manifest that
+             is not a workspace member. `fuzz` is its own workspace and is excluded.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
+import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 SOURCE_EXTS = {".rs", ".py", ".sh"}
@@ -28,6 +36,9 @@ FORBIDDEN_EXTS = (
     ".wav", ".ogg", ".mp3", ".fos", ".ess", ".dll", ".exe", ".asi", ".7z", ".rar", ".zip",
 )  # fmt: skip
 MAX_BYTES = 256 * 1024
+RELEASE_CONFIG = "release-please-config.json"
+WORKSPACE_VERSION_PATH = "$.workspace.package.version"
+EXCLUDED_CRATES = {"fuzz"}
 
 
 def tracked_files(root: Path) -> list[str]:
@@ -79,6 +90,56 @@ def check_gitignore(root: Path) -> list[str]:
     return [f".gitignore: does not ignore *{ext}" for ext in FORBIDDEN_EXTS if f"*{ext}" not in entries]
 
 
+def workspace_members(root: Path) -> tuple[list[str], list[str]]:
+    """The workspace member directories (globs expanded, `fuzz` left out) and any problems reading them."""
+    try:
+        manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        return [], [f"Cargo.toml: cannot be read: {e}"]
+    members: list[str] = []
+    for pattern in manifest.get("workspace", {}).get("members", []):
+        found = sorted(
+            Path(m).relative_to(root).as_posix() for m in glob.glob(str(root / pattern)) if Path(m).is_dir()
+        )
+        members += found or [pattern]
+    return [m for m in members if Path(m).name not in EXCLUDED_CRATES], []
+
+
+def check_release(root: Path) -> list[str]:
+    members, bad = workspace_members(root)
+    if bad:
+        return bad
+    try:
+        config = json.loads((root / RELEASE_CONFIG).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return [f"{RELEASE_CONFIG}: cannot be read: {e}"]
+    extra = [
+        entry
+        for package in config.get("packages", {}).values()
+        for entry in package.get("extra-files", [])
+        if isinstance(entry, dict)
+    ]
+    if not any(e.get("path") == "Cargo.toml" and e.get("jsonpath") == WORKSPACE_VERSION_PATH for e in extra):
+        bad.append(f"{RELEASE_CONFIG}: no extra-files entry bumps {WORKSPACE_VERSION_PATH} of Cargo.toml")
+    manifests = {f"{m}/Cargo.toml" for m in members}
+    for entry in extra:
+        path = str(entry.get("path", ""))
+        if path.endswith("/Cargo.toml") and path not in manifests:
+            bad.append(f"{RELEASE_CONFIG}: extra-files names {path}, which is not a workspace member")
+    for member in members:
+        try:
+            package = tomllib.loads((root / member / "Cargo.toml").read_text(encoding="utf-8")).get("package", {})
+        except (OSError, tomllib.TOMLDecodeError):
+            bad.append(f"{member}/Cargo.toml: workspace member without a readable manifest")
+            continue
+        if package.get("version") != {"workspace": True}:
+            bad.append(
+                f"{member}/Cargo.toml: must use `version.workspace = true`, so release-please's bump of the "
+                "workspace version reaches this crate and its Cargo.lock entry"
+            )
+    return bad
+
+
 def run(root: Path, command: str) -> list[str]:
     files = tracked_files(root)
     bad: list[str] = []
@@ -88,12 +149,14 @@ def run(root: Path, command: str) -> list[str]:
         bad += check_data(root, files)
     if command in ("gitignore", "all"):
         bad += check_gitignore(root)
+    if command in ("release", "all"):
+        bad += check_release(root)
     return bad
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["spdx", "data", "gitignore", "all"])
+    parser.add_argument("command", choices=["spdx", "data", "gitignore", "release", "all"])
     parser.add_argument("--root", type=Path, default=Path("."))
     args = parser.parse_args(argv)
     violations = run(args.root.resolve(), args.command)
