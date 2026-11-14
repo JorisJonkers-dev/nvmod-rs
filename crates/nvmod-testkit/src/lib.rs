@@ -8,6 +8,7 @@ mod mo2;
 mod nvrs;
 mod pe;
 mod plugin;
+mod save;
 
 pub use archive::{TarBuilder, ZipBuilder};
 pub use base::{BaseBuilder, Store, snapshot};
@@ -19,3 +20,4 @@ pub use nvrs::{
 };
 pub use pe::{ExportSpec, PeBuilder};
 pub use plugin::{PluginBuilder, ScdaBuilder};
+pub use save::SaveBuilder;

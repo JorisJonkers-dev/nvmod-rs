@@ -732,6 +732,7 @@ dependencies = [
  "nvmod-plugins",
  "nvmod-profile",
  "nvmod-runlog",
+ "nvmod-saves",
  "nvmod-stage",
  "nvmod-testkit",
  "nvmod-tools",
@@ -923,6 +924,21 @@ dependencies = [
  "nvmod-testkit",
  "sha2",
  "tracing",
+]
+
+[[package]]
+name = "nvmod-saves"
+version = "0.3.0"
+dependencies = [
+ "nvmod-backup",
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-profile",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

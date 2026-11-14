@@ -10,6 +10,7 @@ pub mod lockedorder;
 pub mod metaini;
 pub mod modlist;
 pub mod plugins;
+pub mod savegame;
 pub mod scan;
 pub mod scripts;
 pub mod text;
