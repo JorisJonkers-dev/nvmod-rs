@@ -119,15 +119,11 @@ mod tests {
     use super::*;
     use nvmod_testkit::TempDir;
     use serde_json::json;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::PathBuf;
     use std::time::Duration;
 
     fn script(dir: &TempDir, name: &str, body: &str) -> PathBuf {
-        let path = dir.path().join(name);
-        std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
-        path
+        nvmod_testkit::write_script(dir.path(), name, body)
     }
 
     fn fast() -> Runner {

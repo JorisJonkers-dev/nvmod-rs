@@ -263,6 +263,7 @@ fn a_failed_restore_puts_the_profile_back_and_exits_4() {
 }
 
 #[test]
+#[cfg(unix)]
 fn restore_refuses_while_the_game_runs() {
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
@@ -274,7 +275,9 @@ fn restore_refuses_while_the_game_runs() {
     };
     let tools = TempDir::new("bk-game");
     let fake = tools.path().join("FalloutNV.exe");
-    std::fs::copy(sleep, &fake).unwrap();
+    // A symlink, not a copy: nothing is written, so no descriptor open for writing can leak into a forked
+    // child and make the exec fail with ETXTBSY. The process name (`comm`) is the name it was started under.
+    std::os::unix::fs::symlink(sleep, &fake).unwrap();
     let mut child = Command::new(&fake).arg("30").spawn().unwrap();
     let before = snapshot(&s.root());
     let (code, _, err) = s.run(T0 + 5, &["backup", "restore", "latest"]);
