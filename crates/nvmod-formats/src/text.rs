@@ -52,6 +52,24 @@ pub fn decode(bytes: &[u8]) -> String {
     }
 }
 
+/// Encode as Windows-1252, the code page `plugins.txt` is written in; `None` when a character has no place in it.
+#[must_use]
+pub fn encode_windows_1252(text: &str) -> Option<Vec<u8>> {
+    text.chars()
+        .map(|c| {
+            let code = u32::from(c);
+            if code < 0x80 || (0xA0..=0xFF).contains(&code) {
+                u8::try_from(code).ok()
+            } else {
+                CP1252_HIGH
+                    .iter()
+                    .position(|&h| h == c)
+                    .and_then(|i| u8::try_from(0x80 + i).ok())
+            }
+        })
+        .collect()
+}
+
 /// The lines of `text`, split on `\n` with a trailing `\r` removed.
 pub fn lines(text: &str) -> impl Iterator<Item = &str> {
     text.split('\n')
@@ -75,6 +93,21 @@ mod tests {
             "Caf\u{e9} \u{20ac} \u{201c}x\u{201d}"
         );
         assert_eq!(decode(b"\x81"), "\u{81}");
+    }
+
+    #[test]
+    fn encoding_is_the_inverse_of_decoding_and_refuses_what_the_code_page_lacks() {
+        let all: Vec<u8> = (0..=255).collect();
+        assert_eq!(
+            encode_windows_1252(&decode(&all)),
+            Some(all.clone()),
+            "every byte round-trips"
+        );
+        assert_eq!(
+            encode_windows_1252("Caf\u{e9}.esp"),
+            Some(b"Caf\xE9.esp".to_vec())
+        );
+        assert_eq!(encode_windows_1252("\u{6f22}"), None);
     }
 
     #[test]

@@ -7,6 +7,7 @@ mod catalog;
 mod doctor;
 mod import;
 mod init;
+mod install_mod;
 mod install_nvrs;
 mod pe;
 mod stage;
@@ -35,6 +36,13 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               or where links cannot be made)
   nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
                               import one MO2 profile into a new Instance (the MO2 instance is only read)
+  nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run]
+                [--answers <file>] [--extract-tool <path>] [--json]
+                              install a Mod from a zip, tar or (through 7z or bsdtar) other archive; a FOMOD is
+                              answered where its XML is unambiguous and otherwise exits 1 with the questions
+                              (--json), which --answers completes; then stage the profile
+  nvmod rollback --instance <dir> [--json]
+                              undo the last install: restore the three profile files, remove the Mod
   nvmod doctor --base <dir> [--json] [--fail-on <severity>]
                               check a base copy of the game (read only)
   nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
@@ -47,7 +55,7 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
 
 exit codes:
   0  success
-  1  problems found
+  1  problems found, or a FOMOD that needs answers
   2  refused (nothing was changed)
   3  verification failure
   4  step failed and rolled back
@@ -67,6 +75,8 @@ pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("stage") => stage::run(&args[1..], out, err),
         Some("init") => init::run(&args[1..], out, err),
         Some("import-mo2") => import::run(&args[1..], out, err),
+        Some("install") => install_mod::run_install(&args[1..], out, err),
+        Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
