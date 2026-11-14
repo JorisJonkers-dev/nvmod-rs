@@ -1,0 +1,63 @@
+# `task check` is what the Pipeline Complete job runs, so local and CI cannot drift.
+version: "3"
+
+vars:
+  COVERAGE_MIN: "80"
+
+tasks:
+  default:
+    cmd: task --list
+    silent: true
+
+  fmt:
+    desc: Check formatting
+    cmd: cargo fmt --all -- --check
+
+  clippy:
+    desc: Clippy with warnings denied
+    cmd: cargo clippy --locked --workspace --all-targets -- -D warnings
+
+  test:
+    desc: Tests and the line-coverage gate ({{.COVERAGE_MIN}}%)
+    cmd: cargo llvm-cov --locked --workspace --fail-under-lines {{.COVERAGE_MIN}}
+
+  fuzz:check:
+    desc: The fuzz harnesses compile (stable, type-check only; running them needs nightly and cargo-fuzz)
+    cmd: cargo check --locked --manifest-path fuzz/Cargo.toml
+
+  deny:
+    desc: Licences, bans, sources and advisories (deny.toml), for the workspace and the fuzz workspace
+    cmds:
+      - cargo deny --locked check
+      - cargo deny --locked --manifest-path fuzz/Cargo.toml check
+
+  secrets:
+    desc: Scan every commit for secrets
+    cmd: gitleaks git --redact --no-banner --config .gitleaks.toml .
+
+  lint:actions:
+    desc: actionlint and zizmor on every workflow
+    cmds:
+      - actionlint
+      - zizmor --offline --no-progress .github/workflows/
+
+  guards:
+    desc: Repository guards on the whole tree (SPDX headers, no game data or binaries, .gitignore)
+    cmd: python3 -I scripts/repo_guards.py all
+
+  scripts:
+    desc: Self-tests of the repository's own scripts (throwaway git repositories, no network)
+    cmd: python3 -I -m unittest discover -s scripts -p 'test_*.py' -t scripts
+
+  check:
+    desc: Everything the pipeline runs on a pull request
+    cmds:
+      - task: fmt
+      - task: clippy
+      - task: test
+      - task: fuzz:check
+      - task: deny
+      - task: secrets
+      - task: lint:actions
+      - task: guards
+      - task: scripts

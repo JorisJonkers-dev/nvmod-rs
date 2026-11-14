@@ -1,0 +1,29 @@
+[package]
+name = "nvmod-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+nvmod-core = { path = "../crates/nvmod-core" }
+
+# Own workspace root: keeps libfuzzer-sys out of the shipped crates and the root lockfile.
+[workspace]
+
+[profile.release]
+debug = 1
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[[bin]]
+name = "severity"
+path = "fuzz_targets/severity.rs"
+test = false
+doc = false
+bench = false

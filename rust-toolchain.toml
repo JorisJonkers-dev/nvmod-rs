@@ -1,0 +1,6 @@
+# The one Rust compiler every build uses: this machine, agents and CI. Same pin as nv-rs and tools/*.
+# Move it on in a pull request of its own.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy", "llvm-tools-preview"]
