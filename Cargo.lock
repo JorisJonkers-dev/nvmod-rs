@@ -715,6 +715,7 @@ name = "nvmod-cli"
 version = "0.3.0"
 dependencies = [
  "ctrlc",
+ "jsonschema",
  "loot-rs",
  "nvmod-backup",
  "nvmod-catalog",
@@ -728,6 +729,7 @@ dependencies = [
  "nvmod-loadorder",
  "nvmod-modinstall",
  "nvmod-pe",
+ "nvmod-plugins",
  "nvmod-stage",
  "nvmod-testkit",
  "nvmod-tools",
@@ -860,6 +862,22 @@ version = "0.3.0"
 dependencies = [
  "nvmod-testkit",
  "proptest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nvmod-plugins"
+version = "0.3.0"
+dependencies = [
+ "nvmod-conflicts",
+ "nvmod-core",
+ "nvmod-formats",
+ "nvmod-instance",
+ "nvmod-loadorder",
+ "nvmod-modinstall",
+ "nvmod-testkit",
+ "schemars",
  "serde",
  "serde_json",
 ]

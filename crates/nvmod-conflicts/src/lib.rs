@@ -337,6 +337,20 @@ pub fn tree_of(profile: &str, layers: &[Layer]) -> Tree {
     }
 }
 
+/// The file a provider of the tree stands for: in Overwrite, in the Mod's folder or in the base copy's `Data`.
+#[must_use]
+pub fn provider_file(
+    instance: &NvmodInstance,
+    provider: &nvmod_core::Provider,
+) -> Option<std::path::PathBuf> {
+    let root = match provider.source.as_str() {
+        BASE_SOURCE => find_ci(&instance.config.base, "Data")?,
+        OVERWRITE_SOURCE => instance.root.join(nvmod_stage::OVERWRITE_DIR),
+        name => instance.mod_dir(name),
+    };
+    Some(root.join(&provider.path))
+}
+
 /// The conflicts of `profile`, read from disk.
 ///
 /// # Errors
