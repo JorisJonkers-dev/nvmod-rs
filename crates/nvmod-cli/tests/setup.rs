@@ -459,6 +459,134 @@ fn import_mo2_starts_from_a_profile_instead_of_init() {
     let _: &Path = mo2.path();
 }
 
+/// An import run whose masterlist wants `Existing.esp` after `Core.esp`, so a full sort would swap the two.
+fn import_run(rig: &Rig, extra: &[&str]) -> (i32, String, String, Vec<Value>) {
+    let mo2 = TempDir::new("setup-mo2-order");
+    Mo2Builder::new(rig.base.path())
+        .mod_dir(ModSpec::new("Existing").file("Existing.esp", &PluginBuilder::new().build()))
+        .profile(
+            "Default",
+            &["+Existing"],
+            &["FalloutNV.esm", "Existing.esp"],
+        )
+        .write(mo2.path());
+    std::fs::write(
+        rig.work.path().join("rules.yaml"),
+        "plugins:\n  - name: Existing.esp\n    after: [Core.esp]\n",
+    )
+    .unwrap();
+    let mut args = rig.full_args();
+    let at = args.iter().position(|a| a == "--masterlist").unwrap();
+    args[at + 1] = rig.work("rules.yaml");
+    args.extend(strings(&["--import-mo2", mo2.path().to_str().unwrap()]));
+    args.extend(strings(extra));
+    let (code, out, err) = nvmod(&args);
+    let events = if out.trim().is_empty() {
+        Vec::new()
+    } else {
+        events(&out)
+    };
+    (code, out, err, events)
+}
+
+fn load_order(rig: &Rig) -> Vec<String> {
+    std::fs::read_to_string(rig.root().join("profiles/Default/loadorder.txt"))
+        .unwrap()
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+        .map(|l| l.trim().to_owned())
+        .collect()
+}
+
+#[test]
+fn an_imported_instance_keeps_its_order_and_reports_the_skipped_sort() {
+    let rig = Rig::new();
+    let (code, out, err, events) = import_run(&rig, &[]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let skipped = events
+        .iter()
+        .find(|e| e["event"] == "skipped" && e["step"] == "sort")
+        .unwrap_or_else(|| panic!("a skipped sort event: {out}"));
+    assert!(skipped["reason"].as_str().unwrap().contains("kept"));
+    assert_eq!(skipped["would_change"]["changed"], 2, "{skipped}");
+    assert_eq!(skipped["would_change"]["total"], 4, "{skipped}");
+    assert!(
+        !events
+            .iter()
+            .any(|e| e["step"] == "sort" && e["status"] == "started")
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e["step"] == "stamp" && e["status"] == "done")
+    );
+    let order = load_order(&rig);
+    let at = |n: &str| order.iter().position(|o| o == n).unwrap();
+    assert!(at("Existing.esp") < at("Core.esp"), "{order:?}");
+    let (code, out, err) = nvmod(&strings(&[
+        "doctor",
+        "--instance",
+        rig.root().to_str().unwrap(),
+    ]));
+    assert_eq!(code, 0, "{out}\n{err}");
+}
+
+#[test]
+fn sort_flag_opts_in_to_the_full_sort_on_an_imported_instance() {
+    let rig = Rig::new();
+    let (code, out, err, events) = import_run(&rig, &["--sort"]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    assert!(!events.iter().any(|e| e["event"] == "skipped"));
+    assert!(
+        events
+            .iter()
+            .any(|e| e["step"] == "sort" && e["status"] == "done")
+    );
+    assert!(!events.iter().any(|e| e["step"] == "stamp"));
+    let order = load_order(&rig);
+    let at = |n: &str| order.iter().position(|o| o == n).unwrap();
+    assert!(at("Core.esp") < at("Existing.esp"), "{order:?}");
+}
+
+#[test]
+fn a_fresh_instance_still_sorts_and_has_no_stamp_step() {
+    let rig = Rig::new();
+    let (code, out, err) = nvmod(&rig.full_args());
+    assert_eq!(code, 0, "{out}\n{err}");
+    let events = events(&out);
+    assert!(
+        events
+            .iter()
+            .any(|e| e["step"] == "sort" && e["status"] == "done")
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|e| e["event"] == "skipped" || e["step"] == "stamp")
+    );
+}
+
+#[test]
+fn a_skipped_sort_survives_a_resume() {
+    let rig = Rig::new();
+    let (code, out, err, _) = import_run(&rig, &["--keep-partial"]);
+    assert_eq!(code, 0, "{out}\n{err}");
+    let (code, out, err) = nvmod(&strings(&[
+        "setup",
+        "--resume",
+        "--instance",
+        rig.root().to_str().unwrap(),
+        "--json",
+    ]));
+    assert_eq!(code, 0, "{out}\n{err}");
+    let skipped: Vec<String> = events(&out)
+        .iter()
+        .filter(|e| e["event"] == "skipped")
+        .map(|e| e["step"].as_str().unwrap().to_owned())
+        .collect();
+    assert!(skipped.contains(&"sort".to_owned()), "{skipped:?}");
+}
+
 fn target_of(rig: &Rig) -> String {
     let text = std::fs::read_to_string(rig.root().join("nvmod-instance.json")).unwrap();
     let doc: Value = serde_json::from_str(&text).unwrap();

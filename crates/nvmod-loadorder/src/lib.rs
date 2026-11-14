@@ -70,6 +70,21 @@ impl Proposal {
     }
 }
 
+impl Proposal {
+    /// How many positions of the Load order the proposal would change: the places where the proposed plugin is
+    /// not the current one (names, ignoring case), plus the difference in length. Counts only, no names.
+    #[must_use]
+    pub fn positions_changed(&self) -> usize {
+        let differing = self
+            .current
+            .iter()
+            .zip(&self.proposed)
+            .filter(|(a, b)| !a.name.eq_ignore_ascii_case(&b.name))
+            .count();
+        differing + self.current.len().abs_diff(self.proposed.len())
+    }
+}
+
 /// What applying a proposal changed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Applied {

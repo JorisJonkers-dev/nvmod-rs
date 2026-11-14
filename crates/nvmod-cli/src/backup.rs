@@ -266,7 +266,7 @@ fn changes_lists(args: &[String]) -> bool {
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
-        Some("sort") => args.iter().any(|a| a == "--apply"),
+        Some("sort") => args.iter().any(|a| a == "--apply" || a == "--keep-order"),
         Some("profile") => matches!(args.get(1).map(String::as_str), Some("apply")),
         _ => false,
     }

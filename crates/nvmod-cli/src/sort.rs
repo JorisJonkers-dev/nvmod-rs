@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]`.
+//! `nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]`, and
+//! `nvmod sort --instance <dir> [--profile <name>] --keep-order [--json]`, which keeps the Load order as it is and
+//! only writes the plugin file times (what an imported MO2 order needs, see `nvmod setup`).
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
 use nvmod_instance::NvmodInstance;
@@ -9,6 +11,7 @@ use std::path::Path;
 
 const USAGE_TEXT: &str = "usage: nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist)
                  [--apply] [--json]
+       nvmod sort --instance <dir> [--profile <name>] --keep-order [--json]   (keep the order, write only the plugin file times)
        masterlist source options: [--lock <file>] [--store <dir>] [--gh <path>] [--curl <path>]";
 
 /// The tool of `tools.lock.toml` that pins the masterlist.
@@ -113,6 +116,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
     serde_json::json!({
         "profile": proposal.profile,
         "reordered": proposal.reordered(),
+        "positions": { "changed": proposal.positions_changed(), "total": proposal.proposed.len() },
         "order": order,
         "general_messages": output.general_messages.iter()
             .chain(&output.generated_general_messages)
@@ -140,6 +144,12 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
         } else {
             "the Load order is already sorted"
         }
+    );
+    let _ = writeln!(
+        out,
+        "{} of {} position(s) would change",
+        proposal.positions_changed(),
+        proposal.proposed.len()
     );
     let output = &proposal.output;
     for (index, slot) in proposal.proposed.iter().enumerate() {
@@ -211,10 +221,69 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
     }
 }
 
+/// `--keep-order`: the Load order stays exactly as the profile has it; only the plugin file times of the Staging
+/// tree are written (and the lists, if their bytes differ), so nv-rs, which orders by file time, loads the order.
+fn keep_order(
+    args: &Args,
+    instance: &NvmodInstance,
+    profile: &str,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> u8 {
+    let result = nvmod_loadorder::staging_data(instance, profile).and_then(|data| {
+        let order = nvmod_loadorder::read_slots(&instance.profile_dir(profile))?;
+        nvmod_loadorder::write_order(
+            instance,
+            profile,
+            Some(&data),
+            &order,
+            None,
+            nvmod_modinstall::journal::KIND_SORT,
+        )
+        .map(|applied| (order.len(), applied))
+    });
+    let (count, applied) = match result {
+        Ok(done) => done,
+        Err(Error::Refused(why)) => {
+            let _ = writeln!(err, "nvmod sort: refused: {why}");
+            return REFUSED;
+        }
+        Err(Error::Failed(why)) => {
+            let _ = writeln!(err, "nvmod sort: {why}");
+            return ROLLED_BACK;
+        }
+    };
+    if args.flag("json") {
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "profile": profile,
+                "kept_order": true,
+                "plugins": count,
+                "applied": {
+                    "lists_written": applied.lists_written,
+                    "stamped": applied.stamped,
+                    "detached": applied.detached,
+                    "journal": applied.journal,
+                },
+            }))
+            .unwrap_or_default()
+        );
+    } else {
+        let _ = writeln!(
+            out,
+            "nvmod sort: profile `{profile}`, {count} plugin(s), the Load order is kept; {} plugin file time(s) set ({} link(s) replaced by copies)",
+            applied.stamped, applied.detached
+        );
+    }
+    OK
+}
+
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(
         args,
-        &["apply", "json", "fetch-masterlist"],
+        &["apply", "json", "fetch-masterlist", "keep-order"],
         &[
             "instance",
             "profile",
@@ -229,7 +298,13 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Ok(a)
             if a.positional.is_empty()
                 && a.option("instance").is_some()
-                && (a.option("masterlist").is_some() != a.flag("fetch-masterlist")) =>
+                && if a.flag("keep-order") {
+                    a.option("masterlist").is_none()
+                        && !a.flag("fetch-masterlist")
+                        && !a.flag("apply")
+                } else {
+                    a.option("masterlist").is_some() != a.flag("fetch-masterlist")
+                } =>
         {
             a
         }
@@ -257,6 +332,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Ok(p) => p,
         Err(e) => return refused(&e.to_string(), err),
     };
+    if args.flag("keep-order") {
+        return keep_order(&args, &instance, &profile, out, err);
+    }
     let masterlist_path = if args.flag("fetch-masterlist") {
         match fetch_masterlist(&args, &instance) {
             Ok(path) => path,

@@ -14,6 +14,11 @@
 //!
 //! The last two steps matter for the Load order: `install` and `stage` lose the plugin file times, so the run
 //! ends with `sort --apply`, which stamps them, and then the Doctor checks that they encode the order.
+//!
+//! An Instance made by `--import-mo2` keeps the owner's MO2 order: the `sort` step is then skipped (a `skipped`
+//! event with the reason and, when loot-rs can say, how many positions a sort would change: counts only), and a
+//! `stamp` step writes the plugin file times for the order as it is (`sort --keep-order`). `--sort` opts in to
+//! the full sort on an imported Instance. A fresh Instance always sorts.
 
 use crate::setup_state::{self as state, Completed, Failure, LoadError, PlanEntry, State};
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
@@ -21,12 +26,13 @@ use nvmod_core::Severity;
 use std::io::Write;
 use std::path::Path;
 
-const USAGE_LINE: &str = "usage: nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]... [--fallout3 <dir> [--package <file>] [--installer <path>]] [--release | --source <dir>] [--skip-nv-rs] [--keep-partial] [--dry-run] [--json]\n       nvmod setup --resume --instance <dir> [--json]\n       nvmod setup --restart --instance <dir> --yes";
+const USAGE_LINE: &str = "usage: nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]... [--fallout3 <dir> [--package <file>] [--installer <path>]] [--release | --source <dir>] [--skip-nv-rs] [--sort] [--keep-partial] [--dry-run] [--json]\n       nvmod setup --resume --instance <dir> [--json]\n       nvmod setup --restart --instance <dir> --yes";
 const FLAGS: &[&str] = &[
     "json",
     "dry-run",
     "release",
     "skip-nv-rs",
+    "sort",
     "copy",
     "keep-partial",
     "resume",
@@ -83,6 +89,8 @@ struct Step {
     name: String,
     what: String,
     args: Vec<String>,
+    /// Why the step is not run (it is reported as `skipped`, and counts as finished for a resume).
+    skip: Option<String>,
 }
 
 fn words(list: &[&str]) -> Vec<String> {
@@ -105,6 +113,7 @@ fn step(name: &str, what: &str, line: &[&str], more: Vec<String>) -> Step {
         name: name.to_owned(),
         what: what.to_owned(),
         args,
+        skip: None,
     }
 }
 
@@ -235,7 +244,8 @@ fn plan_finish(args: &Args) -> Vec<Step> {
         &["stage", "--instance", &instance],
         more,
     ));
-    steps.push(step(
+    let keep_mo2_order = args.option("import-mo2").is_some() && !args.flag("sort");
+    let mut sort = step(
         "sort",
         "compute the Load order with loot-rs, write it and stamp the plugin file times",
         &[
@@ -247,7 +257,22 @@ fn plan_finish(args: &Args) -> Vec<Step> {
             "--apply",
         ],
         pass(args, &["profile"]),
-    ));
+    );
+    if keep_mo2_order {
+        sort.skip = Some(
+            "the Load order of the imported MO2 profile is kept; sorting is opt-in (--sort, or `nvmod sort --apply` later)"
+                .to_owned(),
+        );
+    }
+    steps.push(sort);
+    if keep_mo2_order {
+        steps.push(step(
+            "stamp",
+            "keep the Load order as imported and stamp the plugin file times",
+            &["sort", "--instance", &instance, "--keep-order"],
+            pass(args, &["profile"]),
+        ));
+    }
     steps.push(step(
         "verify",
         "run the Doctor on the finished Instance and print the launch plan",
@@ -298,7 +323,7 @@ impl Events<'_> {
         self.emit(
             serde_json::json!({
                 "event": "plan", "dry_run": dry, "resume": resume, "instance": args.option("instance"),
-                "steps": steps.iter().map(|s| serde_json::json!({ "step": s.name, "description": s.what })).collect::<Vec<_>>(),
+                "steps": steps.iter().map(|s| serde_json::json!({ "step": s.name, "description": s.what, "skip": s.skip })).collect::<Vec<_>>(),
             }),
             &format!(
                 "nvmod setup: {total} step(s){}",
@@ -582,9 +607,16 @@ fn lifecycle(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let stray_option = OPTIONS
         .iter()
         .any(|o| *o != "instance" && args.option(o).is_some());
-    let stray_flag = ["dry-run", "release", "skip-nv-rs", "copy", "keep-partial"]
-        .iter()
-        .any(|f| args.flag(f));
+    let stray_flag = [
+        "dry-run",
+        "release",
+        "skip-nv-rs",
+        "sort",
+        "copy",
+        "keep-partial",
+    ]
+    .iter()
+    .any(|f| args.flag(f));
     let misplaced = (args.flag("resume") && restart) || (args.flag("yes") && !restart);
     if stray_option
         || stray_flag
@@ -788,8 +820,74 @@ fn run_step(step: &Step, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     code
 }
 
+/// The `skipped` event of a step the run chose not to run, with the dry-run summary when there is one.
+fn emit_skipped_by_choice(
+    events: &mut Events,
+    step: &Step,
+    i: usize,
+    total: usize,
+    reason: &str,
+    summary: Option<(u64, u64)>,
+) {
+    let mut value = serde_json::json!({
+        "event": "skipped", "step": step.name, "index": i + 1, "total": total,
+        "description": step.what, "reason": reason,
+    });
+    let mut text = format!("[{}/{total}] {}: skipped: {reason}", i + 1, step.name);
+    if let Some((changed, count)) = summary {
+        value["would_change"] = serde_json::json!({ "changed": changed, "total": count });
+        text = format!("{text}\n    a sort would change {changed} of {count} position(s)");
+    }
+    events.emit(value, &text);
+}
+
+/// How many positions a sort would change, from a dry run of `nvmod sort` (nothing is written). `None` when
+/// the dry run cannot say (it is only a summary, so it never fails the run).
+fn sort_summary(args: &Args) -> Option<(u64, u64)> {
+    let mut line = words(&[
+        "sort",
+        "--instance",
+        args.option("instance")?,
+        "--masterlist",
+        args.option("masterlist")?,
+        "--json",
+    ]);
+    line.extend(pass(args, &["profile"]));
+    let (mut so, mut se) = (Vec::new(), Vec::new());
+    if crate::run(&line, &mut so, &mut se) != OK {
+        return None;
+    }
+    let doc: serde_json::Value = serde_json::from_slice(&so).ok()?;
+    Some((
+        doc.pointer("/positions/changed")?.as_u64()?,
+        doc.pointer("/positions/total")?.as_u64()?,
+    ))
+}
+
+/// Report a step the run chose not to run and record it as finished (the error is the state file problem).
+fn record_skip(
+    args: &Args,
+    step: &Step,
+    (i, total): (usize, usize),
+    reason: &str,
+    events: &mut Events,
+    run: &mut Run,
+    instance: &Path,
+) -> Result<(), String> {
+    emit_skipped_by_choice(events, step, i, total, reason, sort_summary(args));
+    run.state.completed.push(Completed {
+        step: step.name.clone(),
+        witness: state::Witness::default(),
+    });
+    state::save(instance, &run.state).map_err(|e| {
+        run.state.completed.pop();
+        format!("cannot write the setup state file: {e}")
+    })
+}
+
 /// Run the steps in order. A failure with `keep` set (and something finished) leaves the Instance resumable;
 /// otherwise it undoes the run. Either way the run finishes with that step's code.
+#[allow(clippy::too_many_lines)] // one loop: skip, cancel check, run, record, report
 fn execute(
     args: &Args,
     steps: &[Step],
@@ -825,6 +923,26 @@ fn execute(
                 err,
                 run,
             );
+        }
+        if let Some(reason) = &step.skip {
+            if let Err(shown) = record_skip(args, step, (i, total), reason, events, run, &instance)
+            {
+                return fail(
+                    &Failed {
+                        step,
+                        index: i,
+                        total,
+                        code: ROLLED_BACK,
+                        shown: &shown,
+                    },
+                    &instance,
+                    pre_existing,
+                    events,
+                    err,
+                    run,
+                );
+            }
+            continue;
         }
         events.step(
             step,
@@ -886,14 +1004,19 @@ fn execute(
             run,
         );
     }
+    finish_ok(events, &instance, run);
+    OK
+}
+
+/// The run is over and every step held: record it and print the `finished` event.
+fn finish_ok(events: &mut Events, instance: &Path, run: &mut Run) {
     run.state.complete = true;
     run.state.failure = None;
-    let _ = state::save(&instance, &run.state);
+    let _ = state::save(instance, &run.state);
     events.emit(
         serde_json::json!({ "event": "finished", "status": "ok", "exit_code": OK, "rolled_back": false, "resumable": false, "instance": instance }),
         &format!("nvmod setup: done; the Instance at {} passes the Doctor", instance.display()),
     );
-    OK
 }
 
 /// A step that failed.
