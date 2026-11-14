@@ -109,6 +109,29 @@ impl Rig {
         path.to_str().unwrap().to_owned()
     }
 
+    /// A lock whose pin is from the release that answers the handshake.
+    fn lock_handshake(&self, program: &str, contracts: &str) -> String {
+        let path = self.lock(program, contracts);
+        let text = std::fs::read_to_string(&path).unwrap();
+        let text = text.replacen(
+            "\n\n[tool.attestation]",
+            "\nhandshake_from = \"0.1.0\"\n\n[tool.attestation]",
+            1,
+        );
+        std::fs::write(&path, text).unwrap();
+        path
+    }
+
+    /// A fake lodwright that answers `contracts --json` with `handshake` and prints `plan` otherwise.
+    fn negotiating(&self, handshake: &str, plan: &str) -> String {
+        let file = self.work.path().join("plan.json");
+        std::fs::write(&file, plan).unwrap();
+        self.lodwright(&format!(
+            "if [ \"$1\" = contracts ]; then echo '{handshake}'; else cat {}; fi",
+            file.display()
+        ))
+    }
+
     fn lod(&self, sub: &str, lock: &str, program: &str, extra: &[&str]) -> (i32, String, String) {
         let root = self.root();
         let mut args = vec![
@@ -284,4 +307,85 @@ fn usage_errors_exit_5() {
         .0,
         5
     );
+}
+
+fn named(plan: &str, name: &str) -> String {
+    plan.replacen(
+        "\"schema_version\":1",
+        &format!("\"schema_version\":1,\"contract\":\"{name}\""),
+        1,
+    )
+}
+
+const SPEAKS_V1: &str = r#"{"contracts":[{"name":"lodwright-plan","versions":[1]}]}"#;
+
+#[test]
+fn a_pin_with_the_handshake_is_negotiated_and_the_plan_runs() {
+    let rig = Rig::new();
+    rig.stage();
+    let program = rig.negotiating(SPEAKS_V1, &named(PLAN, "lodwright-plan"));
+    let lock = rig.lock_handshake(&program, "lodwright-plan = 1");
+    let (code, out, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.contains("planned by lodwright-rs"), "{out}");
+    let runs = rig.runs();
+    assert!(runs[0].starts_with("contracts --json"), "{runs:?}");
+    assert!(runs[1].starts_with("plan "), "{runs:?}");
+}
+
+#[test]
+fn a_lock_version_the_tool_does_not_list_exits_3_and_runs_no_plan() {
+    let rig = Rig::new();
+    rig.stage();
+    let only_v2 = r#"{"contracts":[{"name":"lodwright-plan","versions":[2]}]}"#;
+    let program = rig.negotiating(only_v2, &named(PLAN, "lodwright-plan"));
+    let lock = rig.lock_handshake(&program, "lodwright-plan = 1");
+    let (code, out, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 3, "{err}");
+    assert_eq!(out, "");
+    assert_eq!(rig.runs().len(), 1, "only the handshake ran");
+}
+
+#[test]
+fn a_pin_that_needs_the_handshake_and_has_none_exits_3() {
+    let rig = Rig::new();
+    rig.stage();
+    let program = rig.lodwright("echo no >&2; exit 2");
+    let lock = rig.lock_handshake(&program, "lodwright-plan = 1");
+    let (code, _, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 3, "{err}");
+    assert!(err.contains("contracts --json"), "{err}");
+}
+
+#[test]
+fn a_document_that_names_another_contract_is_refused() {
+    let rig = Rig::new();
+    rig.stage();
+    let program = rig.negotiating(SPEAKS_V1, &named(PLAN, "loot-sort"));
+    let lock = rig.lock_handshake(&program, "lodwright-plan = 1");
+    let (code, _, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains("loot-sort"), "{err}");
+}
+
+#[test]
+fn a_negotiated_document_without_its_name_is_refused() {
+    let rig = Rig::new();
+    rig.stage();
+    let program = rig.negotiating(SPEAKS_V1, PLAN);
+    let lock = rig.lock_handshake(&program, "lodwright-plan = 1");
+    let (code, _, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 4, "{err}");
+    assert!(err.contains("names no contract"), "{err}");
+}
+
+#[test]
+fn a_grandfathered_pin_runs_without_a_handshake_and_without_a_name() {
+    let rig = Rig::new();
+    rig.stage();
+    let program = rig.print_plan(PLAN);
+    let lock = rig.lock(&program, "lodwright-plan = 1");
+    let (code, _, err) = rig.lod("plan", &lock, &program, &[]);
+    assert_eq!(code, 0, "{err}");
+    assert!(!rig.runs()[0].starts_with("contracts"), "{:?}", rig.runs());
 }

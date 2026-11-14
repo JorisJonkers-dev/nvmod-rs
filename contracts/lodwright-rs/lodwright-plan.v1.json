@@ -6,6 +6,7 @@
   "required": ["worlds"],
   "properties": {
     "schema_version": { "const": 1 },
+    "contract": { "const": "lodwright-plan" },
     "worlds": {
       "type": "array",
       "items": {

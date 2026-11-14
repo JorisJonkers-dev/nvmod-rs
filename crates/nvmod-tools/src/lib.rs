@@ -10,6 +10,7 @@ mod contract;
 mod fetch;
 mod lock;
 pub mod lodwright;
+mod negotiate;
 mod runner;
 mod sha256;
 mod source;
@@ -26,7 +27,8 @@ pub use lock::{
     Asset, AttestationPin, Kind, LOCK_SCHEMA_VERSION, Lock, SourcePin, ToolEntry, builtin_lock,
     platform,
 };
-pub use runner::{Call, Output, Runner, ToolError, call_contract};
+pub use negotiate::{Handshake, negotiate};
+pub use runner::{Call, Negotiation, Output, Runner, ToolError, call_contract, call_negotiated};
 pub use sha256::sha256_hex;
 pub use source::{SourceCheck, verify_source_build};
 pub use store::{Store, StoreState, exe_file};

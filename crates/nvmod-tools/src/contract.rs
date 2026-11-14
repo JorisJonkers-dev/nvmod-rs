@@ -79,6 +79,24 @@ pub enum ContractError {
         /// The contract name.
         contract: String,
     },
+    /// The document names a different contract than the one it was read as (a tool or file wired to the wrong place),
+    /// or needs a name and has none (exit code 4).
+    WrongName {
+        /// The contract name asked for.
+        expected: String,
+        /// The `contract` the document carries, or `None` when it carries none.
+        found: Option<String>,
+    },
+    /// The document is of a newer schema version than the handshake settled on, which is the version the lock
+    /// records for the pin (exit code 2).
+    AboveNegotiated {
+        /// The contract name.
+        contract: String,
+        /// The version found.
+        found: u32,
+        /// The version negotiated.
+        negotiated: u32,
+    },
     /// The document does not validate against the snapshot of its version.
     Invalid {
         /// The contract name.
@@ -114,6 +132,22 @@ impl fmt::Display for ContractError {
             ContractError::NoVersion { contract } => {
                 write!(f, "{contract}: the document has no integer schema_version")
             }
+            ContractError::WrongName { expected, found } => match found {
+                Some(found) => write!(
+                    f,
+                    "{expected}: the document says it is `{found}`, not `{expected}`"
+                ),
+                None => write!(f, "{expected}: the document names no contract"),
+            },
+            ContractError::AboveNegotiated {
+                contract,
+                found,
+                negotiated,
+            } => write!(
+                f,
+                "{contract}: the tool wrote schema {found}, above the schema {negotiated} the handshake settled on \
+                 (the version the lock records for the pin)"
+            ),
             ContractError::Invalid {
                 contract,
                 version,
@@ -209,6 +243,55 @@ impl Contract {
     /// See [`ContractError`]: a newer version is refused, a version older than the previous one is refused, and
     /// anything that does not validate is reported with its first error.
     pub fn check(&self, document: &Value) -> Result<u32, ContractError> {
+        self.check_at(document, None, false)
+    }
+
+    /// Like [`Contract::check`], with what a handshake settled: `ceiling` is the version negotiated, and a document
+    /// of a higher version is refused; `require_name` makes a document without `contract` an error (a tool that has
+    /// answered the handshake must name its contract). A document that names another contract is always refused.
+    ///
+    /// # Errors
+    /// See [`ContractError`].
+    pub fn check_at(
+        &self,
+        document: &Value,
+        ceiling: Option<u32>,
+        require_name: bool,
+    ) -> Result<u32, ContractError> {
+        match document.get("contract") {
+            Some(Value::String(name)) if *name == self.name => {}
+            Some(other) => {
+                return Err(ContractError::WrongName {
+                    expected: self.name.clone(),
+                    found: Some(
+                        other
+                            .as_str()
+                            .map_or_else(|| other.to_string(), str::to_owned),
+                    ),
+                });
+            }
+            None if require_name => {
+                return Err(ContractError::WrongName {
+                    expected: self.name.clone(),
+                    found: None,
+                });
+            }
+            None => {}
+        }
+        let version = self.check_version(document)?;
+        if let Some(negotiated) = ceiling
+            && version > negotiated
+        {
+            return Err(ContractError::AboveNegotiated {
+                contract: self.name.clone(),
+                found: version,
+                negotiated,
+            });
+        }
+        Ok(version)
+    }
+
+    fn check_version(&self, document: &Value) -> Result<u32, ContractError> {
         let found = match document.get("schema_version") {
             Some(v) => v
                 .as_u64()

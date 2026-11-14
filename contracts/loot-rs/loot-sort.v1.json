@@ -6,6 +6,7 @@
   "required": ["sorted", "general_messages", "generated_general_messages", "plugins", "dirty", "rules", "dropped_group_rules", "not_installed", "warnings", "hard_violations"],
   "properties": {
     "schema_version": { "const": 1 },
+    "contract": { "const": "loot-sort" },
     "sorted": { "type": "array", "items": { "type": "string" } },
     "general_messages": { "$ref": "#/$defs/messages" },
     "generated_general_messages": { "$ref": "#/$defs/messages" },
