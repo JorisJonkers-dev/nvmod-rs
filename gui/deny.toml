@@ -1,5 +1,5 @@
 # cargo-deny configuration of the GUI workspace (ADR-0004 of nv-linux). Run from the repository root:
-#   cargo deny --locked --manifest-path gui/Cargo.toml check --config gui/deny.toml
+#   cargo deny --locked --manifest-path gui/Cargo.toml --config gui/deny.toml check
 # The main workspace's deny.toml never sees GPUI. The GUI is GPL-3.0-only; every licence below is compatible with
 # it, and a licence not listed is refused. The list is the one the GPUI spike found in its lock files (a metadata
 # scan, not a legal review): where a crate offers a choice, the permissive option is the one taken.

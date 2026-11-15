@@ -79,7 +79,7 @@ jobs:
         run: cargo test --locked --workspace
       - name: Dependencies
         working-directory: .
-        run: mise exec -- cargo deny --locked --manifest-path gui/Cargo.toml check --config gui/deny.toml
+        run: mise exec -- cargo deny --locked --manifest-path gui/Cargo.toml --config gui/deny.toml check
       - name: Release build (GPUI window and egui canary)
         run: cargo build --locked --release -p nvmod-gui-gpui -p nvmod-gui-egui
 
