@@ -199,10 +199,14 @@ pub(crate) fn mo2_backups(profile_dir: &Path) -> Vec<Snapshot> {
 /// (comma separated), matched against the process name without regard to case.
 #[must_use]
 pub fn game_running() -> Option<String> {
-    let mut names: Vec<String> = ["FalloutNV.exe", "nvse_loader.exe", "nv-viewer"]
-        .iter()
-        .map(|n| n.to_ascii_lowercase())
-        .collect();
+    process_running(&["FalloutNV.exe", "nvse_loader.exe", "nv-viewer"])
+}
+
+/// The name of a running process among `wanted` (and those in `NVMOD_GAME_PROCESSES`), matched without regard to
+/// case; see [`game_running`]. Linux only; elsewhere `None`.
+#[must_use]
+pub fn process_running(wanted: &[&str]) -> Option<String> {
+    let mut names: Vec<String> = wanted.iter().map(|n| n.to_ascii_lowercase()).collect();
     if let Ok(extra) = std::env::var("NVMOD_GAME_PROCESSES") {
         names.extend(
             extra

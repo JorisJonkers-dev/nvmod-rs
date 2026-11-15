@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub use files::{game_running, tracked};
+pub use files::{game_running, process_running, tracked};
 pub use restore::{RestoreReport, restore};
 pub use retention::{PruneReport, prune, select_keep};
 
