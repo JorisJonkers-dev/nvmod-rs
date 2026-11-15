@@ -1,0 +1,11 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "archive.corrupt-header",
+      "message": "the archive's directory cannot be read: damaged directory: the counts need at least 76 bytes, the file has 40",
+      "severity": "error",
+      "subject": "Beta: Beta.bsa"
+    }
+  ]
+}

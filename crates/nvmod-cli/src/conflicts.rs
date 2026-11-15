@@ -8,8 +8,7 @@ use nvmod_instance::NvmodInstance;
 use std::io::Write;
 use std::path::Path;
 
-const CONFLICTS_USAGE: &str =
-    "usage: nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--json]";
+const CONFLICTS_USAGE: &str = "usage: nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]";
 const TREE_USAGE: &str =
     "usage: nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]";
 
@@ -29,7 +28,7 @@ fn open(command: &str, args: &Args, err: &mut dyn Write) -> Result<(NvmodInstanc
 }
 
 pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    let args = match Args::parse(args, &["json"], &["instance", "profile", "mod"]) {
+    let args = match Args::parse(args, &["json", "archives"], &["instance", "profile", "mod"]) {
         Ok(a) if a.positional.is_empty() && a.option("instance").is_some() => a,
         Ok(_) => {
             let _ = writeln!(err, "{CONFLICTS_USAGE}");
@@ -44,11 +43,15 @@ pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn 
         Ok(v) => v,
         Err(code) => return code,
     };
-    let report =
-        nvmod_conflicts::conflicts(&instance, &profile).and_then(|r| match args.option("mod") {
-            Some(name) => r.only(name),
-            None => Ok(r),
-        });
+    let made = if args.flag("archives") {
+        nvmod_conflicts::conflicts_with_archives(&instance, &profile)
+    } else {
+        nvmod_conflicts::conflicts(&instance, &profile)
+    };
+    let report = made.and_then(|r| match args.option("mod") {
+        Some(name) => r.only(name),
+        None => Ok(r),
+    });
     let report = match report {
         Ok(r) => r,
         Err(ConflictError::Refused(why)) => {
@@ -104,7 +107,50 @@ pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn 
             losers.join(", ")
         );
     }
+    if let Some(archives) = &report.archives {
+        print_archives(archives, out);
+    }
     OK
+}
+
+fn print_archives(archives: &nvmod_conflicts::archives::ArchiveReport, out: &mut dyn Write) {
+    let _ = writeln!(
+        out,
+        "archives: {} loaded, {} contested path(s) (rules {}; bInvalidateOlderFiles {})",
+        archives.archives.len(),
+        archives.conflicts.len(),
+        archives.basis,
+        match archives.invalidate_older_files {
+            Some(true) => "on",
+            Some(false) => "off",
+            None => "not set",
+        }
+    );
+    for a in &archives.archives {
+        let _ = match &a.error {
+            None => writeln!(
+                out,
+                "  {} ({}): {} file(s), {}",
+                a.name, a.provider, a.files, a.loaded_by
+            ),
+            Some(why) => writeln!(out, "  {} ({}): {why}", a.name, a.provider),
+        };
+    }
+    let describe = |p: &nvmod_conflicts::archives::Provider| match &p.archive {
+        Some(a) => format!("{} ({a})", p.name),
+        None => format!("{} (loose)", p.name),
+    };
+    for c in &archives.conflicts {
+        let losers: Vec<_> = c.losers.iter().map(describe).collect();
+        let _ = writeln!(
+            out,
+            "  {}: {} beats {} [{}, unverified]",
+            c.path,
+            describe(&c.winner),
+            losers.join(", "),
+            c.rule
+        );
+    }
 }
 
 pub(crate) fn run_tree(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {

@@ -1,0 +1,17 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "archive.invalidation",
+      "message": "the profile turns archive invalidation on but bInvalidateOlderFiles=1 is not set in [Archive] of its INIs; loose files may lose to older archives",
+      "severity": "warning",
+      "subject": "Default"
+    },
+    {
+      "code": "archive.invalidation",
+      "message": "the profile turns archive invalidation on but SArchiveList has no `Fallout - Invalidation.bsa` entry",
+      "severity": "warning",
+      "subject": "Default"
+    }
+  ]
+}

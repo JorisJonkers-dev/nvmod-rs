@@ -701,6 +701,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-bsa"
+version = "0.5.0"
+dependencies = [
+ "nvmod-testkit",
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "nvmod-catalog"
 version = "0.5.0"
 dependencies = [
@@ -746,6 +755,7 @@ dependencies = [
 name = "nvmod-conflicts"
 version = "0.5.0"
 dependencies = [
+ "nvmod-bsa",
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
@@ -770,6 +780,7 @@ name = "nvmod-doctor"
 version = "0.5.0"
 dependencies = [
  "nvmod-catalog",
+ "nvmod-conflicts",
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",

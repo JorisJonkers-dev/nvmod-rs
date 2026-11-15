@@ -86,9 +86,11 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               the life of a Mod folder and of separators (run `nvmod mods remove` for the
                               forms): journaled and undone by `nvmod rollback`; a removed Mod goes to
                               .nvmod/trash; refused while the game or Mod Organizer runs
-  nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--json]
+  nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]
                               the file-level conflicts of a profile (read only): who wins each contested path,
-                              and per Mod whether it overwrites, is overwritten, is mixed or redundant
+                              and per Mod whether it overwrites, is overwritten, is mixed or redundant;
+                              --archives adds the BSA axes: the archives the game loads and where a loose file
+                              or another archive collides with an archive (rules marked unverified)
   nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]
                               the virtual Data folder (read only): which Mod provides each path; the file set
                               of `nvmod stage`

@@ -1,0 +1,112 @@
+{
+  "profile": "Default",
+  "mods": [
+    {
+      "name": "Alpha",
+      "kind": "mod",
+      "position": 1,
+      "files": 1,
+      "wins": 0,
+      "losses": 0,
+      "overwrites": false,
+      "overwritten": false,
+      "mixed": false,
+      "redundant": false,
+      "overwrites_mods": [],
+      "overwritten_by_mods": []
+    },
+    {
+      "name": "Beta",
+      "kind": "mod",
+      "position": 2,
+      "files": 2,
+      "wins": 0,
+      "losses": 0,
+      "overwrites": false,
+      "overwritten": false,
+      "mixed": false,
+      "redundant": false,
+      "overwrites_mods": [],
+      "overwritten_by_mods": []
+    },
+    {
+      "name": "Gamma",
+      "kind": "mod",
+      "position": 3,
+      "files": 1,
+      "wins": 0,
+      "losses": 0,
+      "overwrites": false,
+      "overwritten": false,
+      "mixed": false,
+      "redundant": false,
+      "overwrites_mods": [],
+      "overwritten_by_mods": []
+    }
+  ],
+  "conflicts": [],
+  "archives": {
+    "invalidate_older_files": true,
+    "basis": "from the nv-rs research note, not read from the original engine",
+    "archives": [
+      {
+        "name": "Gamma - Main.bsa",
+        "provider": "Gamma",
+        "loaded_by": "SArchiveList #1",
+        "files": 2
+      },
+      {
+        "name": "Alpha.bsa",
+        "provider": "Alpha",
+        "loaded_by": "plugin Alpha.esp",
+        "files": 2
+      },
+      {
+        "name": "Beta.bsa",
+        "provider": "Beta",
+        "loaded_by": "plugin Beta.esp",
+        "files": 2
+      }
+    ],
+    "conflicts": [
+      {
+        "path": "meshes/fake/rock.nif",
+        "winner": {
+          "mod": "Gamma",
+          "kind": "archive",
+          "archive": "Gamma - Main.bsa"
+        },
+        "losers": [
+          {
+            "mod": "Alpha",
+            "kind": "archive",
+            "archive": "Alpha.bsa"
+          },
+          {
+            "mod": "Beta",
+            "kind": "archive",
+            "archive": "Beta.bsa"
+          }
+        ],
+        "rule": "archive-load-order",
+        "unverified": true
+      },
+      {
+        "path": "textures/fake/a.dds",
+        "winner": {
+          "mod": "Beta",
+          "kind": "loose"
+        },
+        "losers": [
+          {
+            "mod": "Alpha",
+            "kind": "archive",
+            "archive": "Alpha.bsa"
+          }
+        ],
+        "rule": "loose-over-archive",
+        "unverified": true
+      }
+    ]
+  }
+}

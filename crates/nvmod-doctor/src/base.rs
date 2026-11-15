@@ -167,6 +167,9 @@ pub fn check_instance(
         report
             .findings
             .extend(nvmod_stage::doctor_findings(instance, profile));
+        if let Ok(findings) = nvmod_conflicts::audit_archives(instance, profile) {
+            report.findings.extend(findings);
+        }
         let game = report.exe.as_ref().and_then(|e| e.file_version);
         crate::order::check(
             instance,

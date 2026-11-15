@@ -12,6 +12,7 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 nvmod-core = { path = "../crates/nvmod-core" }
 nvmod-pe = { path = "../crates/nvmod-pe" }
+nvmod-bsa = { path = "../crates/nvmod-bsa" }
 nvmod-formats = { path = "../crates/nvmod-formats" }
 nvmod-catalog = { path = "../crates/nvmod-catalog" }
 nvmod-tools = { path = "../crates/nvmod-tools" }
@@ -100,6 +101,13 @@ bench = false
 [[bin]]
 name = "capabilities_parse"
 path = "fuzz_targets/capabilities_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bsa_directory"
+path = "fuzz_targets/bsa_directory.rs"
 test = false
 doc = false
 bench = false
