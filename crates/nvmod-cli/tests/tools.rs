@@ -492,7 +492,7 @@ fn a_lock_that_breaks_the_rules_is_refused_with_the_reason() {
 fn the_shipped_lock_lists_loot_rs_as_linked() {
     let (code, out, err) = nvmod(&["tools", "list"]);
     assert_eq!(code, 0, "{err}");
-    assert!(out.contains("loot-rs 0.2.0 linked (tag v0.2.0)"), "{out}");
+    assert!(out.contains("loot-rs 0.5.0 linked (tag v0.5.0)"), "{out}");
 }
 
 #[test]
