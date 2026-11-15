@@ -230,7 +230,7 @@ fn an_nv_rs_changed_after_its_install_is_a_verification_failure() {
 }
 
 #[test]
-fn no_nv_rs_is_reported_not_failed_native_launch_is_out_of_scope() {
+fn no_nv_rs_is_reported_not_failed_and_the_plan_names_the_native_command() {
     let rig = Rig::new();
     let (code, doc) = rig.json(&[]);
     assert_eq!(code, 0);
@@ -239,7 +239,7 @@ fn no_nv_rs_is_reported_not_failed_native_launch_is_out_of_scope() {
         doc["launch_plan"]["nv_rs"]
             .as_str()
             .unwrap()
-            .contains("not part of")
+            .contains("nvmod run nv-rs")
     );
 }
 
