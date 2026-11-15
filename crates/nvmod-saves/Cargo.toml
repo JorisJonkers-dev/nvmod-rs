@@ -1,0 +1,25 @@
+[package]
+name = "nvmod-saves"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Saves are never damaged: list, back up, restore, transfer and check the saves of a profile, and guard them across a run."
+
+[dependencies]
+nvmod-backup = { workspace = true }
+nvmod-core = { workspace = true }
+nvmod-formats = { workspace = true }
+nvmod-instance = { workspace = true }
+nvmod-profile = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true

@@ -29,7 +29,11 @@ pub use conflicts::{
 pub use exec::{CancelHandle, Exec, Output, ProcessExec};
 pub use fake::{FakeService, ScriptedExec};
 pub use jobs::{JobSpec, cancel_job};
+<<<<<<< HEAD
 pub use lifecycle::{LifecycleReport, LifecycleRequest, LifecycleStep, Where};
+=======
+pub use lifecycle::{CategoryEntry, LifecycleReport, LifecycleRequest, LifecycleStep, Where};
+>>>>>>> origin/main
 pub use service::{
     CliService, DoctorRequest, ImportRequest, InstallRequest, InstallResult, ModsRequest,
     RollbackRequest, RuntimeTarget, Service, ServiceError, SetupMode, SetupRequest, SortRequest,

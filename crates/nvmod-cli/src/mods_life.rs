@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+<<<<<<< HEAD
 //! `nvmod mods remove|rename|create|clone|hide|unhide|note`: the life of a Mod folder. A change is journaled (kind `lifecycle`), so
+=======
+//! `nvmod mods remove|rename|create|clone|hide|unhide|note`, `mods separator add|rename|remove` and
+//! `mods category set`: the life of a Mod folder and its separators. A change is journaled (kind `lifecycle`), so
+>>>>>>> origin/main
 //! `nvmod rollback` takes it back, and is refused while the game or Mod Organizer runs.
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
@@ -15,17 +20,42 @@ pub(crate) const USAGE_TEXT: &str = "usage: nvmod mods remove <mod> [--force] [c
        nvmod mods clone <mod> [--name <name>] [--hardlink] [common options]
        nvmod mods hide|unhide <mod> <path inside the Mod> [common options]
        nvmod mods note <mod> <text> [common options]
+<<<<<<< HEAD
+=======
+       nvmod mods separator add <label> (--before <mod> | --after <mod>) [common options]
+       nvmod mods separator rename <label> <new label> [common options]
+       nvmod mods separator remove <label> [common options]
+       nvmod mods category set <mod> [<id>...] [common options]
+>>>>>>> origin/main
   common options: --instance <dir> [--profile <name>] [--dry-run] [--json]";
 
 /// Whether `sub` (the word after `nvmod mods`) is a command of this module.
 pub(crate) fn handles(sub: Option<&str>) -> bool {
     matches!(
         sub,
+<<<<<<< HEAD
         Some("remove" | "rename" | "create" | "clone" | "hide" | "unhide" | "note")
     )
 }
 
 fn place_of(args: &Args) -> Result<Option<Place>, ()> {
+=======
+        Some(
+            "remove"
+                | "rename"
+                | "create"
+                | "clone"
+                | "hide"
+                | "unhide"
+                | "note"
+                | "separator"
+                | "category"
+        )
+    )
+}
+
+fn place_of(args: &Args, required: bool) -> Result<Option<Place>, ()> {
+>>>>>>> origin/main
     let mut places = Vec::new();
     if args.flag("top") {
         places.push(Place::Top);
@@ -43,7 +73,11 @@ fn place_of(args: &Args) -> Result<Option<Place>, ()> {
         places.push(Place::Position(n.parse().map_err(|_| ())?));
     }
     match places.len() {
+<<<<<<< HEAD
         0 => Ok(None),
+=======
+        0 if !required => Ok(None),
+>>>>>>> origin/main
         1 => Ok(places.pop()),
         _ => Err(()),
     }
@@ -109,6 +143,21 @@ fn dependants_of(instance: &NvmodInstance, profile: &str, target: &str) -> Vec<S
         .collect()
 }
 
+<<<<<<< HEAD
+=======
+fn known_categories(instance: &NvmodInstance) -> Vec<u32> {
+    std::fs::read(instance.root.join("categories.dat"))
+        .map(|b| {
+            nvmod_formats::categories::Categories::parse(&b)
+                .entries
+                .iter()
+                .map(|c| c.id)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+>>>>>>> origin/main
 // One flat match over the command words reads better than ten helpers.
 #[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
@@ -132,6 +181,10 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         USAGE
     };
     let words: Vec<&str> = args.positional.iter().map(String::as_str).collect();
+<<<<<<< HEAD
+=======
+    let place = |required| place_of(&args, required);
+>>>>>>> origin/main
     let parsed: Option<(String, Action)> = match words.as_slice() {
         ["remove", m] => Some((
             (*m).to_owned(),
@@ -146,7 +199,11 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                 to: (*to).to_owned(),
             },
         )),
+<<<<<<< HEAD
         ["create", name] => place_of(&args)
+=======
+        ["create", name] => place(false)
+>>>>>>> origin/main
             .ok()
             .map(|p| ((*name).to_owned(), Action::Create { place: p })),
         ["clone", m] => Some((
@@ -174,6 +231,34 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                 text: (*text).to_owned(),
             },
         )),
+<<<<<<< HEAD
+=======
+        ["separator", "add", label] => place(true)
+            .ok()
+            .flatten()
+            .filter(|p| matches!(p, Place::Before(_) | Place::After(_)))
+            .map(|p| ((*label).to_owned(), Action::SeparatorAdd { place: p })),
+        ["separator", "rename", label, to] => Some((
+            (*label).to_owned(),
+            Action::SeparatorRename {
+                to: (*to).to_owned(),
+            },
+        )),
+        ["separator", "remove", label] => Some(((*label).to_owned(), Action::SeparatorRemove)),
+        ["category", "set", m, ids @ ..] => ids
+            .iter()
+            .map(|i| i.parse::<u32>().ok())
+            .collect::<Option<Vec<u32>>>()
+            .map(|ids| {
+                (
+                    (*m).to_owned(),
+                    Action::Categories {
+                        ids,
+                        known: Vec::new(),
+                    },
+                )
+            }),
+>>>>>>> origin/main
         _ => None,
     };
     let Some((target, mut action)) = parsed else {
@@ -202,8 +287,17 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             err,
         );
     }
+<<<<<<< HEAD
     if let Action::Remove { dependants, .. } = &mut action {
         *dependants = dependants_of(&instance, &profile, &target);
+=======
+    match &mut action {
+        Action::Remove { dependants, .. } => {
+            *dependants = dependants_of(&instance, &profile, &target);
+        }
+        Action::Categories { known, .. } => *known = known_categories(&instance),
+        _ => {}
+>>>>>>> origin/main
     }
     match lifecycle::apply(&instance, &profile, &target, &action, dry_run) {
         Ok(report) => {

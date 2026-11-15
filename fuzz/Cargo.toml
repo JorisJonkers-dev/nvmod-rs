@@ -42,6 +42,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "categories"
+path = "fuzz_targets/categories.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "modlist"
 path = "fuzz_targets/modlist.rs"
 test = false
@@ -93,6 +100,13 @@ bench = false
 [[bin]]
 name = "capabilities_parse"
 path = "fuzz_targets/capabilities_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "savegame"
+path = "fuzz_targets/savegame.rs"
 test = false
 doc = false
 bench = false

@@ -20,8 +20,12 @@ The output holds only opcode numbers, command names taken from the tables you na
 plugin file names. A test plants a marker string in script source and in a script string literal and asserts that
 it is absent from both the table and the JSON.
 
-Opcode blocks, by owner: xNVSE `0x1400..=0x1FFF`, JIP LN `0x2200..=0x233A` and `0x2600..=0x2942`, JohnnyGuitar
-`0x3100..=0x3C92`, ShowOff `0x3C93..=0x3FFF`; anything else from `0x2000` up is `unknown`. Opcodes below `0x1400`
+Opcode blocks, by owner, as each plugin registers them (opcode base and command count in its public source, or the
+`SetOpcodeBase` and `RegisterCommand` lines of its log): xNVSE `0x1400..=0x1FFF`, MCM `0x21C0..=0x21C8`, JIP LN
+`0x2200..=0x233A` and `0x2600..=0x2942`, JohnnyGuitar `0x3100..=0x329B`, kNVSE `0x3920..=0x3929`, ShowOff
+`0x3C93..=0x3D74` (the allocated range; the plugin registers up to `0x3D69` for scripts). Anything else from `0x2000`
+up is `unknown`: other plugins hold bases between these (for example `0x21D0`, `0x3600`, `0x3961`, `0x3F40`, `0x4008`),
+and a gap is never given to the plugin below it. Opcodes below `0x1400`
 are the game's own and are not reported.
 
 Status of each row:
@@ -29,7 +33,7 @@ Status of each row:
 - `built`: the command is in the installed nv-rs's `capabilities.json` (`implemented_names` of the extender `xnvse`
   or `jip-ln`).
 - `missing`: the table names the command and `capabilities.json` does not list it.
-- `no-table`: JohnnyGuitar, ShowOff and unknown blocks have no name table and no `capabilities.json` extender.
+- `no-table`: MCM, JohnnyGuitar, kNVSE, ShowOff and unknown blocks have no name table and no `capabilities.json` extender.
 - `unchecked`: a xNVSE or JIP LN opcode that could not be judged, because `capabilities.json` is missing or invalid
   (the top-level `capabilities` field says which), or because no table named the opcode.
 

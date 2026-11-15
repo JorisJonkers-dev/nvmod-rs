@@ -231,15 +231,29 @@ impl FakeRelease {
 }
 
 /// Write an executable shell script `name` into `dir` and return its path.
+///
+/// The script is never written through a descriptor of this process. A test binary runs tests on several threads,
+/// and a thread that forks while another still holds a file open for writing hands that descriptor to its child
+/// until the child execs; running the file then fails with `ETXTBSY` ("Text file busy"). So the bytes go to a
+/// plain staging file, and a short-lived `install` process copies it into place with the executable bit set. The
+/// descriptor open for writing exists only in that process, which is gone when this function returns.
 pub fn write_script(dir: &Path, name: &str, body: &str) -> PathBuf {
-    write_file(dir, name, format!("#!/bin/sh\n{body}\n").as_bytes());
+    write_executable(dir, name, format!("#!/bin/sh\n{body}\n").as_bytes())
+}
+
+/// Write the executable file `name` into `dir` with these bytes, without the `ETXTBSY` race (see [`write_script`]).
+pub fn write_executable(dir: &Path, name: &str, bytes: &[u8]) -> PathBuf {
     let path = dir.join(name);
-    let status = Command::new("chmod")
-        .arg("+x")
+    let staging = dir.join(format!(".{name}.staging"));
+    write_file(dir, &format!(".{name}.staging"), bytes);
+    let status = Command::new("install")
+        .args(["-m", "755"])
+        .arg(&staging)
         .arg(&path)
         .status()
-        .expect("run chmod");
+        .expect("run install");
     assert!(status.success());
+    std::fs::remove_file(&staging).expect("remove the staging file");
     path
 }
 
