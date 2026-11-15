@@ -1,0 +1,11 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "archive.listed-missing",
+      "message": "is named in SArchiveList but no Mod, Overwrite or the base copy provides it",
+      "severity": "warning",
+      "subject": "Absent.bsa"
+    }
+  ]
+}

@@ -9,6 +9,7 @@ publish.workspace = true
 description = "File-level conflicts between the Mods of an nvmod profile and the virtual Data tree (read only)."
 
 [dependencies]
+nvmod-bsa = { workspace = true }
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }

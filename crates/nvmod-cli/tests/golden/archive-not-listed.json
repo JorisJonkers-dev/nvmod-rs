@@ -1,0 +1,17 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "archive.not-listed",
+      "message": "the game never loads it: it is not named like a plugin and not in SArchiveList",
+      "severity": "warning",
+      "subject": "Stray: Stray.bsa"
+    },
+    {
+      "code": "archive.not-listed",
+      "message": "the game does not load it: its plugin Dormant.esp is not active and it is not in SArchiveList",
+      "severity": "info",
+      "subject": "Dormant: Dormant.bsa"
+    }
+  ]
+}
