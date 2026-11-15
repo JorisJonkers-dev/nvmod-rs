@@ -92,7 +92,7 @@ pub fn launch_plan(instance: &NvmodInstance, proton: Option<&str>) -> LaunchPlan
                 working_dir: dir,
             },
         ],
-        nv_rs: "native nv-rs launch is not part of this milestone; on Linux it ends at an installed, Doctor-clean Instance".to_owned(),
+        nv_rs: "native nv-rs: `nvmod run nv-rs` (or `nvmod run game` on an nv-rs Instance) starts the installed nv-viewer from a run folder of the staged Data; this Proton plan is its fallback (`--via-proton`)".to_owned(),
     }
 }
 

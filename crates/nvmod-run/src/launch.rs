@@ -18,6 +18,9 @@ pub struct LaunchSpec {
     pub env: BTreeMap<String, String>,
     /// The folder to run in.
     pub working_dir: PathBuf,
+    /// A file the program's output and errors are appended to; `None` leaves them on the terminal (attached) or
+    /// drops them (detached).
+    pub log: Option<PathBuf>,
 }
 
 /// A started program.
@@ -65,6 +68,7 @@ impl Launcher for ProcessLauncher {
             &spec.env,
             &spec.working_dir,
             attached,
+            spec.log.as_deref(),
         )
         .map(|c| Box::new(Child(c)) as Box<dyn Running>)
     }

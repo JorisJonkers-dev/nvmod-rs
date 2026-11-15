@@ -6,6 +6,7 @@
 //! agree by construction.
 
 use crate::launch::LaunchSpec;
+use crate::native::{self, Native};
 use nvmod_core::Executable;
 use nvmod_instance::{NvmodInstance, launch_plan};
 use serde::Serialize;
@@ -99,6 +100,8 @@ pub struct RunPlan {
     pub data_dir: PathBuf,
     /// What happens to the Staging tree first.
     pub staging: StagingAction,
+    /// The run folder, user data and log of a native nv-rs run (`None` for every other entry).
+    pub native: Option<Native>,
     /// Things worth knowing about this run.
     pub notes: Vec<String>,
 }
@@ -120,6 +123,12 @@ pub struct Request<'a> {
     pub platform: Platform,
     /// The Steam client folder (`STEAM_COMPAT_CLIENT_INSTALL_PATH`), when known.
     pub steam_client: Option<PathBuf>,
+    /// `game` on an nv-rs Instance runs through Proton instead of natively.
+    pub via_proton: bool,
+    /// The nv-viewer to start, instead of the one found.
+    pub viewer: Option<PathBuf>,
+    /// The folder of shared nv-rs builds (`~/.local/opt/nv-rs`), searched when the Instance has none of its own.
+    pub shared_root: Option<PathBuf>,
 }
 
 /// `path` as Wine names it: `Z:` and backslashes.
@@ -221,7 +230,15 @@ pub fn plan(req: &Request) -> Result<RunPlan, String> {
         return Err(format!("--proton {p} is not a file"));
     }
     if req.target.eq_ignore_ascii_case(ENTRY_GAME) {
-        return plan_game(req);
+        // An nv-rs Instance on Linux runs the game natively; `--via-proton` is the fallback.
+        let native = req.platform == Platform::Linux
+            && req.instance.config.target == nvmod_core::Target::NvRs
+            && !req.via_proton;
+        return if native {
+            plan_nv_rs(req)
+        } else {
+            plan_game(req)
+        };
     }
     if req.target.eq_ignore_ascii_case(ENTRY_NV_RS) {
         return plan_nv_rs(req);
@@ -297,33 +314,69 @@ fn plan_game(req: &Request) -> Result<RunPlan, String> {
             args,
             env,
             working_dir: PathBuf::from(&entry.working_dir),
+            log: None,
         },
         via_proton,
         data_dir: data,
         staging: StagingAction::Current,
+        native: None,
         notes,
     })
 }
 
 fn plan_nv_rs(req: &Request) -> Result<RunPlan, String> {
     let data = data_dir(req.instance, req.profile);
-    let suffix = if req.platform == Platform::Windows {
-        ".exe"
-    } else {
-        ""
-    };
-    let viewer = req
-        .instance
-        .nv_rs_dir()
-        .join("bin")
-        .join(format!("nv-viewer{suffix}"));
-    if !viewer.is_file() {
-        return Err(format!(
-            "nv-rs is not installed in this Instance ({} is missing); run `nvmod install-nv-rs` first",
-            viewer.display()
-        ));
+    let windows = req.platform == Platform::Windows;
+    let suffix = if windows { ".exe" } else { "" };
+    let viewer = native::find_viewer(
+        req.instance,
+        req.viewer.as_deref(),
+        req.shared_root.as_deref(),
+        suffix,
+    )?;
+    let mut env = base_env(req, &data);
+    if windows {
+        // No run folder off Linux: the viewer reads the staged Data folder and the executable beside it.
+        let mut args = vec![data.to_string_lossy().into_owned()];
+        args.extend(req.args.iter().cloned());
+        return Ok(RunPlan {
+            entry: ENTRY_NV_RS.to_owned(),
+            kind: "nv-rs",
+            command: LaunchSpec {
+                program: viewer.to_string_lossy().into_owned(),
+                args,
+                env,
+                working_dir: req.instance.nv_rs_dir(),
+                log: None,
+            },
+            via_proton: false,
+            data_dir: data,
+            staging: StagingAction::Current,
+            native: None,
+            notes: vec![
+                "nv-rs starts with the staged Data folder; no executable is copied".to_owned(),
+            ],
+        });
     }
-    let mut args = vec![data.to_string_lossy().into_owned()];
+    let run = native::run_dir(req.instance, req.profile);
+    let userdata = run.join("userdata");
+    let log = native::log_path();
+    // The game window and the log are what a person playing needs; a caller's own values win.
+    let defaults = [
+        ("NV_D3D9", "wgpu"),
+        ("RUST_BACKTRACE", "1"),
+        ("RUST_LOG", "info"),
+    ];
+    for (k, v) in defaults {
+        if std::env::var_os(k).is_none() {
+            env.insert(k.to_owned(), v.to_owned());
+        }
+    }
+    env.insert(
+        "NV_LINUX_PROFILE".to_owned(),
+        run.join("linux_profile.txt").to_string_lossy().into_owned(),
+    );
+    let mut args = vec![run.to_string_lossy().into_owned()];
     args.extend(req.args.iter().cloned());
     Ok(RunPlan {
         entry: ENTRY_NV_RS.to_owned(),
@@ -331,14 +384,22 @@ fn plan_nv_rs(req: &Request) -> Result<RunPlan, String> {
         command: LaunchSpec {
             program: viewer.to_string_lossy().into_owned(),
             args,
-            env: base_env(req, &data),
-            working_dir: req.instance.nv_rs_dir(),
+            env,
+            working_dir: run.clone(),
+            log: Some(log.clone()),
         },
         via_proton: false,
         data_dir: data,
         staging: StagingAction::Current,
+        native: Some(Native {
+            run_dir: run,
+            userdata,
+            log,
+            viewer,
+        }),
         notes: vec![
-            "nv-rs starts natively with the staged Data folder; no executable is copied".to_owned(),
+            "nv-rs starts natively from the run folder: its Data is the staged tree, its FalloutNV.exe a link to the base copy's; no game file is copied and the Steam folder is not touched".to_owned(),
+            "the profile's INIs, plugins.txt and loadorder.txt are placed in the run folder's user data; plugin order comes from file times (`nvmod sort --apply` sets them)".to_owned(),
         ],
     })
 }
@@ -414,10 +475,12 @@ fn plan_program(req: &Request, kind: &'static str, entry: &Executable) -> Result
             args,
             env,
             working_dir,
+            log: None,
         },
         via_proton,
         data_dir: data,
         staging: StagingAction::Current,
+        native: None,
         notes,
     })
 }
@@ -443,6 +506,12 @@ impl RunPlan {
             self.staging.describe(&profile_of(self))
         ));
         lines.push(format!("  data: {}", self.data_dir.display()));
+        if let Some(n) = &self.native {
+            lines.push(format!("  run folder: {}", n.run_dir.display()));
+            lines.push(format!("  user data: {}", n.userdata.display()));
+            lines.push(format!("  viewer: {}", n.viewer.display()));
+            lines.push(format!("  log: {}", n.log.display()));
+        }
         lines.push(format!("  working directory: {}", c.working_dir.display()));
         for (k, v) in &c.env {
             let shown = if is_secret_name(k) { "<hidden>" } else { v };
