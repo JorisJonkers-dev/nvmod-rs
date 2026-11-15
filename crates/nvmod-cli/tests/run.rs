@@ -390,33 +390,151 @@ fn the_game_entry_agrees_with_verify() {
     }
 }
 
+/// Regular files (not links) under `root` whose bytes are the sentinel.
+fn real_copies_of_the_exe(root: &Path) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let kind = entry.file_type().unwrap();
+            if kind.is_dir() {
+                stack.push(entry.path());
+            } else if kind.is_file() && std::fs::read(entry.path()).unwrap() == SENTINEL {
+                found.push(entry.path());
+            }
+        }
+    }
+    found
+}
+
+/// A fake nv-viewer that records its arguments, folder, variables and what its run folder shows.
+fn fake_viewer(path: &Path) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    script(
+        path,
+        r#"{
+printf 'args=%s\n' "$*"
+printf 'pwd=%s\n' "$(pwd)"
+printf 'd3d9=%s\n' "$NV_D3D9"
+printf 'profile_file=%s\n' "$NV_LINUX_PROFILE"
+printf 'userdata_line=%s\n' "$(cat "$NV_LINUX_PROFILE")"
+printf 'sees_tex=%s\n' "$(test -f "$1/Data/textures/a.dds" && echo yes || echo no)"
+printf 'sees_base=%s\n' "$(test -f "$1/Data/meshes/rock.nif" && echo yes || echo no)"
+printf 'exe_bytes=%s\n' "$(cat "$1/FalloutNV.exe")"
+} > "$FAKE_RECORD"
+echo viewer says hello
+exit "${FAKE_EXIT:-0}""#,
+    );
+}
+
 #[test]
-fn nv_rs_gets_the_staged_data_folder_and_nothing_is_copied() {
+fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     let s = Scratch::new();
     let viewer = s.root().join("nv-rs/bin/nv-viewer");
-    std::fs::create_dir_all(viewer.parent().unwrap()).unwrap();
-    script(&viewer, r#"printf 'args=%s\n' "$*" > "$FAKE_RECORD""#);
-    let (code, _, err) = s.run(&["nv-rs", "--wait"], &[]);
+    fake_viewer(&viewer);
+    let state = s.inst.path().join("state");
+    let state_s = state.to_str().unwrap();
+    let (code, out, err) = s.run(&["nv-rs", "--wait"], &[("XDG_STATE_HOME", state_s)]);
     assert_eq!(code, 0, "{err}");
-    let data = s.root().join("staging/Default/data");
-    assert_eq!(s.recorded()["args"], data.to_str().unwrap());
-    // The sentinel: no game executable is copied or moved, by run or by staging.
+    let run = s.root().join("run/Default");
+    let rec = s.recorded();
+    assert_eq!(rec["args"], run.to_str().unwrap());
+    assert_eq!(rec["pwd"], run.to_str().unwrap());
     assert_eq!(
-        std::fs::read(s.base.path().join("FalloutNV.exe")).unwrap(),
-        SENTINEL
+        rec["profile_file"],
+        run.join("linux_profile.txt").to_str().unwrap()
     );
-    let copies: Vec<_> = snapshot(&s.root())
-        .into_iter()
-        .filter(|(_, bytes)| bytes.as_slice() == SENTINEL)
-        .collect();
+    assert_eq!(
+        rec["userdata_line"],
+        format!("userdata = {}", run.join("userdata").display())
+    );
+    assert_eq!(rec["d3d9"], "wgpu");
+    assert_eq!(
+        (rec["sees_tex"].as_str(), rec["sees_base"].as_str()),
+        ("yes", "yes")
+    );
+    // The executable is a link to the base copy's, never a copy.
+    assert_eq!(rec["exe_bytes"], String::from_utf8_lossy(SENTINEL));
+    assert_eq!(
+        std::fs::read_link(run.join("FalloutNV.exe")).unwrap(),
+        s.base.path().join("FalloutNV.exe")
+    );
+    assert_eq!(
+        std::fs::read_link(run.join("Data")).unwrap(),
+        s.root().join("staging/Default/data")
+    );
+    assert_eq!(real_copies_of_the_exe(s.inst.path()), Vec::<PathBuf>::new());
+    assert_eq!(real_copies_of_the_exe(s.base.path()).len(), 1);
+    // The profile's lists are placed in the run folder's user data, and the output is logged.
     assert!(
-        copies.is_empty(),
-        "a copy of the game executable exists: {copies:?}"
+        run.join("userdata/AppData/Local/FalloutNV/plugins.txt")
+            .is_file()
     );
+    let log = std::fs::read_dir(state.join("nv-rs/logs"))
+        .unwrap()
+        .flatten()
+        .next()
+        .unwrap()
+        .path();
+    let text = std::fs::read_to_string(&log).unwrap();
+    assert!(text.starts_with("# nvmod run "), "{text}");
+    assert!(text.contains("viewer says hello"), "{text}");
+    assert!(out.contains(log.to_str().unwrap()), "{out}");
     // Not installed: refused with the way forward.
     std::fs::remove_file(&viewer).unwrap();
-    let (code, _, err) = s.run(&["nv-rs", "--wait"], &[]);
+    let (code, _, err) = s.run(
+        &["nv-rs", "--wait"],
+        &[("NVMOD_NV_RS_ROOT", "/nonexistent")],
+    );
     assert_eq!((code, err.contains("install-nv-rs")), (2, true));
+}
+
+#[test]
+fn the_newest_shared_build_is_found_and_the_dry_run_writes_nothing() {
+    let s = Scratch::new();
+    let shared = s.inst.path().join("opt");
+    fake_viewer(&shared.join("nv-rs-2026-11-15.9-linux/bin/nv-viewer"));
+    fake_viewer(&shared.join("nv-rs-2026-11-15.10-linux/bin/nv-viewer"));
+    let shared_s = shared.to_str().unwrap();
+    let before = snapshot(&s.root());
+    let (code, out, err) = s.run(&["nv-rs", "--dry-run"], &[("NVMOD_NV_RS_ROOT", shared_s)]);
+    assert_eq!(code, 0, "{err}");
+    assert!(
+        out.contains("viewer: ") && out.contains("15.10-linux/bin/nv-viewer"),
+        "{out}"
+    );
+    assert!(
+        out.contains("run folder: ") && out.contains("NV_LINUX_PROFILE="),
+        "{out}"
+    );
+    assert_eq!(snapshot(&s.root()), before, "a dry run wrote something");
+    assert!(!s.root().join("run").exists());
+    let (code, _, err) = s.run(
+        &["nv-rs", "--dry-run", "--viewer", "/nonexistent/nv-viewer"],
+        &[],
+    );
+    assert_eq!((code, err.contains("is not a file")), (2, true), "{err}");
+}
+
+#[test]
+fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
+    let s = Scratch::new();
+    let (code, _, err) = nvmod(&["target", "nv-rs", "--instance", &s.r()]);
+    assert_eq!(code, 0, "{err}");
+    let shared = s.inst.path().join("opt");
+    fake_viewer(&shared.join("nv-rs-1/bin/nv-viewer"));
+    let env = [("NVMOD_NV_RS_ROOT", shared.to_str().unwrap())];
+    let (code, out, err) = s.run(&["game", "--dry-run", "--json"], &env);
+    assert_eq!(code, 0, "{err}");
+    let plan: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(plan["kind"], "nv-rs");
+    let (code, out, err) = s.run(&["game", "--dry-run", "--json", "--via-proton"], &env);
+    assert_eq!(code, 0, "{err}");
+    let plan: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(
+        (plan["kind"].as_str(), plan["via_proton"].as_bool()),
+        (Some("game"), Some(true))
+    );
 }
 
 #[test]

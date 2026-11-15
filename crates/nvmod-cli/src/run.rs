@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod run <title|path> --instance <dir> [--profile <name>] [--proton <program>] [--dry-run] [--wait]
+//! `nvmod run <title|path> --instance <dir> [--profile <name>] [--proton <program>] [--via-proton] [--viewer <path>] [--dry-run] [--wait]
 //! [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]`: start the game or a tool through the staged view
 //! (nv-linux #148).
 //!
@@ -14,7 +14,7 @@ use nvmod_stage::{Options, StageError};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const USAGE_LINE: &str = "usage: nvmod run <title|path|game|nv-rs> --instance <dir> [--profile <name>] [--proton <program>] [--dry-run] [--wait] [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]";
+const USAGE_LINE: &str = "usage: nvmod run <title|path|game|nv-rs> --instance <dir> [--profile <name>] [--proton <program>] [--via-proton] [--viewer <path>] [--dry-run] [--wait] [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]";
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     run_with(args, out, err, &ProcessLauncher)
@@ -62,8 +62,9 @@ pub(crate) fn run_with(
             "no-stage",
             "no-profile",
             "json",
+            "via-proton",
         ],
-        &["instance", "profile", "proton"],
+        &["instance", "profile", "proton", "viewer"],
     ) {
         Ok(a) if a.positional.len() == 1 && a.option("instance").is_some() => a,
         Ok(_) => {
@@ -96,6 +97,16 @@ pub(crate) fn run_with(
         proton: a.option("proton"),
         platform: Platform::host(),
         steam_client: steam_client(),
+        via_proton: a.flag("via-proton"),
+        viewer: a
+            .option("viewer")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("NV_VIEWER").map(PathBuf::from)),
+        shared_root: std::env::var_os("NVMOD_NV_RS_ROOT")
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("HOME").map(|h| PathBuf::from(h).join(nvmod_run::SHARED_ROOT))
+            }),
     };
     let mut plan = match nvmod_run::plan(&request) {
         Ok(p) => p,
@@ -106,7 +117,7 @@ pub(crate) fn run_with(
     let dry = a.flag("dry-run");
     if dry {
         if !a.flag("no-profile") {
-            plan.notes.push(profile_note(&instance, &profile));
+            plan.notes.push(profile_note(&instance, &profile, &plan));
         }
         print_plan(&plan, a.flag("json"), out);
         return OK;
@@ -115,9 +126,20 @@ pub(crate) fn run_with(
     execute(&a, &instance, &profile, plan, launcher, out, err)
 }
 
-/// The Wine prefix of the Instance (the `compatdata` folder the launch plan gives Proton) as a profile target:
-/// `None` where there is none yet, and always on Windows, whose real folders have no backend here.
-fn prefix_target(instance: &NvmodInstance) -> Result<nvmod_profile::Target, String> {
+/// Where the profile's files are placed: the user data of the run folder for a native nv-rs run, else the Wine
+/// prefix of the Instance (the `compatdata` folder the launch plan gives Proton), which is `Err` where there is
+/// none yet, and always on Windows, whose real folders have no backend here.
+fn prefix_target(
+    instance: &NvmodInstance,
+    plan: &nvmod_run::RunPlan,
+) -> Result<nvmod_profile::Target, String> {
+    if let Some(n) = &plan.native {
+        return Ok(nvmod_profile::Target::new(
+            n.userdata.clone(),
+            nvmod_run::my_games(&n.userdata),
+            nvmod_run::app_data(&n.userdata),
+        ));
+    }
     if cfg!(windows) {
         return Err(
             "applying a profile to the Windows folders is not done by `nvmod run` yet".to_owned(),
@@ -127,8 +149,8 @@ fn prefix_target(instance: &NvmodInstance) -> Result<nvmod_profile::Target, Stri
 }
 
 /// What a dry run says about applying the profile to the prefix (nothing is written).
-fn profile_note(instance: &NvmodInstance, profile: &str) -> String {
-    match prefix_target(instance) {
+fn profile_note(instance: &NvmodInstance, profile: &str, plan: &nvmod_run::RunPlan) -> String {
+    match prefix_target(instance, plan) {
         Err(why) => format!("profile: not applied to a prefix ({why})"),
         Ok(target) => match nvmod_profile::apply(instance, profile, &target, true) {
             Ok(r) => format!(
@@ -177,10 +199,22 @@ fn prepare(
             }
         }
     }
+    if let Some(native) = &mut plan.native {
+        match nvmod_run::prepare_run_dir(instance, profile) {
+            Ok(made) => {
+                native.run_dir = made.run_dir;
+                native.userdata = made.userdata;
+            }
+            Err(why) => {
+                let _ = writeln!(err, "nvmod run: preparing the run folder failed: {why}");
+                return Err(ROLLED_BACK);
+            }
+        }
+    }
     let target = if a.flag("no-profile") {
         None
     } else {
-        match prefix_target(instance) {
+        match prefix_target(instance, plan) {
             Ok(t) => Some(t),
             Err(why) => {
                 plan.notes
@@ -253,6 +287,25 @@ fn execute(
     };
     print_plan(&plan, a.flag("json"), out);
     let wait = a.flag("wait");
+    if let Some(native) = &plan.native {
+        if let Some(dir) = native.log.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let env = &plan.command.env;
+        let note = format!(
+            "NV_D3D9={}  RUST_LOG={}",
+            env.get("NV_D3D9").map_or("(inherited)", String::as_str),
+            env.get("RUST_LOG").map_or("(inherited)", String::as_str)
+        );
+        let _ = std::fs::write(&native.log, nvmod_run::log_header(native, profile, &note));
+        if !a.flag("json") {
+            let _ = writeln!(
+                out,
+                "nvmod run: the run's output goes to {}",
+                native.log.display()
+            );
+        }
+    }
     let running = match launcher.start(&plan.command, wait) {
         Ok(r) => r,
         Err(why) => {
