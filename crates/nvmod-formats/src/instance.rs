@@ -58,6 +58,14 @@ pub struct Executable {
     pub binary_host: Option<PathBuf>,
     /// Its arguments, as written.
     pub arguments: String,
+    /// The working directory, as written (empty or absent: the program's own folder).
+    pub working_directory: Option<String>,
+    /// The working directory on this machine, when one was given and could be mapped.
+    pub working_directory_host: Option<PathBuf>,
+    /// The Steam app id, when the entry has a non-zero one.
+    pub steam_app_id: Option<u32>,
+    /// Whether the entry is hidden in MO2's list.
+    pub hidden: bool,
 }
 
 /// What `ModOrganizer.ini` says, with the folders resolved.
@@ -314,11 +322,20 @@ fn read_executables(
                     .map(qt_string)
             };
             let binary = field("binary")?;
+            let working_directory = field("workingDirectory").filter(|w| !w.is_empty());
             Some(Executable {
                 title: field("title").unwrap_or_default(),
                 binary_host: host(&format!("executable {n}"), &binary),
                 binary,
                 arguments: field("arguments").unwrap_or_default(),
+                working_directory_host: working_directory
+                    .as_deref()
+                    .and_then(|w| host(&format!("executable {n} working directory"), w)),
+                working_directory,
+                steam_app_id: field("steamAppID")
+                    .and_then(|v| v.trim().parse::<u32>().ok())
+                    .filter(|id| *id != 0),
+                hidden: field("hide").is_some_and(|v| v.trim().eq_ignore_ascii_case("true")),
             })
         })
         .collect()
