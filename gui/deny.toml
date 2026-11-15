@@ -17,6 +17,9 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 # Add RUSTSEC ids here only with a comment saying why the advisory does not apply.
 ignore = []
 yanked = "warn"
+# GPUI and egui pull in unmaintained transitive crates (instant, paste, rustybuzz, ttf-parser, zbus_names, zvariant)
+# that we cannot replace; they are reported, not failed. Vulnerabilities and our own direct dependencies still fail.
+unmaintained = "workspace"
 
 [licenses]
 version = 2
