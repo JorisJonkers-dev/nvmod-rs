@@ -11,6 +11,7 @@ mod model;
 pub use finding::{Finding, ParseSeverityError, Severity};
 pub use index::{FileIndex, Provider, normalize_path};
 pub use model::{
-    INSTANCE_SCHEMA_VERSION, Instance, LoadError, LoadedInstance, PROFILE_SCHEMA_VERSION, Profile,
-    ProfileMod, Storefront, Target, instance_schema, load_instance, load_profile, profile_schema,
+    Executable, INSTANCE_SCHEMA_VERSION, Instance, LoadError, LoadedInstance,
+    PROFILE_SCHEMA_VERSION, Profile, ProfileMod, Storefront, Target, instance_schema,
+    load_instance, load_profile, profile_schema,
 };

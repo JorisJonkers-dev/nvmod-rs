@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.5.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.4.0...v0.5.0) (2026-11-15)
+
+
+### Features
+
+* **gui:** add the nested gui/ workspace with a GPUI setup window, an egui canary and a GUI workflow ([#62](https://github.com/JorisJonkers-dev/nvmod-rs/issues/62)) ([0745340](https://github.com/JorisJonkers-dev/nvmod-rs/commit/07453402a0ab296bf2ccaba9c2614983da72c39a))
+* **run:** executables registry, instance lock and nvmod run through the staged view ([#51](https://github.com/JorisJonkers-dev/nvmod-rs/issues/51)) ([13356df](https://github.com/JorisJonkers-dev/nvmod-rs/commit/13356dfb51b43e49ea29beccdbf69b603a09fc1e))
+
+## [0.4.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.3.0...v0.4.0) (2026-11-14)
+
+
+### Features
+
+* **backup:** nvmod backup create, list, restore and prune with automatic snapshots ([#44](https://github.com/JorisJonkers-dev/nvmod-rs/issues/44)) ([bd7a6f6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/bd7a6f6632564ef7d591580e976daaf79130c96c))
+* **conflicts:** add nvmod conflicts and nvmod tree ([#42](https://github.com/JorisJonkers-dev/nvmod-rs/issues/42)) ([71a34de](https://github.com/JorisJonkers-dev/nvmod-rs/commit/71a34de5737774208cacbd97ad85797b58be2999))
+* **formats:** meta.ini editor, version type and meta.ini on install ([#41](https://github.com/JorisJonkers-dev/nvmod-rs/issues/41)) ([657f085](https://github.com/JorisJonkers-dev/nvmod-rs/commit/657f085f57d58fd8598d26e6b843634e04f43f58))
+* **lod:** add nvmod lod plan through the pinned lodwright-rs ([#30](https://github.com/JorisJonkers-dev/nvmod-rs/issues/30)) ([#39](https://github.com/JorisJonkers-dev/nvmod-rs/issues/39)) ([ac0b7e4](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ac0b7e4701ccb8842f63e203813e4c7b42ba876e))
+* **plugins:** add nvmod plugins commands and sort --fetch-masterlist ([#49](https://github.com/JorisJonkers-dev/nvmod-rs/issues/49)) ([b777724](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b777724f3a9fbb87b8bd1c958b87151b8d39a9db))
+* **profile:** materialise a profile in the prefix (INIs, tweak merge, local saves, plugin lists, archive invalidation) ([#54](https://github.com/JorisJonkers-dev/nvmod-rs/issues/54)) ([867031e](https://github.com/JorisJonkers-dev/nvmod-rs/commit/867031e8d440f972304825923b88317e4c9885a4))
+* **runlog:** tracing in the library crates and a local run log for every command ([#48](https://github.com/JorisJonkers-dev/nvmod-rs/issues/48)) ([d4ac133](https://github.com/JorisJonkers-dev/nvmod-rs/commit/d4ac1332fae52a71c5443518800ae6ff5507d60c))
+* **saves:** nvmod saves list, backup, restore, transfer, check and checksum ([#55](https://github.com/JorisJonkers-dev/nvmod-rs/issues/55)) ([5dca00a](https://github.com/JorisJonkers-dev/nvmod-rs/commit/5dca00ae33e667474cfa5ebfe2511a608266c132))
+* **setup:** keep the imported MO2 load order and make the sort opt-in ([#57](https://github.com/JorisJonkers-dev/nvmod-rs/issues/57)) ([8cc8354](https://github.com/JorisJonkers-dev/nvmod-rs/commit/8cc83547eeacc9140fc365b8dcfe93a8a2acef0e))
+* **tools:** negotiate contracts with the tool, clamped to the lock's version ([#50](https://github.com/JorisJonkers-dev/nvmod-rs/issues/50)) ([ee0cad6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ee0cad6c3ebbb851190faa8a08a08b0ed1fa69a2))
+* **usage:** add nvmod nvse-usage, an opcode-only scan of the active plugins' compiled scripts ([#46](https://github.com/JorisJonkers-dev/nvmod-rs/issues/46)) ([33296d8](https://github.com/JorisJonkers-dev/nvmod-rs/commit/33296d8e3b866f30ef3d8d8ed856d820f02cd1da))
+
+
+### Bug Fixes
+
+* **ci:** build release assets from the workflow's own packaging scripts ([#53](https://github.com/JorisJonkers-dev/nvmod-rs/issues/53)) ([ca869c4](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ca869c420839c27080852794f54c13c126ba299d))
+* **cli:** give nvse-usage opcode blocks only the ranges plugins register ([#60](https://github.com/JorisJonkers-dev/nvmod-rs/issues/60)) ([6e19e4b](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6e19e4b33a87d20c26884eed1716aae5dbcb886c))
+* **release:** do not parse an empty pull request output in the lock refresh step ([#52](https://github.com/JorisJonkers-dev/nvmod-rs/issues/52)) ([b064013](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b0640136891832994b1126925087f35d5bed91b3))
+* **tests:** stop running freshly written executables into ETXTBSY ([#59](https://github.com/JorisJonkers-dev/nvmod-rs/issues/59)) ([5ee5c3c](https://github.com/JorisJonkers-dev/nvmod-rs/commit/5ee5c3cd575e9abb480cc83495676ab886bbe3df))
+
 ## [0.3.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.2.0...v0.3.0) (2026-11-14)
 
 

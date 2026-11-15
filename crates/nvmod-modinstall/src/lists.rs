@@ -135,6 +135,51 @@ pub fn add_plugins(
     Ok(Some((encoded, order_text.into_bytes())))
 }
 
+/// The new `(plugins.txt, loadorder.txt)` without the lines for `names` (ignoring case); every other line, comment
+/// lines included, stays. `None` when neither file lists any of them.
+///
+/// # Errors
+/// A name that `plugins.txt` holds has no place in Windows-1252.
+pub fn remove_plugins(
+    old_plugins: Option<&[u8]>,
+    old_order: Option<&[u8]>,
+    names: &[String],
+) -> Result<Option<NewLists>, String> {
+    let strip = |bytes: Option<&[u8]>| -> Option<(Vec<String>, bool)> {
+        let text = decode(bytes?);
+        let all: Vec<String> = lines(&text)
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_owned)
+            .collect();
+        let kept: Vec<String> = all
+            .iter()
+            .filter(|l| {
+                l.starts_with('#') || !names.iter().any(|n| name_of(l).eq_ignore_ascii_case(n))
+            })
+            .cloned()
+            .collect();
+        let changed = kept.len() != all.len();
+        Some((kept, changed))
+    };
+    let plugins = strip(old_plugins);
+    let order = strip(old_order);
+    if !plugins.as_ref().is_some_and(|p| p.1) && !order.as_ref().is_some_and(|o| o.1) {
+        return Ok(None);
+    }
+    let render = |list: Option<(Vec<String>, bool)>, old: Option<&[u8]>| -> String {
+        list.map_or_else(
+            || old.map(decode).unwrap_or_default(),
+            |(l, _)| join(&l.iter().map(String::as_str).collect::<Vec<_>>()),
+        )
+    };
+    let plugins_text = render(plugins, old_plugins);
+    let order_text = render(order, old_order);
+    let encoded = encode_windows_1252(&plugins_text)
+        .ok_or("a plugin name cannot be written to plugins.txt in the Windows code page")?;
+    Ok(Some((encoded, order_text.into_bytes())))
+}
+
 /// Whether `name` is listed in `list` (a parsed plugin list), ignoring case.
 #[must_use]
 pub fn lists(list: &[String], name: &str) -> bool {

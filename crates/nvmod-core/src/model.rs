@@ -85,6 +85,31 @@ pub struct Instance {
     /// What the Instance runs on. Absent in a file of schema 1, which migrates to `vanilla`.
     #[serde(default)]
     pub target: Target,
+    /// The programs `nvmod run` starts through the staged view (MO2's `customExecutables`). Absent when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub executables: Vec<Executable>,
+}
+
+/// One entry of an Instance's executables registry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Executable {
+    /// The name `nvmod run` takes; unique in the Instance, compared without regard to case.
+    pub title: String,
+    /// The program, as a path on this machine (a `.exe` runs through Proton on Linux).
+    pub binary: String,
+    /// The arguments as one string, split on spaces with double quotes grouping words. `%DATA%` is the staged
+    /// `Data` folder, `%INSTANCE%` the Instance folder and `%PROFILE%` the profile name.
+    #[serde(default)]
+    pub arguments: String,
+    /// The folder to run in; the program's own folder when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+    /// The Steam app id the program runs under; the game's own id when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub steam_app_id: Option<u32>,
+    /// Whether front ends leave the entry out of their lists.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
 }
 
 impl Instance {
@@ -96,6 +121,7 @@ impl Instance {
             base,
             storefront,
             target: Target::Vanilla,
+            executables: Vec::new(),
         }
     }
 }

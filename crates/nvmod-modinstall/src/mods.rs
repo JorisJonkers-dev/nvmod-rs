@@ -124,15 +124,15 @@ fn rows(instance: &NvmodInstance, list: &Modlist) -> Vec<ModRow> {
 }
 
 /// The entry lines (`+Name`, `-Name`, `*Name`, `Name`) and where in `all` they are.
-struct Doc<'a> {
-    all: Vec<&'a str>,
+pub(crate) struct Doc<'a> {
+    pub(crate) all: Vec<&'a str>,
     /// Indexes into `all` of the entry lines kept by the parser (first occurrence of a name).
-    entries: Vec<usize>,
-    names: Vec<String>,
+    pub(crate) entries: Vec<usize>,
+    pub(crate) names: Vec<String>,
 }
 
 impl<'a> Doc<'a> {
-    fn parse(text: &'a str) -> Doc<'a> {
+    pub(crate) fn parse(text: &'a str) -> Doc<'a> {
         let all: Vec<&str> = lines(text).filter(|l| !l.trim().is_empty()).collect();
         let mut entries = Vec::new();
         let mut names: Vec<String> = Vec::new();
@@ -156,7 +156,7 @@ impl<'a> Doc<'a> {
     }
 
     /// The index among entries of `wanted`: an exact name, or the only name equal ignoring case.
-    fn find(&self, wanted: &str) -> Result<usize, ModsError> {
+    pub(crate) fn find(&self, wanted: &str) -> Result<usize, ModsError> {
         if let Some(i) = self.names.iter().position(|n| n == wanted) {
             return Ok(i);
         }
@@ -173,7 +173,7 @@ impl<'a> Doc<'a> {
     }
 }
 
-fn join(lines: &[String]) -> Vec<u8> {
+pub(crate) fn join(lines: &[String]) -> Vec<u8> {
     let mut out = String::new();
     for line in lines {
         out.push_str(line);

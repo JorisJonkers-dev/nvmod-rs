@@ -27,6 +27,8 @@ nvmod-conflicts = { workspace = true }
 nvmod-backup = { workspace = true }
 nvmod-plugins = { workspace = true }
 nvmod-profile = { workspace = true }
+nvmod-saves = { workspace = true }
+nvmod-run = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }

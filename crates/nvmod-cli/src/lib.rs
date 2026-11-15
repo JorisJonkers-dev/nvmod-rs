@@ -7,18 +7,23 @@ mod backup;
 mod catalog;
 mod conflicts;
 mod doctor;
+mod exec;
 mod import;
 mod init;
 mod install_mod;
 mod install_nvrs;
+mod lock;
 mod lod;
 mod logging;
 mod mods;
+mod mods_life;
 mod nvse_usage;
 mod pe;
 mod plugins;
 mod profile;
 mod profile_apply;
+mod run;
+mod saves;
 mod setup;
 mod setup_state;
 mod sort;
@@ -68,7 +73,7 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               (needs `nvmod stage` first); --fetch-masterlist takes the masterlist pinned in tools.lock.toml
                               (checksum verified, kept in the tool store) instead of a file; locked plugins
                               (`nvmod plugins lock`) keep their position
-  nvmod mods list --instance <dir> [--profile <name>] [--json]
+  nvmod mods list --instance <dir> [--profile <name>] [--category <id>] [--json]
   nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
                 --instance <dir> [--profile <name>] [--dry-run] [--json]
@@ -76,6 +81,11 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               list them, enable or disable some, move one; a change edits only modlist.txt,
                               stages the profile again when it was staged, and is undone by `nvmod rollback`
                               (--dry-run writes nothing)
+  nvmod mods remove|rename|create|clone|hide|unhide|note <mod> ... --instance <dir> [--dry-run] [--json]
+  nvmod mods separator add|rename|remove <label> ... and nvmod mods category set <mod> <id>...
+                              the life of a Mod folder and of separators (run `nvmod mods remove` for the
+                              forms): journaled and undone by `nvmod rollback`; a removed Mod goes to
+                              .nvmod/trash; refused while the game or Mod Organizer runs
   nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]
                               the file-level conflicts of a profile (read only): who wins each contested path,
                               and per Mod whether it overwrites, is overwritten, is mixed or redundant;
@@ -129,6 +139,17 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               plugins.txt and loadorder.txt, and archive invalidation; whatever it displaces is
                               backed up, a read-only file is refused (exit 2) before any write; finish (and the
                               next apply) copies back what the game changed in the prefix
+  nvmod saves list|backup|check|checksum --instance <dir> [--profile <name>] [--prefix <dir>] [--json]
+  nvmod saves restore <id|latest> --instance <dir> [--profile <name>] [--prefix <dir>] [--json]
+  nvmod saves transfer <from> <to> --instance <dir> [--prefix <dir>] [--force] [--json]
+                              the saves of a profile (its saves/ with LocalSaves, else the prefix's My Games Saves):
+                              list them with the plugin count from the header (a documented, unverified layout),
+                              back up into .nvmod/saves-backup/<UTC>/ with a manifest of hashes, restore a backup
+                              (verified, exit 3 on a mismatch; the folder as it was is backed up first; nothing is
+                              deleted), copy saves with their .nvse co-saves to another profile (refused without
+                              the co-save unless --force, and never over a different file), check each save's
+                              plugin list against the profile (exit 1 when one needs a plugin that is not active),
+                              or print the checksums that `nvmod run` compares before and after a launch
   nvmod target <vanilla|nv-rs> --instance <dir>
                               choose what the Instance runs on (the Doctor checks xNVSE's DLL on vanilla)
   nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
@@ -172,6 +193,15 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               without network, fetch one (only from the lock's URL; its SHA-256 is checked before
                               it is made executable, then its attestation), confirm a third-party tool that pins
                               no checksum, or run one (its SHA-256 is re-checked at every call)
+  nvmod exec list|add|edit|remove|import --instance <dir> ...
+                              the executables registry (title, binary, arguments, working directory, Steam app
+                              id, hidden); `import --mo2 <dir>` reads MO2's customExecutables (only Z: paths map)
+  nvmod run <title|path|game|nv-rs> --instance <dir> [--profile <name>] [--proton <program>] [--dry-run]
+                [--wait] [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]
+                              start the game or a tool through the staged view: refuses while Mod Organizer 2
+                              runs or another command holds the Instance lock (exit 2), stages the profile when
+                              the tree is missing or old, then starts the program (detached unless --wait, whose
+                              exit code passes through); --dry-run prints the plan and changes nothing
   nvmod --version | --help
 
 every command writes a run log to logs/<run id>.ndjson in the state directory ($NVMOD_STATE_DIR, else
@@ -196,14 +226,31 @@ fn writes_instance(args: &[String]) -> bool {
         Some("setup" | "install" | "ttw" | "import-mo2") => true,
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
-            Some("enable" | "disable" | "reorder")
+            Some(
+                "enable"
+                    | "disable"
+                    | "reorder"
+                    | "remove"
+                    | "rename"
+                    | "create"
+                    | "clone"
+                    | "hide"
+                    | "unhide"
+                    | "note"
+                    | "separator"
+                    | "category"
+            )
         ),
         Some("plugins") => matches!(
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
-        Some("sort") => args.iter().any(|a| a == "--apply"),
+        Some("sort") => args.iter().any(|a| a == "--apply" || a == "--keep-order"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
+        Some("saves") => matches!(
+            args.get(1).map(String::as_str),
+            Some("backup" | "restore" | "transfer")
+        ),
         Some("profile") => matches!(args.get(1).map(String::as_str), Some("apply" | "finish")),
         _ => false,
     }
@@ -248,7 +295,9 @@ pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
 pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    backup::around(args, err, |err| dispatch(args, out, err))
+    lock::around(args, err, |err| {
+        backup::around(args, err, |err| dispatch(args, out, err))
+    })
 }
 
 fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
@@ -270,9 +319,12 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("mods") => mods::run(&args[1..], out, err),
         Some("profile") => profile::run(&args[1..], out, err),
+        Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
+        Some("exec") => exec::run(&args[1..], out, err),
+        Some("run") => run::run(&args[1..], out, err),
         Some("sort") => sort::run(&args[1..], out, err),
         Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),

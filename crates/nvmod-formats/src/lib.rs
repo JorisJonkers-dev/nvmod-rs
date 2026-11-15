@@ -4,12 +4,14 @@
 //! (write `modlist.txt`, `plugins.txt` and `loadorder.txt` together, CRLF, atomic) belong to the installer
 //! milestone. Every reader takes bytes or text, so it can be fuzzed without a file system.
 
+pub mod categories;
 pub mod ini;
 pub mod instance;
 pub mod lockedorder;
 pub mod metaini;
 pub mod modlist;
 pub mod plugins;
+pub mod savegame;
 pub mod scan;
 pub mod scripts;
 pub mod text;

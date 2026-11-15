@@ -1,0 +1,21 @@
+[package]
+name = "nvmod-gui-egui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "The egui canary: the same setup screen from the same view-model, so swapping the toolkit stays a day of work."
+
+[[bin]]
+name = "nvmod-gui-egui"
+path = "src/main.rs"
+
+[dependencies]
+nvmod-gui-shell = { workspace = true }
+nvmod-ui-service = { workspace = true }
+eframe = { workspace = true }
+
+[lints]
+workspace = true

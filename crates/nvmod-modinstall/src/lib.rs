@@ -10,6 +10,7 @@
 pub mod extract;
 pub mod fomod;
 pub mod journal;
+pub mod lifecycle;
 mod lists;
 pub mod mods;
 

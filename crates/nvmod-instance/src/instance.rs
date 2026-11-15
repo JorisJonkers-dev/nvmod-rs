@@ -3,7 +3,7 @@
 //! copy it points at.
 
 use crate::detect_storefront;
-use nvmod_core::{Instance, LoadError, LoadedInstance, Target, load_instance};
+use nvmod_core::{Executable, Instance, LoadError, LoadedInstance, Target, load_instance};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -133,6 +133,20 @@ impl NvmodInstance {
     pub fn set_target(&mut self, target: Target) -> Result<(), InstanceError> {
         let mut config = self.config.clone();
         config.target = target;
+        self.write_config(config)
+    }
+
+    /// Replace the executables registry and write `nvmod-instance.json` (temporary file, then a rename).
+    ///
+    /// # Errors
+    /// `Io` when writing fails; the old file is then still in place.
+    pub fn set_executables(&mut self, executables: Vec<Executable>) -> Result<(), InstanceError> {
+        let mut config = self.config.clone();
+        config.executables = executables;
+        self.write_config(config)
+    }
+
+    fn write_config(&mut self, config: Instance) -> Result<(), InstanceError> {
         let io = |e: std::io::Error| InstanceError::Io(format!("{}: {e}", self.root.display()));
         let text =
             serde_json::to_string_pretty(&config).map_err(|e| InstanceError::Io(e.to_string()))?;
