@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.4.0...v0.5.0) (2026-11-15)
+
+
+### Features
+
+* **gui:** add the nested gui/ workspace with a GPUI setup window, an egui canary and a GUI workflow ([#62](https://github.com/JorisJonkers-dev/nvmod-rs/issues/62)) ([0745340](https://github.com/JorisJonkers-dev/nvmod-rs/commit/07453402a0ab296bf2ccaba9c2614983da72c39a))
+* **run:** executables registry, instance lock and nvmod run through the staged view ([#51](https://github.com/JorisJonkers-dev/nvmod-rs/issues/51)) ([13356df](https://github.com/JorisJonkers-dev/nvmod-rs/commit/13356dfb51b43e49ea29beccdbf69b603a09fc1e))
+
 ## [0.4.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.3.0...v0.4.0) (2026-11-14)
 
 
