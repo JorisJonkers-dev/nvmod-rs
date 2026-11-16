@@ -1,11 +1,34 @@
 # nvmod-rs
 
-`nvmod` is a unified mod manager and installer for Fallout: New Vegas and Tale of Two Wastelands, written in Rust.
-It is the installer of [nv-rs](https://github.com/JorisJonkers-dev/nv-rs): one tool that takes a profile from "a list
-of mods" to "a runnable game with those mods, sorted and with LOD". The plan, with the survey of existing managers,
-the virtual file system options and the milestones, is in
-[`docs/plans/mod-manager.md`](https://github.com/JorisJonkers-dev/NV-Linux-Modding/blob/main/docs/plans/mod-manager.md)
-of NV-Linux-Modding.
+`nvmod` is the mod-management Component of the stack, for Fallout: New Vegas and Tale of Two Wastelands, written in
+Rust. The product that players install is
+[Raul's Trusty Toolbox](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox) (`raul`); it links nvmod's libraries
+and shows its reports. `nvmod` also works alone from the command line, and it never fetches, finds or starts another
+Component.
+
+## Scope
+
+nvmod-rs keeps mod management:
+
+- the Instance, Profile and Mod model and its schema;
+- mod install, FOMOD, the mod lifecycle, `meta.ini`, separators and categories;
+- the Staging tree, file and archive conflicts, and Overwrite;
+- Plugins and the Load order (it links [loot-rs](https://github.com/JorisJonkers-dev/loot-rs)), including the
+  minimal-change sort;
+- backups, saves, MO2 import, the Nexus client, the downloads library and mod update rows;
+- the executables registry, as data;
+- the content Doctor: the NVSE plugin catalogue, readiness per category from a given `capabilities.json`, and the
+  opcode usage scan.
+
+These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and planned in its `docs/REORG.md`:
+
+- setup (the pipeline with its journal and resume), `ttw`, `lod`, the engine install (`install-nv-rs`), `run`,
+  `tools`, `verify` and `contracts`;
+- the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`);
+- the view model and service seam (`nvmod-ui-model`, `nvmod-ui-service`) and the GUI (`gui/`).
+
+After each move, the moved command is a stub here that prints the `raul` command to use and exits with the usage
+code, for one nvmod release and at least 30 days. Until then the commands work as documented.
 
 Licence: GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 

@@ -235,3 +235,14 @@ written, and this section amends them.
 | Install and rollback | A newer build is installed side by side in its own versioned folder (checksum and attestation verified, `--check` passed) and becomes active by switching a pointer. Rollback is one click that switches the pointer back; nothing is overwritten or deleted. The run report and `nvmod doctor` record that the build is outside the tested set | Replace in place cannot be undone; a pointer can, instantly. This replaces the unsupported `--lock` override as the way to run a newer build |
 | Cadence rule 2 of ADR-0007 | The weekly batching applies to nvmod's own releases and to lock bumps. It no longer limits which nv-rs build the owner may install | The owner decides when to take a build; the check says what it changes |
 | GUI process model (corrects the UI row of 2026-11-14) | The GUI shells out to the `nvmod` CLI with `--json` (subprocess `Service`); it never links the engine crates. A long-lived `nvmod serve --json` child may be added behind the same trait if a measured screen needs it | The earlier row said "links the core in process", which contradicted `gui/README.md`, ADR-0005 and the code on `main`. Subprocess keeps the GPUI build out of the engine's dependency tree, makes the parity test prove the GUI can do nothing the CLI cannot, and makes every GUI action reproducible as a shell line |
+
+## 2026-11-16: nvmod-rs is the mod-management Component (rauls-trusty-toolbox ADR-0007)
+
+Decided by the owner on 2026-11-16. History is kept: the rows above stay as written, and this section says which of
+them now live in rauls-trusty-toolbox.
+
+| Topic | Decision | Reason |
+| --- | --- | --- |
+| Scope of nvmod-rs | nvmod-rs is the mod-management Component. It keeps the Instance, Profile and Mod model, install and FOMOD, staging, conflicts, Plugins and Load order, backups, saves, MO2 import, Nexus, the executables registry as data, and the content Doctor. Setup, TTW, LOD, the engine install, `run`, `tools`, `verify`, `contracts`, the Runner, tool supply, the view model, the service seam and the GUI move to rauls-trusty-toolbox, and their nvmod commands become stubs after the move | rauls-trusty-toolbox ADR-0007 and its `docs/REORG.md`: the Toolbox contains the tools, and a Component's CLI works alone |
+| The Rolling channel (the 2026-11-16 rows on nv-rs ahead of the tested set, install and rollback, and cadence) | Moved to rauls-trusty-toolbox ADR-0011. The rows above are history; the Toolbox decides and implements the channel | Tool supply, side-by-side install and pointer rollback move to the Toolbox with the pin file |
+| GUI process model (the 2026-11-16 row above, and the UI row of 2026-11-14) | Replaced by rauls-trusty-toolbox ADR-0003 and ADR-0007: the GUI lives in the Toolbox, reads in process and writes through a `raul` subprocess, and the view model and service seam move with it | The GUI and its view model are product UI, which the Toolbox owns |

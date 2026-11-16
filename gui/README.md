@@ -1,9 +1,12 @@
 # nvmod GUI
 
+> **Moving to the Toolbox.** The GUI, with its view model and service seam (`nvmod-ui-model`, `nvmod-ui-service`),
+> moves to [rauls-trusty-toolbox](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox) (its ADR-0003 and
+> ADR-0007, and `docs/REORG.md`). New GUI work goes there.
+
 The nvmod GUI is a nested cargo workspace with its own `Cargo.lock`, like `fuzz/`. It is not a member of the main
 workspace, so GPUI (about 560 crates, a cold build that peaks near 9 GB) never reaches the main `Cargo.lock`, the
-main `cargo deny` run, Renovate noise there or the coverage gate. The reasons are in ADR-0004 of the nv-linux
-repository, and the toolkit choice and its measurements are in `docs/research/gui-toolkit-spike.md` there.
+main `cargo deny` run, Renovate noise there or the coverage gate. The Toolbox keeps the same split (its ADR-0004).
 
 **The service is the CLI subprocess service.** The GUI never links nvmod's engine crates. Every action goes through
 the `Service` trait of `nvmod-ui-service`, whose real implementation runs the `nvmod` command line as a subprocess and
