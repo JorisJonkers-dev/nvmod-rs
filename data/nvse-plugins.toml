@@ -1,6 +1,7 @@
 # NVSE plugin catalogue: data this repository owns. Every entry carries its provenance.
 #
-# Fields of [[plugin]]: id (stable), role (framework: other mods need it; the update checklist says so for
+# Fields of [[plugin]]: id (stable), category (script-extender, render, patch or lod: what the DLL is for, from its role as
+# the research notes record it; the readiness report of the Doctor groups by it; unverified), role (framework: other mods need it; the update checklist says so for
 # JIP LN, JohnnyGuitar and ShowOff), name (the mod's folder name in the owner's instance), dll (the file in
 # NVSE/Plugins, compared without case), ini (files next to it that the plugin reads), nexus_mod_id (only where a
 # document says so), requires / conflicts (plugin ids), replaced_by (plugin id), provided_by.vanilla and provided_by.nv-rs (see below), game_version and min_xnvse (the game executable version the plugin requires and
@@ -20,6 +21,7 @@ schema = 1
 
 [[plugin]]
 id = "xnvse"
+category = "script-extender"
 role = "extender"
 name = "xNVSE"
 dll = "nvse_1_4.dll"
@@ -36,6 +38,7 @@ note = "the kind says built in with a coverage read at run time; no count is rec
 
 [[plugin]]
 id = "actorcause-save-bloat-fix"
+category = "patch"
 name = "ActorCause Save Bloat Fix"
 dll = "ActorCauseSaveBloatFix.dll"
 
@@ -47,6 +50,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "anhnvse"
+category = "script-extender"
 name = "AnhNVSE"
 dll = "AnhNVSE.dll"
 
@@ -58,6 +62,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "audio-region-fix"
+category = "patch"
 name = "Audio Region Fix - NVSE"
 dll = "AudioRegionFix.dll"
 
@@ -69,6 +74,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "better-caravan"
+category = "script-extender"
 name = "Better Caravan"
 dll = "BetterCaravan.dll"
 ini = ["BetterCaravan.ini"]
@@ -81,6 +87,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "cell-offset-generator"
+category = "patch"
 name = "Cell Offset Generator - NVSE"
 dll = "CellOffsetGenerator.dll"
 nexus_mod_id = 92182
@@ -93,6 +100,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "race-menu-presets"
+category = "script-extender"
 name = "Character Preset Menu"
 dll = "race_menu_presets.dll"
 
@@ -104,6 +112,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "climate-control"
+category = "script-extender"
 name = "Climate Control NVSE"
 dll = "ClimateControl.dll"
 
@@ -115,6 +124,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "cloud-upgrade"
+category = "render"
 name = "Cloud Upgrade"
 dll = "CloudUpgrade.dll"
 ini = ["CloudUpgrade.ini"]
@@ -127,6 +137,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "weapon-lag-fix"
+category = "patch"
 name = "Combat Lag Fix"
 dll = "weapon_lag_fix.dll"
 
@@ -138,6 +149,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "console-paste"
+category = "script-extender"
 name = "Console Paste"
 dll = "nvse_console_clipboard.dll"
 
@@ -149,6 +161,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "dof-fix"
+category = "render"
 name = "Depth of Field Fix"
 dll = "DoF-Fix.dll"
 
@@ -160,6 +173,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "depth-resolve"
+category = "render"
 name = "Depth Resolve - NVSE"
 dll = "DepthResolve.dll"
 nexus_mod_id = 93991
@@ -172,6 +186,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "external-emittance-fix"
+category = "render"
 name = "External Emittance Fix"
 dll = "ExternalEmittanceFix.dll"
 nexus_mod_id = 80443
@@ -184,6 +199,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "fallout-alpha-rendering-tweaks"
+category = "render"
 name = "Fallout Alpha Rendering Tweaks"
 dll = "Alpha Fixes.dll"
 ini = ["FART.ini"]
@@ -196,6 +212,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "fog-culling"
+category = "render"
 name = "Fog-based Object Culling"
 dll = "FogCulling.dll"
 
@@ -207,6 +224,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "high-res-local-maps"
+category = "render"
 name = "High Res Local Maps"
 dll = "HighResLocalMaps.dll"
 ini = ["HighResLocalMaps.ini"]
@@ -219,6 +237,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "high-res-bloom"
+category = "render"
 name = "High Resolution Bloom"
 dll = "HighResBloom.dll"
 ini = ["HighResBloom.ini"]
@@ -231,6 +250,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "high-res-screens"
+category = "render"
 name = "High Resolution Screens"
 dll = "HDPipboy.dll"
 
@@ -242,6 +262,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "high-res-water-fog"
+category = "render"
 name = "High Resolution Water Fog"
 dll = "HighResWaterDepth.dll"
 
@@ -253,6 +274,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "improved-console"
+category = "script-extender"
 name = "Improved Console"
 dll = "improved_console.dll"
 
@@ -264,6 +286,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "stewie-engine-optimizations"
+category = "patch"
 name = "IStewieAI Engine Optimizations"
 dll = "EngineOptimizations.dll"
 
@@ -275,6 +298,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "stewie-tweaks"
+category = "patch"
 name = "IStewieAI Tweaks"
 dll = "nvse_stewie_tweaks.dll"
 ini = ["nvse_stewie_tweaks.ini"]
@@ -288,6 +312,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "jip-ln"
+category = "script-extender"
 role = "framework"
 name = "JIP LN NVSE Plugin"
 dll = "jip_nvse.dll"
@@ -305,6 +330,7 @@ note = "dll and ini names observed; compatibility facts not recorded; provided_b
 
 [[plugin]]
 id = "johnnyguitar"
+category = "script-extender"
 role = "framework"
 name = "JohnnyGuitar NVSE"
 dll = "johnnyguitar.dll"
@@ -319,6 +345,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "knvse"
+category = "script-extender"
 name = "kNVSE Animation Plugin"
 dll = "kNVSE.dll"
 
@@ -330,6 +357,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "lod-fixes"
+category = "lod"
 name = "LOD Fixes and Improvements - NVSE"
 dll = "LOD Fixes.dll"
 ini = ["LOD Fixes.ini"]
@@ -343,6 +371,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "lod-flicker-fix"
+category = "lod"
 name = "LOD Flicker Fix - NVSE"
 dll = "LODFlickerFix.dll"
 
@@ -354,6 +383,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "mobile-pipboy-light"
+category = "script-extender"
 name = "Mobile Pip-Boy Light - NVSE"
 dll = "MobilePipBoyLight.dll"
 
@@ -365,6 +395,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "modern-minimap"
+category = "script-extender"
 name = "Modern Minimap"
 dll = "ModernMinimap.dll"
 ini = ["ModernMinimap.ini"]
@@ -377,6 +408,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "mod-limit-fix"
+category = "patch"
 name = "Mod Limit Fix"
 dll = "mlf.dll"
 
@@ -388,6 +420,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "moonlight-nvse"
+category = "script-extender"
 name = "MoonlightNVSE"
 dll = "MoonlightNVSE.dll"
 ini = ["MoonlightNVSE.ini"]
@@ -400,6 +433,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "muzzle-flash-light-fix"
+category = "render"
 name = "Muzzle Flash Light Fix"
 dll = "MuzzleFlashFix.dll"
 
@@ -411,6 +445,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "nvac"
+category = "patch"
 name = "NVAC - New Vegas Anti Crash"
 dll = "nvac.dll"
 nexus_mod_id = 53635
@@ -423,6 +458,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "nvr"
+category = "render"
 name = "NVR"
 dll = "NewVegasReloaded.dll"
 
@@ -434,6 +470,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "nvtf"
+category = "patch"
 name = "NVTF"
 dll = "NVTF.dll"
 ini = ["NVTF.ini"]
@@ -446,6 +483,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "real-time-reflections"
+category = "render"
 name = "Real Time Reflections"
 dll = "DynamicReflections.dll"
 ini = ["DynamicReflections.ini"]
@@ -458,6 +496,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "shader-loader"
+category = "render"
 name = "Shader Loader - NVSE"
 dll = "Fallout Shader Loader.dll"
 
@@ -469,6 +508,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "simple-fog-remover"
+category = "render"
 name = "Simple Fog Remover"
 dll = "SimpleFogRemover.dll"
 
@@ -480,6 +520,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "showoff"
+category = "script-extender"
 role = "framework"
 name = "ShowOff xNVSE"
 dll = "ShowOffNVSE.dll"
@@ -494,6 +535,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "sup-nvse"
+category = "script-extender"
 name = "SUP NVSE Plugin"
 dll = "supNVSE.dll"
 
@@ -505,6 +547,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "mcm"
+category = "script-extender"
 name = "The Mod Configuration Menu"
 dll = "MCM.dll"
 
@@ -516,6 +559,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "ttw-nvse"
+category = "script-extender"
 name = "TTW NVSE"
 dll = "ttw_nvse.dll"
 ini = ["TTW.ini"]
@@ -528,6 +572,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "ui-organizer"
+category = "script-extender"
 name = "UIO - User Interface Organizer"
 dll = "ui_organizer.dll"
 
@@ -539,6 +584,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "vanilla-plus-ao"
+category = "render"
 name = "Vanilla Plus AO"
 dll = "VanillaPlusAO.dll"
 
@@ -550,6 +596,7 @@ note = "dll and ini names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "vanilla-plus-terrain"
+category = "render"
 name = "Vanilla Plus Terrain"
 dll = "VanillaPlusTerrain.dll"
 nexus_mod_id = 92519
@@ -562,6 +609,7 @@ note = "dll names observed; Nexus id as stated by the document, not checked on t
 
 [[plugin]]
 id = "vats-lag-fix"
+category = "patch"
 name = "VATS Lag Fix"
 dll = "VATSLagFix.dll"
 
@@ -573,6 +621,7 @@ note = "dll names observed; compatibility facts not recorded"
 
 [[plugin]]
 id = "viewmodel-shading-fix"
+category = "render"
 name = "Viewmodel Shading Fix - NVSE"
 dll = "Viewmodel Shading Fix.dll"
 nexus_mod_id = 84781
@@ -585,6 +634,7 @@ note = "dll names observed; Nexus id as stated by the document, not checked on t
 
 [[plugin]]
 id = "yui"
+category = "script-extender"
 name = "yUI"
 dll = "yUI.dll"
 ini = ["yUI.ini"]
@@ -598,6 +648,7 @@ note = "dll and ini names observed; Nexus id as stated by the document, not chec
 
 [[plugin]]
 id = "zlib-updated"
+category = "patch"
 name = "zlib Updated - NVSE"
 dll = "zlibUpdate.dll"
 nexus_mod_id = 85267

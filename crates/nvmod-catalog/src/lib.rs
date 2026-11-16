@@ -12,6 +12,41 @@ pub const BUILTIN: &str = include_str!("../../../data/nvse-plugins.toml");
 /// The only schema version understood.
 pub const SCHEMA: u32 = 1;
 
+/// What a catalogue entry's DLL is for. This is the grouping of the readiness report in the Doctor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Category {
+    /// Adds script commands or another interface that scripts and other plugins call.
+    ScriptExtender,
+    /// Changes shaders, render targets or the renderer (what nv-rs does with its own renderer).
+    Render,
+    /// An engine fix or tweak that patches the executable in memory.
+    Patch,
+    /// Level-of-detail fixes.
+    Lod,
+}
+
+impl Category {
+    /// Every category, in report order.
+    pub const ALL: [Category; 4] = [
+        Category::ScriptExtender,
+        Category::Render,
+        Category::Patch,
+        Category::Lod,
+    ];
+
+    /// The name used in the catalogue file and in reports.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Category::ScriptExtender => "script-extender",
+            Category::Render => "render",
+            Category::Patch => "patch",
+            Category::Lod => "lod",
+        }
+    }
+}
+
 /// What provides a catalogue entry on one target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -101,6 +136,9 @@ pub struct Plugin {
     /// INI files next to the DLL that the plugin reads.
     #[serde(default)]
     pub ini: Vec<String>,
+    /// What the DLL is for, for the Doctor's readiness report. Absent means nobody recorded it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<Category>,
     /// `framework` when other mods need the plugin; absent otherwise.
     #[serde(default)]
     pub role: Option<String>,
@@ -359,6 +397,20 @@ mod tests {
         format!(
             "schema = 1\n[[plugin]]\nid = \"a\"\nname = \"A\"\ndll = \"a.dll\"\n{extra}\n{PROV}"
         )
+    }
+
+    #[test]
+    fn every_shipped_entry_has_a_category_and_an_unknown_one_is_refused() {
+        assert!(
+            Catalog::builtin()
+                .plugins
+                .iter()
+                .all(|p| p.category.is_some())
+        );
+        let bad = one("category = \"nonsense\"");
+        assert!(Catalog::parse(&bad).is_err());
+        let good = Catalog::parse(&one("category = \"lod\"")).unwrap();
+        assert_eq!(good.plugins[0].category, Some(Category::Lod));
     }
 
     #[test]
