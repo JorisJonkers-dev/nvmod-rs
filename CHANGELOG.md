@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.5.0...v0.6.0) (2026-11-16)
+
+
+### Features
+
+* **archives:** BSA directory reader, archive conflicts and the archive list audit ([#64](https://github.com/JorisJonkers-dev/nvmod-rs/issues/64)) ([6d7ef69](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6d7ef6920bc43e8c16ff7e42725838dd6f733187))
+* **doctor:** per-category nv-rs readiness from the catalogue, capabilities.json and the load order ([#68](https://github.com/JorisJonkers-dev/nvmod-rs/issues/68)) ([e0e3b16](https://github.com/JorisJonkers-dev/nvmod-rs/commit/e0e3b160c8097015d9b160b72bb6385524cdc5a6))
+* **run:** run a modded profile natively on nv-rs ([#66](https://github.com/JorisJonkers-dev/nvmod-rs/issues/66)) ([7b3a07d](https://github.com/JorisJonkers-dev/nvmod-rs/commit/7b3a07d0e5fb29f2330f8704947ae0dc6ae7aefa))
+* **tools:** take loot-rs v0.5.0 ([#67](https://github.com/JorisJonkers-dev/nvmod-rs/issues/67)) ([3d184f6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/3d184f69d9bfd336f106a5f1c985d819f01ff130))
+
 ## [0.5.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.4.0...v0.5.0) (2026-11-15)
 
 
