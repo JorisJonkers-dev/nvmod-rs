@@ -7,14 +7,15 @@ or plugin names.
 ## Checklist
 
 1. **Build the release commit.** Check out the head of the release pull request in its own worktree and build it:
-   `cargo build --release --locked -p nvmod-cli`. `nvmod --version` prints the release's version.
-   Record: the commit, the build time, the version printed.
+   `cargo build --release --locked -p nvmod-cli`. `target/release/nvmod --version` prints the release's version.
+   Use that binary in the steps below. Record: the commit, how long the build took, the version printed.
 2. **Doctor.** `nvmod doctor --instance <dir> --json` on the owner's Instance finishes and lists its findings. The
    Doctor is read only; nothing in the Instance changes. Exit 0 (nothing found) and 1 (problems found) both count as
    finished; any other exit fails the step.
    Record: the exit code, the number of findings by severity, the run time.
-3. **Run.** `nvmod run nv-rs --instance <dir> --wait` starts nv-rs in a nested headless compositor with the VRAM
-   watchdog on, and reaches the main menu.
+3. **Run.** `nvmod run nv-rs --instance <side> --no-stage --wait`, on a side Instance and inside a nested headless
+   session with the VRAM watchdog on (see below), starts nv-rs and reaches the main menu. nvmod starts the program;
+   the nested session, the watchdog and the bench lock come from the fork's bench scripts.
    Record: which nv-rs build ran (a release of the current Known-good set, or the newest local build if that is what
    `nvmod run` picks), the verdict, the time to the main menu, the peak VRAM, the exit code.
 4. **Rolling engine channel: not part of nvmod.** The compatibility check and pointer rollback of newer nv-rs builds
@@ -27,8 +28,8 @@ The release passes when steps 1 to 3 pass.
 
 ### Step 2
 
-The Instance is read, never written. Keep a timestamp file and confirm afterwards that `find <instance> -newer <file>`
-prints nothing.
+The Instance is read, never written. Before the step, create a timestamp file outside the Instance; afterwards
+`find <instance> -newer <file>` must print nothing.
 
 ### Step 3
 
@@ -36,7 +37,8 @@ prints nothing.
 at the end. To leave the owner's Instance untouched, run it on a side Instance: a new folder with copies of
 `nvmod-instance.json`, `profiles/` and `.nvmod/`, and symbolic links to the real `mods/` and `staging/`. Pass
 `--no-stage` so the linked Staging tree is only read. `nvmod run nv-rs --instance <side> --no-stage --dry-run` shows
-which nv-rs build it will start.
+which nv-rs build it will start. The links point at the owner's real folders, so do the timestamp check of step 2 for
+`mods/` and `staging/` too: after the run, `find <instance>/mods <instance>/staging -newer <file>` prints nothing.
 
 Game runs on the owner's machine follow the fork's bench rules (nv-rs `docs/fork/BENCH.md`):
 
