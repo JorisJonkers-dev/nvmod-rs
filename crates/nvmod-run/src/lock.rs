@@ -277,6 +277,23 @@ mod tests {
         assert_eq!(InstanceLock::read(dir.path()).unwrap().command, "stage");
     }
 
+    // Off Linux a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
+    #[test]
+    #[cfg(not(target_os = "linux"))]
+    fn elsewhere_a_lock_is_never_taken_over() {
+        let dir = TempDir::new("lock-kept");
+        fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
+        fs::write(
+            dir.path().join(LOCK_FILE),
+            r#"{"pid":4294967290,"started":1,"command":"run gone"}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            InstanceLock::acquire(dir.path(), "stage"),
+            Err(LockError::Held(h)) if h.command == "run gone"
+        ));
+    }
+
     #[test]
     fn a_hand_over_keeps_the_file_and_names_the_new_pid() {
         let dir = TempDir::new("lock-hand");
