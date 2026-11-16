@@ -72,7 +72,8 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed-methods
       - name: Test
         if: ${{ !cancelled() }}
-        run: cargo test --locked --workspace
+        # Every failing test in one run, not only those of the first crate that fails.
+        run: cargo test --locked --workspace --no-fail-fast
 
   pipeline-complete:
     name: Pipeline Complete
