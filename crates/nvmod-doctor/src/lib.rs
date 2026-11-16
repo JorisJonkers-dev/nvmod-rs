@@ -12,10 +12,12 @@ mod game;
 mod order;
 mod plugins;
 mod profile;
+mod readiness;
 mod report;
 
 pub use base::{BaseExe, BaseReport, BaseSummary, check_base, check_instance};
 pub use builtin::{CapabilitiesStatus, CapabilitiesUse, ExtenderCoverage, NvRsReport};
+pub use readiness::{CategoryReadiness, CommandReadiness, DataOnly, Readiness};
 pub use report::{ExeReport, GameReport, PluginReport, Report, Summary};
 
 use nvmod_catalog::Catalog;

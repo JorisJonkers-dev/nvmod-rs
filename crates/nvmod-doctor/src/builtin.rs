@@ -5,6 +5,7 @@
 //! built in is redundant, one the catalogue marks absent cannot load, and one that is external is reported unknown,
 //! because nothing records that nv-rs loads third-party NVSE plugins.
 
+use crate::readiness::{self, DataOnly, Readiness};
 use nvmod_catalog::{Catalog, Kind, Plugin};
 use nvmod_core::{Finding, Severity, Target};
 use nvmod_instance::{NvmodInstance, find_ci};
@@ -62,6 +63,8 @@ pub struct NvRsReport {
     pub capabilities: CapabilitiesUse,
     /// The coverage of each built-in extender the file lists.
     pub extenders: Vec<ExtenderCoverage>,
+    /// How much of the profile's load order nv-rs provides, per category.
+    pub readiness: Readiness,
 }
 
 fn is_present(plugin: &Plugin, dlls: &[String]) -> bool {
@@ -236,6 +239,7 @@ fn nv_rs(
     instance: &NvmodInstance,
     catalog: &Catalog,
     dlls: &[String],
+    mods: DataOnly,
     findings: &mut Vec<Finding>,
 ) -> NvRsReport {
     let (used, caps) = load(instance, catalog, findings);
@@ -291,6 +295,7 @@ fn nv_rs(
     NvRsReport {
         capabilities: used,
         extenders,
+        readiness: readiness::build(catalog, dlls, caps.as_ref(), mods),
     }
 }
 
@@ -299,6 +304,7 @@ pub(crate) fn check(
     instance: &NvmodInstance,
     catalog: &Catalog,
     dlls: &[String],
+    mods: DataOnly,
     findings: &mut Vec<Finding>,
 ) -> Option<NvRsReport> {
     match instance.config.target {
@@ -306,6 +312,6 @@ pub(crate) fn check(
             vanilla(instance, catalog, findings);
             None
         }
-        Target::NvRs => Some(nv_rs(instance, catalog, dlls, findings)),
+        Target::NvRs => Some(nv_rs(instance, catalog, dlls, mods, findings)),
     }
 }

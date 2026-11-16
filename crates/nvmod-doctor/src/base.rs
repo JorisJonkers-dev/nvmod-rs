@@ -89,6 +89,9 @@ impl BaseReport {
                 if exe.large_address_aware { "yes" } else { "no" }
             ));
         }
+        if let Some(nv_rs) = &self.nv_rs {
+            lines.extend(nv_rs.readiness.to_lines());
+        }
         lines.push(format!(
             "findings: {} error(s), {} warning(s), {} info",
             self.summary.errors, self.summary.warnings, self.summary.info
@@ -163,7 +166,9 @@ pub fn check_instance(
         )
     };
     let mut dlls = Vec::new();
+    let mut mods = crate::readiness::DataOnly::default();
     if let Some(profile) = &resolved {
+        mods = crate::readiness::count_mods(instance, profile);
         report
             .findings
             .extend(nvmod_stage::doctor_findings(instance, profile));
@@ -185,7 +190,7 @@ pub fn check_instance(
             dlls = crate::order::staged_dlls(&data);
         }
     }
-    report.nv_rs = builtin::check(instance, catalog, &dlls, &mut report.findings);
+    report.nv_rs = builtin::check(instance, catalog, &dlls, mods, &mut report.findings);
     report.recount();
     Ok(report)
 }
