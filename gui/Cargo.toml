@@ -9,7 +9,7 @@ members = ["crates/nvmod-gui-shell", "crates/nvmod-gui-gpui", "crates/nvmod-gui-
 # The GUI ships under nvmod's version (one product, one tag); it is not released yet, so this stays 0.0.0.
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 license = "GPL-3.0-only"
 repository = "https://github.com/JorisJonkers-dev/nvmod-rs"
 publish = false

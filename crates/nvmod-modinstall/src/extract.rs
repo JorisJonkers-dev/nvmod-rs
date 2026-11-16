@@ -264,8 +264,7 @@ fn run_tool_with(
 ) -> Result<(), String> {
     let name = tool
         .file_name()
-        .map(|n| n.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
+        .map_or_default(|n| n.to_string_lossy().to_ascii_lowercase());
     let args: Vec<String> = if name.contains("tar") {
         vec![
             "-xf".to_owned(),

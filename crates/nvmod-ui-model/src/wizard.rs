@@ -341,7 +341,7 @@ impl FomodWizard {
         self.questions
             .iter()
             .find(|q| q.id == id)
-            .map(|q| {
+            .map_or_default(|q| {
                 q.options
                     .iter()
                     .filter(|o| {
@@ -350,7 +350,6 @@ impl FomodWizard {
                     .map(|o| o.name.clone())
                     .collect()
             })
-            .unwrap_or_default()
     }
 
     /// Records the choice for a question.
