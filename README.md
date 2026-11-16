@@ -27,8 +27,8 @@ These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and plann
 - the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`);
 - the view model and service seam (`nvmod-ui-model`, `nvmod-ui-service`) and the GUI (`gui/`).
 
-After each move, the moved command is a stub here that prints the `raul` command to use and exits with the usage
-code, for one nvmod release and at least 30 days. Until then the commands work as documented.
+Each moved command is removed from nvmod when it moves; use `raul` for it from then on. Until then the commands work
+as documented.
 
 Licence: GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 

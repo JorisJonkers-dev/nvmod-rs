@@ -5,7 +5,7 @@ only read.
 
 > **Moving to the Toolbox.** Starting programs, the engine install and setup move to
 > [rauls-trusty-toolbox](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox) (its ADR-0007 and `docs/REORG.md`).
-> After the move, `nvmod run` and `nvmod install-nv-rs` are stubs that print the `raul` command to use; the steps
+> After the move, `nvmod run` and `nvmod install-nv-rs` are removed and `raul` does these steps; the steps
 > below that only manage mods (init, install, import, profiles, sort) stay in nvmod.
 
 ## Steps
