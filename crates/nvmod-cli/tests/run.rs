@@ -537,7 +537,9 @@ fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
     );
 }
 
+// Finding a running program reads `/proc`, so it works on Linux only (nvmod_run::find_process).
 #[test]
+#[cfg(target_os = "linux")]
 fn a_running_mo2_refuses_the_run() {
     let s = Scratch::new();
     let tool = s.tool("t.exe");
@@ -582,7 +584,10 @@ fn a_live_lock_refuses_every_writing_command_and_a_dead_one_is_taken_over() {
     // Read only commands and a dry run still work.
     assert_eq!(nvmod(&["exec", "list", "--instance", &r]).0, 0);
     assert_eq!(s.run(&["T", "--dry-run"], &[]).0, 0);
-    // A dead pid is taken over with an info line.
+    // A dead pid is taken over with an info line. Only Linux can tell that a pid is gone (nvmod_run::pid_alive).
+    if !cfg!(target_os = "linux") {
+        return;
+    }
     write_file(
         &s.root(),
         ".nvmod/lock",

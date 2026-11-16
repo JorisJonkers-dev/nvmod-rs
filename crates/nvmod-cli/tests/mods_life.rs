@@ -529,7 +529,9 @@ fn categories_are_set_listed_filtered_and_the_file_is_untouched() {
     );
 }
 
+// Finding a running game reads `/proc`, so it works on Linux only (nvmod_backup::game_running).
 #[test]
+#[cfg(target_os = "linux")]
 fn a_running_game_refuses_a_change_but_not_a_dry_run() {
     let s = Scratch::new();
     let mut child = Command::new("sleep").arg("30").spawn().unwrap();

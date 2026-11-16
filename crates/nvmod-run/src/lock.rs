@@ -260,7 +260,9 @@ mod tests {
         assert!(InstanceLock::acquire(dir.path(), "run x").is_ok());
     }
 
+    // Only Linux can tell that a pid is gone (pid_alive); elsewhere a lock is never taken over.
     #[test]
+    #[cfg(target_os = "linux")]
     fn a_dead_pid_is_taken_over() {
         let dir = TempDir::new("lock-dead");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();

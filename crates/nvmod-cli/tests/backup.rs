@@ -262,8 +262,9 @@ fn a_failed_restore_puts_the_profile_back_and_exits_4() {
     );
 }
 
+// Finding a running game reads `/proc`, so it works on Linux only (nvmod_backup::game_running).
 #[test]
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 fn restore_refuses_while_the_game_runs() {
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
