@@ -1,6 +1,7 @@
 # Releasing and verifying a release
 
-release-please opens a release pull request; merging it creates the tag `vX.Y.Z` and the GitHub release. `release.yml`
+release-please opens a release pull request. It is merged only after the [Release test](RELEASE-TEST.md) passes on
+the owner's machine; merging it creates the tag `vX.Y.Z` and the GitHub release. `release.yml`
 then dispatches `release-assets.yml`, which builds `nvmod` from that tag with `--locked` and the compiler pinned in
 `rust-toolchain.toml`, and attaches:
 
