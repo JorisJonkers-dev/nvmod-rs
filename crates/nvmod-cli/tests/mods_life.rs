@@ -295,14 +295,24 @@ fn a_clone_named_like_a_backup_is_not_listed_and_not_staged() {
 
 #[test]
 fn a_clone_with_another_name_is_listed_disabled_below_the_original_and_can_hard_link() {
-    use std::os::unix::fs::MetadataExt;
     let s = Scratch::new();
     let r = s.json(&["clone", "Plain", "--name", "Plain tweaked", "--hardlink"]);
     assert_eq!(r["listed"], true);
     assert!(s.modlist().contains("+Plain\r\n-Plain tweaked\r\n"));
-    let linked = fs::metadata(s.root().join("mods/Plain tweaked/Textures/Only.dds")).unwrap();
-    assert!(linked.nlink() >= 2, "hard linked");
     assert_eq!(s.staged("textures/dirt.dds").unwrap(), b"Extra");
+    // A hard link is a plain file that shares its data with the original, so a write through the clone shows in
+    // the original. The check holds on every platform, unlike a link count.
+    let linked = s.root().join("mods/Plain tweaked/Textures/Only.dds");
+    assert!(
+        fs::symlink_metadata(&linked).unwrap().is_file(),
+        "not a symlink"
+    );
+    fs::write(&linked, b"Linked").unwrap();
+    assert_eq!(
+        fs::read(s.root().join("mods/Plain/Textures/Only.dds")).unwrap(),
+        b"Linked",
+        "hard linked"
+    );
 }
 
 #[test]
