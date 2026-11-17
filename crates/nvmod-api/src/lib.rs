@@ -38,7 +38,7 @@
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |
 //! | [`backup::restore`] | [`backup::RestoreRequest`] | [`backup::RestoreOutput`] |
 //! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
-//! | [`install::install`] | [`install::InstallRequest`] | [`install::Report`] |
+//! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //!

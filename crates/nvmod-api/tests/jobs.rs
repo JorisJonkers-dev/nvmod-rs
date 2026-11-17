@@ -5,7 +5,7 @@
 use nvmod_api::backup::{
     CreateRequest, ListRequest as BackupListRequest, PruneRequest, RestoreRequest,
 };
-use nvmod_api::install::{InstallRequest, RollbackRequest};
+use nvmod_api::install::{InstallOutput, InstallRequest, Report, RollbackRequest};
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
 use nvmod_api::plugins::{
@@ -19,7 +19,7 @@ use nvmod_testkit::{
     BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, write_file,
 };
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const MASTERLIST: &str = r"
 globals:
@@ -1019,6 +1019,32 @@ fn a_plugins_change_cancelled_before_a_write_changes_nothing() {
     );
 }
 
+/// A FOMOD whose only group leaves the choice open: it needs an answer.
+const ASK: &str = r#"<config><moduleName>Ask</moduleName>
+  <installSteps order="Explicit"><installStep name="Options"><optionalFileGroups order="Explicit">
+    <group name="Style" type="SelectExactlyOne"><plugins order="Explicit">
+      <plugin name="Red"><files><file source="red.txt" destination="style.txt"/></files>
+        <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+      <plugin name="Blue"><files><file source="blue.txt" destination="style.txt"/></files>
+        <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+    </plugins></group>
+  </optionalFileGroups></installStep></installSteps></config>"#;
+
+fn fomod_zip(path: &Path, xml: &str, files: &[(&str, &[u8])]) {
+    let mut zip = ZipBuilder::new().file("fomod/ModuleConfig.xml", xml.as_bytes());
+    for (name, data) in files {
+        zip = zip.file(name, data);
+    }
+    zip.write(path);
+}
+
+fn installed(output: InstallOutput) -> Report {
+    match output {
+        InstallOutput::Installed(report) => report,
+        InstallOutput::Questions(questions) => panic!("the FOMOD asked: {questions:?}"),
+    }
+}
+
 #[test]
 fn install_dry_run_writes_nothing() {
     let s = Scratch::new();
@@ -1035,11 +1061,15 @@ fn install_dry_run_writes_nothing() {
         archive,
         name: None,
         dry_run: true,
+        answers: None,
+        extract_tool: None,
+        max_extract_bytes: None,
     };
-    let report = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
+    let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
         .expect("installs")
         .done()
         .expect("not cancelled");
+    let report = installed(output);
     assert!(report.dry_run);
     assert_eq!(
         fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
@@ -1060,6 +1090,9 @@ fn install_for_real_then_rollback_removes_it() {
         archive,
         name: None,
         dry_run: false,
+        answers: None,
+        extract_tool: None,
+        max_extract_bytes: None,
     };
     let _ = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
         .expect("installs")
@@ -1091,6 +1124,9 @@ fn install_cancelled_before_changes_nothing() {
         archive,
         name: None,
         dry_run: false,
+        answers: None,
+        extract_tool: None,
+        max_extract_bytes: None,
     };
     let outcome =
         nvmod_api::install::install(&request, &mut NoProgress, &cancel).expect("no error");
@@ -1100,6 +1136,74 @@ fn install_cancelled_before_changes_nothing() {
         before
     );
     assert!(!s.root().join("mods/Cancelled").exists());
+}
+
+#[test]
+fn an_install_that_needs_fomod_answers_returns_the_questions() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-install-work");
+    let archive = work.path().join("Ask.zip");
+    let files: [(&str, &[u8]); 2] = [("red.txt", b"red"), ("blue.txt", b"blue")];
+    fomod_zip(&archive, ASK, &files);
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let request = InstallRequest {
+        instance: s.root(),
+        profile: None,
+        archive,
+        name: None,
+        dry_run: false,
+        answers: None,
+        extract_tool: None,
+        max_extract_bytes: None,
+    };
+    let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
+        .expect("no error")
+        .done()
+        .expect("not cancelled");
+    let questions = match output {
+        InstallOutput::Questions(questions) => questions,
+        InstallOutput::Installed(report) => panic!("installed `{}` instead", report.r#mod),
+    };
+    assert_eq!(questions.len(), 1);
+    let style = &questions[0];
+    assert_eq!(style.id, "Options/Style");
+    assert_eq!(style.kind.as_str(), "SelectExactlyOne");
+    assert_eq!(style.options.len(), 2);
+    assert_eq!(style.options[0].name, "Red");
+    assert_eq!(style.options[1].name, "Blue");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+    assert!(!s.root().join("mods/Ask").exists());
+}
+
+#[test]
+fn an_install_over_the_extraction_limit_is_refused() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-install-work");
+    let archive = work.path().join("Big.zip");
+    ZipBuilder::new().file("big.bin", &[0; 100]).write(&archive);
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let request = InstallRequest {
+        instance: s.root(),
+        profile: None,
+        archive,
+        name: None,
+        dry_run: false,
+        answers: None,
+        extract_tool: None,
+        max_extract_bytes: Some(50),
+    };
+    let outcome = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new());
+    let error = outcome.expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "install.install");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+    assert!(!s.root().join("mods/Big").exists());
 }
 
 #[test]
