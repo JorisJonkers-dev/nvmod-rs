@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #![allow(clippy::missing_panics_doc, clippy::must_use_candidate)]
 //! Fakes for the nv-rs install step, built in code: a tiny cargo workspace that stands in for the nv-rs source, a
-//! fake release (an archive and its `SHA256SUMS`), a local HTTP server that counts requests, and shell scripts
-//! that stand in for `gh` and `curl`. The fake `nv-viewer` answers `--check` like the real one (exit 0 when the game
-//! can start, 1 when not) and prints the arguments it got. Nothing here is a real nv-rs file or game file.
+//! fake release (an archive and its `SHA256SUMS`), a local HTTP server that counts requests, and shell scripts. The
+//! fake `nv-viewer` answers `--check` like the real one (exit 0 when the game can start, 1 when not) and prints the
+//! arguments it got; on Windows, where a shell script does not start, it is a compiled [`Standin`]. Nothing here is a
+//! real nv-rs file or game file.
 
 // Test support: it builds fixtures with `tar` and `chmod`, which is not product code (ADR-0005).
 #![allow(clippy::disallowed_methods)]
 
-use crate::write_file;
+use crate::{Standin, write_file};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
@@ -19,11 +20,41 @@ use std::thread::JoinHandle;
 
 /// What the fake nv-rs binary prints, so a test can tell it ran.
 pub const FAKE_BUILT_BANNER: &str = "fake nv-rs built from source";
-/// The bytes of the binary inside the fake release.
+/// The bytes of the binary inside the fake release, on Linux and macOS.
 pub const FAKE_RELEASE_BINARY: &[u8] = b"#!/bin/sh\necho fake nv-rs from a release \"$@\"\n";
-/// The bytes of the binary inside a fake release whose `--check` fails.
+/// The bytes of the binary inside a fake release whose `--check` fails, on Linux and macOS.
 pub const FAKE_FAILING_RELEASE_BINARY: &[u8] =
     b"#!/bin/sh\necho fake-check-refused \"$@\" >&2\nexit 1\n";
+
+/// The bytes of the binary inside the fake release: [`FAKE_RELEASE_BINARY`], or on Windows, where a shell script
+/// does not start, a compiled [`Standin`] that does the same.
+#[must_use]
+pub fn fake_release_binary() -> Vec<u8> {
+    if cfg!(windows) {
+        Standin::new().says("fake nv-rs from a release").program()
+    } else {
+        FAKE_RELEASE_BINARY.to_vec()
+    }
+}
+
+/// The bytes of the binary inside a fake release whose `--check` fails (see [`fake_release_binary`]).
+#[must_use]
+pub fn fake_failing_release_binary() -> Vec<u8> {
+    if cfg!(windows) {
+        Standin::new()
+            .complains(FAKE_CHECK_REFUSED)
+            .exits(1)
+            .program()
+    } else {
+        FAKE_FAILING_RELEASE_BINARY.to_vec()
+    }
+}
+
+/// The name of the nv-rs program in a release and in an install: `nv-viewer`, `nv-viewer.exe` on Windows.
+#[must_use]
+pub fn nv_viewer_name() -> String {
+    format!("nv-viewer{}", std::env::consts::EXE_SUFFIX)
+}
 /// What the fake source-built `nv-viewer` prints on a failing `--check`.
 pub const FAKE_CHECK_REFUSED: &str = "fake-check-refused";
 /// The asset name the fake release uses.
@@ -178,29 +209,27 @@ impl FakeRelease {
         let pack = dir.join(".pack");
         let work = pack.join("root");
         let binary = if self.failing_check {
-            FAKE_FAILING_RELEASE_BINARY
+            fake_failing_release_binary()
         } else {
-            FAKE_RELEASE_BINARY
+            fake_release_binary()
         };
-        write_file(&work, "nv-rs/nv-viewer", binary);
+        let viewer = format!("nv-rs/{}", nv_viewer_name());
+        write_file(&work, &viewer, &binary);
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(
-                work.join("nv-rs/nv-viewer"),
-                std::fs::Permissions::from_mode(0o755),
-            )
-            .expect("make nv-viewer executable");
+            std::fs::set_permissions(work.join(&viewer), std::fs::Permissions::from_mode(0o755))
+                .expect("make nv-viewer executable");
         }
         // The escaping member is a real file one level above the folder tar packs from, named `../escaped`. `-P`
         // keeps that name as given, where GNU tar would strip the leading `../`. Only GNU tar has `--transform`, so
         // this works with the tar of Linux, macOS and Windows alike.
         let mut members = if self.escaping_member {
-            std::fs::copy(work.join("nv-rs/nv-viewer"), pack.join("escaped"))
+            std::fs::copy(work.join(&viewer), pack.join("escaped"))
                 .expect("write the escaping member");
             vec!["../escaped"]
         } else {
-            vec!["nv-rs/nv-viewer"]
+            vec![viewer.as_str()]
         };
         if let Some(manifest) = &self.manifest {
             write_file(&work, "nv-rs/release-manifest.json", manifest.as_bytes());
@@ -252,8 +281,13 @@ pub fn write_script(dir: &Path, name: &str, body: &str) -> PathBuf {
 }
 
 /// Write the executable file `name` into `dir` with these bytes, without the `ETXTBSY` race (see [`write_script`]).
+/// Windows has neither the executable bit nor that race, so the file is written directly there.
 pub fn write_executable(dir: &Path, name: &str, bytes: &[u8]) -> PathBuf {
     let path = dir.join(name);
+    if cfg!(windows) {
+        write_file(dir, name, bytes);
+        return path;
+    }
     let staging = dir.join(format!(".{name}.staging"));
     write_file(dir, &format!(".{name}.staging"), bytes);
     let status = Command::new("install")

@@ -2,7 +2,7 @@
 //! `nvmod verify`, run as a program against a scratch Instance made by `nvmod init` and `nvmod profile create`
 //! from a synthetic base copy. nv-rs is a fake file and its record written here. No game data.
 
-use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, nv_viewer_name, snapshot, write_file};
 use nvmod_tools::sha256_hex;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -82,7 +82,11 @@ impl Rig {
 
     /// A fake nv-rs install with the record `nvmod install-nv-rs` writes.
     fn fake_nv_rs(&self, recorded: &[u8], present: &[u8]) {
-        write_file(&self.root(), "nv-rs/bin/nv-viewer", present);
+        write_file(
+            &self.root(),
+            &format!("nv-rs/bin/{}", nv_viewer_name()),
+            present,
+        );
         let record = serde_json::json!({ "method": "release", "sha256": sha256_hex(recorded) });
         write_file(
             &self.root(),
