@@ -4,6 +4,10 @@
 
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
+use nvmod_api::plugins::{
+    self as plugins_api, Change as PluginChange, ChangeRequest as PluginChangeRequest,
+    ListRequest as PluginListRequest,
+};
 use nvmod_api::run::PlanRequest;
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
@@ -719,4 +723,155 @@ fn the_api_version_is_the_release_version() {
         .expect("version")
         .trim_matches('"');
     assert_eq!(API_VERSION, version);
+}
+
+#[test]
+fn plugins_list_gives_the_plugins() {
+    let s = Scratch::new();
+    let request = PluginListRequest {
+        instance: s.root(),
+        profile: None,
+    };
+    let listed = plugins_api::list(&request, &mut NoProgress, &CancelToken::new())
+        .expect("lists")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(listed.profile, "Default");
+    assert_ne!(listed.plugins.len(), 0);
+}
+
+#[test]
+fn plugins_change_enables_with_a_dry_run_that_writes_nothing() {
+    let s = Scratch::new();
+    let run = |change: PluginChange, dry_run: bool| {
+        plugins_api::change(
+            &PluginChangeRequest {
+                instance: s.root(),
+                profile: None,
+                change,
+                dry_run,
+            },
+            &mut NoProgress,
+            &CancelToken::new(),
+        )
+        .expect("runs")
+        .done()
+        .expect("not cancelled")
+    };
+    run(
+        PluginChange::Disable {
+            names: vec!["Patch.esp".into()],
+        },
+        false,
+    );
+    let before = fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap();
+    let report = run(
+        PluginChange::Enable {
+            names: vec!["Patch.esp".into()],
+            with_masters: false,
+        },
+        true,
+    );
+    assert_eq!(report.status, "dry-run");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn plugins_change_disables_with_a_dry_run_that_writes_nothing() {
+    let s = Scratch::new();
+    let before = fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap();
+    let request = PluginChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: PluginChange::Disable {
+            names: vec!["Patch.esp".into()],
+        },
+        dry_run: true,
+    };
+    let report = plugins_api::change(&request, &mut NoProgress, &CancelToken::new())
+        .expect("plans")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(report.status, "dry-run");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn plugins_change_moves_a_plugin() {
+    let s = Scratch::new();
+    let request = PluginChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: PluginChange::Move {
+            name: "Patch.esp".into(),
+            to: plugins_api::Place::Bottom,
+        },
+        dry_run: false,
+    };
+    let report = plugins_api::change(&request, &mut NoProgress, &CancelToken::new())
+        .expect("changes")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(report.status, "changed");
+}
+
+#[test]
+fn plugins_change_locks_then_unlocks() {
+    let s = Scratch::new();
+    let lock = PluginChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: PluginChange::Lock {
+            name: "Patch.esp".into(),
+            position: 3,
+        },
+        dry_run: false,
+    };
+    let report = plugins_api::change(&lock, &mut NoProgress, &CancelToken::new())
+        .expect("locks")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(report.status, "changed");
+    let unlock = PluginChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: PluginChange::Unlock {
+            name: "Patch.esp".into(),
+        },
+        dry_run: false,
+    };
+    let report = plugins_api::change(&unlock, &mut NoProgress, &CancelToken::new())
+        .expect("unlocks")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(report.status, "changed");
+}
+
+#[test]
+fn a_plugins_change_cancelled_before_a_write_changes_nothing() {
+    let s = Scratch::new();
+    let before = fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = PluginChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: PluginChange::Enable {
+            names: vec!["Base.esp".into()],
+            with_masters: false,
+        },
+        dry_run: false,
+    };
+    let outcome = plugins_api::change(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before
+    );
 }

@@ -2,11 +2,11 @@
 //! `nvmod plugins list|enable|disable|move|lock|unlock`: the plugin list of a profile, edited by hand. A write is
 //! journaled like a sort, so `nvmod rollback` takes it back; `list` and `--dry-run` write nothing.
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
-use nvmod_instance::NvmodInstance;
-use nvmod_plugins::{Edit, EditReport, ListReport, Place, PluginsError};
+use crate::{OK, REFUSED, USAGE, args::Args};
+use nvmod_api::plugins::{Change, ChangeRequest, EditReport, ListReport, ListRequest, Place};
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 const USAGE_TEXT: &str = "usage: nvmod plugins list --instance <dir> [--profile <name>] [--json]
        nvmod plugins enable <plugin>... [--with-masters] --instance <dir> [--profile <name>] [--dry-run] [--json]
@@ -125,32 +125,35 @@ fn place_of(args: &Args) -> Option<Place> {
 }
 
 /// The edit the words ask for, `None` for `list`, or what is wrong with the command line.
-fn parse_edit(args: &Args) -> Result<Option<Edit>, String> {
+fn parse_edit(args: &Args) -> Result<Option<Change>, String> {
     let names: Vec<String> = args.positional[1..].to_vec();
     let edit = match args.positional[0].as_str() {
         "list" if names.is_empty() => None,
-        "enable" if !names.is_empty() => Some(Edit::Enable {
+        "enable" if !names.is_empty() => Some(Change::Enable {
             names,
             with_masters: args.flag("with-masters"),
         }),
-        "disable" if !names.is_empty() => Some(Edit::Disable(names)),
-        "move" if names.len() == 1 => Some(Edit::Move {
+        "disable" if !names.is_empty() => Some(Change::Disable { names }),
+        "move" if names.len() == 1 => Some(Change::Move {
             name: names[0].clone(),
             to: place_of(args).ok_or("give exactly one of --top, --bottom, --before, --after")?,
         }),
         "lock" if names.len() == 2 => match names[1].parse::<usize>() {
-            Ok(position) if position >= 1 => Some(Edit::Lock {
+            Ok(position) if position >= 1 => Some(Change::Lock {
                 name: names[0].clone(),
                 position,
             }),
             _ => return Err("the position is a whole number from 1".to_owned()),
         },
-        "unlock" if names.len() == 1 => Some(Edit::Unlock(names[0].clone())),
+        "unlock" if names.len() == 1 => Some(Change::Unlock {
+            name: names[0].clone(),
+        }),
         _ => return Err("not understood".to_owned()),
     };
     Ok(edit)
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(
         args,
@@ -178,28 +181,17 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let refused = |why: &str, err: &mut dyn Write| {
-        let _ = writeln!(err, "nvmod plugins: refused: {why}");
-        REFUSED
-    };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let opened = if edit.is_some() {
-        NvmodInstance::open(root)
-    } else {
-        NvmodInstance::open_read_only(root)
-    };
-    let instance = match opened {
-        Ok(i) => i,
-        Err(e) => return refused(&crate::install_mod::describe_open_error(root, &e), err),
-    };
-    let profile = match instance.resolve_profile(args.option("profile")) {
-        Ok(p) => p,
-        Err(e) => return refused(&e.to_string(), err),
-    };
+    let root = PathBuf::from(args.option("instance").unwrap_or_default());
+    let profile = args.option("profile").map(str::to_owned);
     let json = args.flag("json");
+    let cancel = CancelToken::new();
     let Some(edit) = edit else {
-        return match nvmod_plugins::list(&instance, &profile) {
-            Ok(report) => {
+        let request = ListRequest {
+            instance: root,
+            profile,
+        };
+        return match nvmod_api::plugins::list(&request, &mut NoProgress, &cancel) {
+            Ok(Outcome::Done(report)) => {
                 if json {
                     let _ = writeln!(
                         out,
@@ -211,15 +203,18 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                 }
                 OK
             }
-            Err(PluginsError::Refused(why)) => refused(&why, err),
-            Err(PluginsError::Failed(why)) => {
-                let _ = writeln!(err, "nvmod plugins: {why}");
-                ROLLED_BACK
-            }
+            Ok(Outcome::Cancelled) => REFUSED,
+            Err(e) => crate::job_failure("plugins", &e, err),
         };
     };
-    match nvmod_plugins::apply(&instance, &profile, &edit, args.flag("dry-run")) {
-        Ok(report) => {
+    let request = ChangeRequest {
+        instance: root,
+        profile,
+        change: edit,
+        dry_run: args.flag("dry-run"),
+    };
+    match nvmod_api::plugins::change(&request, &mut NoProgress, &cancel) {
+        Ok(Outcome::Done(report)) => {
             if json {
                 let _ = writeln!(
                     out,
@@ -231,10 +226,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             }
             OK
         }
-        Err(PluginsError::Refused(why)) => refused(&why, err),
-        Err(PluginsError::Failed(why)) => {
-            let _ = writeln!(err, "nvmod plugins: {why}");
-            ROLLED_BACK
-        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("plugins", &e, err),
     }
 }

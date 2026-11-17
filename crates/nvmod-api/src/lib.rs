@@ -24,6 +24,8 @@
 //! | --- | --- | --- |
 //! | [`mods::list`] | [`mods::ListRequest`] | [`mods::ListOutput`] |
 //! | [`mods::change`] | [`mods::ChangeRequest`] | [`mods::Report`] |
+//! | [`plugins::list`] | [`plugins::ListRequest`] | [`plugins::ListReport`] |
+//! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
@@ -34,6 +36,7 @@
 pub mod job;
 pub mod loadorder;
 pub mod mods;
+pub mod plugins;
 pub mod run;
 pub mod saves;
 
