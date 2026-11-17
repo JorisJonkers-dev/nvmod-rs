@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The instance reader on instances built in code.
 
+use nvmod_formats::winpath::PathStyle;
 use nvmod_formats::{EntryKind, Mo2Error, Mo2Instance, ModState};
 use nvmod_testkit::{Mo2Builder, ModSpec, TempDir, write_file};
 
@@ -34,7 +35,7 @@ fn sample() -> (TempDir, TempDir) {
 }
 
 #[test]
-fn the_instance_is_read_with_wine_paths_mapped() {
+fn the_instance_is_read_with_its_paths_mapped_to_this_machine() {
     let (game, root) = sample();
     let instance = Mo2Instance::open(root.path()).unwrap();
     assert_eq!(instance.game_name, "TTW");
@@ -153,6 +154,20 @@ fn directory_overrides_and_unmapped_drives_are_honoured_or_reported() {
         b"[General]\r\ngamePath=@ByteArray(C:\\\\Games\\\\FNV)\r\n[Settings]\r\nbase_directory=@ByteArray(Z:/data/mo2)\r\nmod_directory=%BASE_DIR%/elsewhere/mods\r\ndownload_directory=dl\r\nprofiles_directory=\r\n[customExecutables]\r\nsize=2\r\n1\\binary=C:/x/tool.exe\r\n1\\title=Tool\r\n1\\arguments=-a \"b\"\r\n",
     );
     let instance = Mo2Instance::open(root.path()).unwrap();
+    if PathStyle::host() == PathStyle::Windows {
+        // MO2 on Windows wrote these: every path is a host path, `Z:` and `C:` are drives like any other, and
+        // nothing is unmapped.
+        let path = |p: &str| Some(std::path::PathBuf::from(p));
+        assert_eq!(Some(instance.mods_dir), path(r"Z:\data\mo2\elsewhere\mods"));
+        assert_eq!(Some(instance.downloads_dir), path(r"Z:\data\mo2\dl"));
+        assert_eq!(Some(instance.profiles_dir), path(r"Z:\data\mo2\profiles"));
+        assert_eq!(instance.game_path, path(r"C:\Games\FNV"));
+        assert_eq!(instance.executables.len(), 1);
+        assert_eq!(instance.executables[0].binary_host, path(r"C:\x\tool.exe"));
+        assert!(instance.issues.is_empty(), "{:?}", instance.issues);
+        return;
+    }
+    // MO2 under Wine wrote these: `Z:` is the root, and `C:` has no mapping here.
     assert_eq!(
         instance.mods_dir,
         std::path::PathBuf::from("/data/mo2/elsewhere/mods")

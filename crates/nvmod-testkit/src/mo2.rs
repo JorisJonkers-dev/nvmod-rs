@@ -121,7 +121,8 @@ impl Mo2Builder {
         self
     }
 
-    /// Add an executable (`binary` is a path on the host; it is written as a Wine path).
+    /// Add an executable (`binary` is a path on the host; it is written as MO2 on this machine writes it: as a Wine
+    /// path, or on Windows as it is).
     #[must_use]
     pub fn executable(mut self, title: &str, binary: &Path) -> Mo2Builder {
         self.executables
@@ -138,10 +139,17 @@ impl Mo2Builder {
 
     /// Create everything under `root`.
     pub fn write(&self, root: &Path) {
-        let wine = |p: &str| format!("Z:{p}");
+        // As MO2 on this machine writes a host path: a Wine path under Wine, the path itself on Windows.
+        let wine = |p: &str| {
+            if cfg!(windows) {
+                p.to_owned()
+            } else {
+                format!("Z:{p}")
+            }
+        };
         let mut ini = format!(
             "[General]\r\ngameName=TTW\r\ngamePath=@ByteArray({})\r\nselected_profile=@ByteArray({})\r\nversion=2.5.2\r\n\r\n[customExecutables]\r\nsize={}\r\n",
-            wine(&self.game_dir.to_string_lossy()).replace('/', "\\\\"),
+            wine(&self.game_dir.to_string_lossy()).replace(['/', '\\'], "\\\\"),
             self.selected,
             self.executables.len()
         );

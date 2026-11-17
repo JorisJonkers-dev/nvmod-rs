@@ -171,9 +171,16 @@ mod doctor {
             "--json",
         ]);
         assert_eq!(code, 0, "only warnings: below the default --fail-on error");
+        // A path as it stands in JSON: on Windows its backslashes are escaped.
+        let json = |p: &std::path::Path| {
+            serde_json::to_string(p.to_str().unwrap())
+                .unwrap()
+                .trim_matches('"')
+                .to_owned()
+        };
         let normalised = out
-            .replace(root.path().to_str().unwrap(), "<instance>")
-            .replace(game.path().to_str().unwrap(), "<game>");
+            .replace(&json(root.path()), "<instance>")
+            .replace(&json(game.path()), "<game>");
         let golden =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/doctor.json");
         if std::env::var_os("UPDATE_GOLDEN").is_some() {
