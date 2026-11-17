@@ -2,6 +2,9 @@
 //! Every job of `nvmod-api`, called in process on a scratch Instance. Plugins are synthetic headers built by the
 //! testkit and the masterlist is written here; no game data is used.
 
+use nvmod_api::backup::{
+    CreateRequest, ListRequest as BackupListRequest, PruneRequest, RestoreRequest,
+};
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
 use nvmod_api::run::PlanRequest;
@@ -15,6 +18,8 @@ const MASTERLIST: &str = r"
 globals:
   - {type: say, content: 'Masterlist for tests'}
 ";
+
+const T0: i64 = 1_794_657_600;
 
 struct Scratch {
     _base: TempDir,
@@ -719,4 +724,139 @@ fn the_api_version_is_the_release_version() {
         .expect("version")
         .trim_matches('"');
     assert_eq!(API_VERSION, version);
+}
+
+#[test]
+fn backup_create_then_list_shows_it() {
+    let s = Scratch::new();
+    let created = nvmod_api::backup::create(
+        &CreateRequest {
+            instance: s.root(),
+            profile: None,
+            with_saves: false,
+            now: Some(T0),
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("creates")
+    .done()
+    .expect("not cancelled");
+    let listed = nvmod_api::backup::list(
+        &BackupListRequest {
+            instance: s.root(),
+            profile: None,
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("lists")
+    .done()
+    .expect("not cancelled");
+    assert!(
+        listed
+            .snapshots
+            .iter()
+            .any(|snap| snap.id == created.snapshot.id),
+        "{listed:?}"
+    );
+}
+
+#[test]
+fn backup_prune_removes_old_ones_by_keep_count() {
+    let s = Scratch::new();
+    for k in (0..40).rev() {
+        let _ = nvmod_api::backup::create(
+            &CreateRequest {
+                instance: s.root(),
+                profile: None,
+                with_saves: false,
+                now: Some(T0 - i64::from(k) * 12 * 3600),
+            },
+            &mut NoProgress,
+            &CancelToken::new(),
+        )
+        .expect("creates");
+    }
+    let pruned = nvmod_api::backup::prune(
+        &PruneRequest {
+            instance: s.root(),
+            profile: None,
+            keep: Some(5),
+            days: Some(14),
+            dry_run: false,
+            now: Some(T0),
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("prunes")
+    .done()
+    .expect("not cancelled");
+    assert_eq!(pruned.removed.len(), 24, "{pruned:?}");
+}
+
+#[test]
+fn backup_restore_brings_back_a_changed_file() {
+    let s = Scratch::new();
+    let created = nvmod_api::backup::create(
+        &CreateRequest {
+            instance: s.root(),
+            profile: None,
+            with_saves: false,
+            now: Some(T0),
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("creates")
+    .done()
+    .expect("not cancelled");
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    fs::write(
+        s.root().join("profiles/Default/modlist.txt"),
+        b"# changed\r\n-Existing\r\n",
+    )
+    .unwrap();
+    let _restored = nvmod_api::backup::restore(
+        &RestoreRequest {
+            instance: s.root(),
+            profile: None,
+            id: created.snapshot.id,
+            now: Some(T0 + 60),
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("restores")
+    .done()
+    .expect("not cancelled");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn backup_cancel_before_create_writes_nothing() {
+    let s = Scratch::new();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let before_backups = s.root().join(".nvmod").join("backups").exists();
+    let outcome = nvmod_api::backup::create(
+        &CreateRequest {
+            instance: s.root(),
+            profile: None,
+            with_saves: false,
+            now: Some(T0),
+        },
+        &mut NoProgress,
+        &cancel,
+    )
+    .expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        s.root().join(".nvmod").join("backups").exists(),
+        before_backups
+    );
 }

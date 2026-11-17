@@ -2,8 +2,10 @@
 //! `nvmod backup create|list|restore|prune`: snapshots of a profile's lists and INIs, and the automatic snapshot
 //! that the writing commands take first (see `nvmod-backup`).
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
-use nvmod_backup::{Config, Error, Snapshot, clock};
+use crate::{OK, REFUSED, USAGE, args::Args};
+use nvmod_api::backup::{CreateRequest, ListRequest, PruneRequest, RestoreRequest};
+use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_backup::{Error, Snapshot, clock};
 use nvmod_instance::NvmodInstance;
 use std::io::Write;
 use std::path::Path;
@@ -39,27 +41,7 @@ fn print_snapshots(out: &mut dyn Write, snapshots: &[Snapshot]) {
     }
 }
 
-/// The exit code and message of a failed backup step.
-fn failure(error: &Error, err: &mut dyn Write) -> u8 {
-    match error {
-        Error::Refused(why) => {
-            let _ = writeln!(err, "nvmod backup: refused: {why}");
-            REFUSED
-        }
-        Error::Corrupt(why) => {
-            let _ = writeln!(
-                err,
-                "nvmod backup: verification failed: {why}; nothing was changed"
-            );
-            VERIFICATION
-        }
-        Error::Failed(why) => {
-            let _ = writeln!(err, "nvmod backup: {why}");
-            ROLLED_BACK
-        }
-    }
-}
-
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(
         args,
@@ -89,164 +71,143 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         let _ = writeln!(err, "{USAGE_TEXT}");
         return USAGE;
     }
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let opened = if sub == "list" {
-        NvmodInstance::open_read_only(root)
-    } else {
-        NvmodInstance::open(root)
-    };
-    let instance = match opened {
-        Ok(i) => i,
-        Err(e) => {
-            let _ = writeln!(
-                err,
-                "nvmod backup: refused: {}",
-                crate::install_mod::describe_open_error(root, &e)
-            );
-            return REFUSED;
-        }
-    };
-    let profile = match instance.resolve_profile(args.option("profile")) {
-        Ok(p) => p,
-        Err(e) => {
-            let _ = writeln!(err, "nvmod backup: refused: {e}");
-            return REFUSED;
-        }
-    };
-    let cx = Cx {
-        instance: &instance,
-        profile: &profile,
-        json: args.flag("json"),
-        now: clock::now(),
-    };
+    let instance = Path::new(args.option("instance").unwrap_or_default()).to_path_buf();
+    let profile = args.option("profile").map(str::to_owned);
+    let json = args.flag("json");
+    let cancel = CancelToken::new();
     match sub {
-        "create" => create(&cx, args.flag("with-saves"), out, err),
-        "list" => list(&cx, out),
-        "restore" => restore(&cx, &args.positional[1], out, err),
+        "create" => {
+            let request = CreateRequest {
+                instance,
+                profile,
+                with_saves: args.flag("with-saves"),
+                now: None,
+            };
+            match nvmod_api::backup::create(&request, &mut NoProgress, &cancel) {
+                Ok(Outcome::Done(created)) => {
+                    if json {
+                        print_json(
+                            out,
+                            &serde_json::json!({
+                                "schema_version": 1, "status": "created", "profile": created.profile, "snapshot": created.snapshot,
+                            }),
+                        );
+                    } else {
+                        let _ = writeln!(
+                            out,
+                            "nvmod backup: snapshot `{}` of profile `{}` ({} file(s))",
+                            created.snapshot.id,
+                            created.profile,
+                            created.snapshot.files.len()
+                        );
+                    }
+                    OK
+                }
+                Ok(Outcome::Cancelled) => REFUSED,
+                Err(e) => crate::job_failure("backup", &e, err),
+            }
+        }
+        "list" => {
+            let request = ListRequest { instance, profile };
+            match nvmod_api::backup::list(&request, &mut NoProgress, &cancel) {
+                Ok(Outcome::Done(listed)) => {
+                    if json {
+                        print_json(
+                            out,
+                            &serde_json::json!({
+                                "schema_version": 1, "profile": listed.profile, "snapshots": listed.snapshots,
+                            }),
+                        );
+                    } else {
+                        let _ = writeln!(
+                            out,
+                            "nvmod backup: profile `{}`, {} snapshot(s)",
+                            listed.profile,
+                            listed.snapshots.len()
+                        );
+                        print_snapshots(out, &listed.snapshots);
+                    }
+                    OK
+                }
+                Ok(Outcome::Cancelled) => REFUSED,
+                Err(e) => crate::job_failure("backup", &e, err),
+            }
+        }
+        "restore" => {
+            let request = RestoreRequest {
+                instance,
+                profile,
+                id: args.positional[1].clone(),
+                now: None,
+            };
+            match nvmod_api::backup::restore(&request, &mut NoProgress, &cancel) {
+                Ok(Outcome::Done(restored)) => {
+                    if json {
+                        print_json(
+                            out,
+                            &serde_json::json!({
+                                "schema_version": 1, "status": "restored", "profile": restored.profile, "report": restored.report,
+                            }),
+                        );
+                    } else {
+                        let _ = writeln!(
+                            out,
+                            "nvmod backup: restored `{}` into profile `{}` ({} file(s))",
+                            restored.report.restored, restored.profile, restored.report.files
+                        );
+                        let _ = writeln!(
+                            out,
+                            "the state before is the snapshot `{}`; restore it to undo",
+                            restored.report.pre_restore
+                        );
+                    }
+                    OK
+                }
+                Ok(Outcome::Cancelled) => REFUSED,
+                Err(e) => crate::job_failure("backup", &e, err),
+            }
+        }
         _ => {
-            let mut config: Config = nvmod_backup::load_config(&instance);
-            if let Some(Ok(n)) = keep {
-                config.keep_newest = n;
+            let keep = keep.and_then(Result::ok);
+            let days = days.and_then(Result::ok);
+            let request = PruneRequest {
+                instance,
+                profile,
+                keep,
+                days,
+                dry_run: args.flag("dry-run"),
+                now: None,
+            };
+            // fix keep/days conversion below not needed
+            match nvmod_api::backup::prune(&request, &mut NoProgress, &cancel) {
+                Ok(Outcome::Done(pruned)) => {
+                    if json {
+                        print_json(
+                            out,
+                            &serde_json::json!({
+                                "schema_version": 1, "profile": pruned.profile, "dry_run": pruned.dry_run,
+                                "kept": pruned.kept, "removed": pruned.removed,
+                            }),
+                        );
+                    } else {
+                        let what = if pruned.dry_run {
+                            "would remove"
+                        } else {
+                            "removed"
+                        };
+                        let _ = writeln!(
+                            out,
+                            "nvmod backup: {what} {} snapshot(s), kept {}",
+                            pruned.removed.len(),
+                            pruned.kept.len()
+                        );
+                    }
+                    OK
+                }
+                Ok(Outcome::Cancelled) => REFUSED,
+                Err(e) => crate::job_failure("backup", &e, err),
             }
-            if let Some(Ok(n)) = days {
-                config.daily_days = u32::try_from(n).unwrap_or(u32::MAX);
-            }
-            prune(&cx, &config, args.flag("dry-run"), out, err)
         }
-    }
-}
-
-struct Cx<'a> {
-    instance: &'a NvmodInstance,
-    profile: &'a str,
-    json: bool,
-    now: i64,
-}
-
-fn create(cx: &Cx, with_saves: bool, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    match nvmod_backup::create(cx.instance, cx.profile, cx.now, with_saves) {
-        Ok(m) => {
-            if cx.json {
-                print_json(
-                    out,
-                    &serde_json::json!({
-                        "schema_version": 1, "status": "created", "profile": cx.profile, "snapshot": m,
-                    }),
-                );
-            } else {
-                let _ = writeln!(
-                    out,
-                    "nvmod backup: snapshot `{}` of profile `{}` ({} file(s))",
-                    m.id,
-                    cx.profile,
-                    m.files.len()
-                );
-            }
-            OK
-        }
-        Err(e) => failure(&e, err),
-    }
-}
-
-fn list(cx: &Cx, out: &mut dyn Write) -> u8 {
-    let snapshots = nvmod_backup::list(cx.instance, cx.profile);
-    if cx.json {
-        print_json(
-            out,
-            &serde_json::json!({
-                "schema_version": 1, "profile": cx.profile, "snapshots": snapshots,
-            }),
-        );
-    } else {
-        let _ = writeln!(
-            out,
-            "nvmod backup: profile `{}`, {} snapshot(s)",
-            cx.profile,
-            snapshots.len()
-        );
-        print_snapshots(out, &snapshots);
-    }
-    OK
-}
-
-fn restore(cx: &Cx, id: &str, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    if let Some(name) = nvmod_backup::game_running() {
-        let _ = writeln!(
-            err,
-            "nvmod backup: refused: the game is running (`{name}`); close it first"
-        );
-        return REFUSED;
-    }
-    match nvmod_backup::restore(cx.instance, cx.profile, id, cx.now) {
-        Ok(r) => {
-            if cx.json {
-                print_json(
-                    out,
-                    &serde_json::json!({
-                        "schema_version": 1, "status": "restored", "profile": cx.profile, "report": r,
-                    }),
-                );
-            } else {
-                let _ = writeln!(
-                    out,
-                    "nvmod backup: restored `{}` into profile `{}` ({} file(s))",
-                    r.restored, cx.profile, r.files
-                );
-                let _ = writeln!(
-                    out,
-                    "the state before is the snapshot `{}`; restore it to undo",
-                    r.pre_restore
-                );
-            }
-            OK
-        }
-        Err(e) => failure(&e, err),
-    }
-}
-
-fn prune(cx: &Cx, config: &Config, dry_run: bool, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    match nvmod_backup::prune(cx.instance, cx.profile, config, cx.now, dry_run) {
-        Ok(r) => {
-            if cx.json {
-                print_json(
-                    out,
-                    &serde_json::json!({
-                        "schema_version": 1, "profile": cx.profile, "dry_run": r.dry_run,
-                        "kept": r.kept, "removed": r.removed,
-                    }),
-                );
-            } else {
-                let what = if r.dry_run { "would remove" } else { "removed" };
-                let _ = writeln!(
-                    out,
-                    "nvmod backup: {what} {} snapshot(s), kept {}",
-                    r.removed.len(),
-                    r.kept.len()
-                );
-            }
-            OK
-        }
-        Err(e) => failure(&e, err),
     }
 }
 
