@@ -2,8 +2,10 @@
 //! `nvmod install <archive> --instance <dir> ...` and `nvmod rollback --instance <dir>`.
 
 use crate::{FOUND, OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
+use nvmod_api::install::RollbackRequest;
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_instance::{InstanceError, NvmodInstance};
-use nvmod_modinstall::{InstallError, Limits, Report, Request, RollbackError};
+use nvmod_modinstall::{InstallError, Limits, Report, Request};
 use std::io::Write;
 use std::path::Path;
 
@@ -192,8 +194,11 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
         Ok(i) => i,
         Err(code) => return code,
     };
-    match nvmod_modinstall::rollback(&instance) {
-        Ok(report) => {
+    let request = RollbackRequest {
+        instance: instance.root.clone(),
+    };
+    match nvmod_api::install::rollback(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(report)) => {
             if args.flag("json") {
                 print_json(out, &report);
             } else if report.kind == "migrate" {
@@ -222,13 +227,7 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
             }
             OK
         }
-        Err(RollbackError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod rollback: refused: {why}");
-            REFUSED
-        }
-        Err(RollbackError::Failed(why)) => {
-            let _ = writeln!(err, "nvmod rollback: {why}");
-            ROLLED_BACK
-        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("rollback", &e, err),
     }
 }
