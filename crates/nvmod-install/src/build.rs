@@ -20,6 +20,56 @@ const BUILD_ENV: &[&str] = &[
     "CARGO_HTTP_CAINFO",
     "CARGO_REGISTRIES_CRATES_IO_PROTOCOL",
 ];
+/// What cargo, rustc and the MSVC linker need on Windows besides [`BUILD_ENV`]: the user's folders (cargo's home
+/// and the temporary folder), the program folders where the compiler finds Visual Studio and the Windows SDK, and
+/// the variables of a developer prompt when nvmod is started from one. Without them rustc cannot find Visual
+/// Studio and runs whatever `link.exe` is first on `PATH`.
+const WINDOWS_BUILD_ENV: &[&str] = &[
+    "USERPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "APPDATA",
+    "TEMP",
+    "TMP",
+    "SystemDrive",
+    "windir",
+    "ComSpec",
+    "PATHEXT",
+    "NUMBER_OF_PROCESSORS",
+    "PROCESSOR_ARCHITECTURE",
+    "ProgramData",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "VSINSTALLDIR",
+    "VCINSTALLDIR",
+    "VCToolsInstallDir",
+    "VCToolsVersion",
+    "VisualStudioVersion",
+    "WindowsSdkDir",
+    "WindowsSDKVersion",
+    "WindowsSdkBinPath",
+    "UniversalCRTSdkDir",
+    "UCRTVersion",
+    "INCLUDE",
+    "LIB",
+    "LIBPATH",
+    "Platform",
+    "VSCMD_ARG_TGT_ARCH",
+];
+
+/// The names of the variables the source build passes on from nvmod's environment on this platform.
+fn build_env() -> Vec<&'static str> {
+    let mut names = BUILD_ENV.to_vec();
+    if cfg!(windows) {
+        names.extend_from_slice(WINDOWS_BUILD_ENV);
+    }
+    names
+}
 
 /// Find `cargo`. `configured` (the `--cargo` flag, else `NVMOD_CARGO`) names the program to use; when it does not
 /// exist the toolchain counts as absent, which is how tests simulate a machine without Rust. Without it, `cargo`
@@ -60,7 +110,7 @@ pub(crate) fn build_from_source(cargo: &Path, source: &Path) -> Result<PathBuf, 
         ..Runner::default()
     }
     .inherit(NETWORK_ENV)
-    .inherit(BUILD_ENV);
+    .inherit(&build_env());
     let mut call = Call::new("cargo", cargo, &args);
     call.cwd = Some(source);
     let out = runner
@@ -92,6 +142,15 @@ mod tests {
     #[test]
     fn a_configured_path_that_does_not_exist_means_no_toolchain() {
         assert_eq!(resolve_cargo(Some(Path::new("/nonexistent/cargo"))), None);
+    }
+
+    #[test]
+    fn the_build_gets_the_windows_variables_only_on_windows() {
+        let names = build_env();
+        assert!(names.contains(&"CARGO_HOME") && names.contains(&"RUSTUP_HOME"));
+        for name in ["USERPROFILE", "ProgramFiles(x86)", "TEMP", "LIB", "INCLUDE"] {
+            assert_eq!(names.contains(&name), cfg!(windows), "{name}");
+        }
     }
 
     #[test]
