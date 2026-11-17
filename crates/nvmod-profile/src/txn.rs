@@ -80,6 +80,19 @@ fn symlink_dir(target: &Path, link: &Path) -> std::io::Result<()> {
     std::os::windows::fs::symlink_dir(target, link)
 }
 
+/// Remove the file or symbolic link `path`. On Windows a link to a folder is a directory entry: `remove_file`
+/// refuses it ("Access is denied") and `remove_dir` removes it, the link only, never what it points to.
+fn remove_entry(path: &Path) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileTypeExt;
+        if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink_dir()) {
+            return fs::remove_dir(path);
+        }
+    }
+    fs::remove_file(path)
+}
+
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| io(parent, &e))?;
@@ -90,7 +103,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     fs::write(&tmp, bytes).map_err(|e| io(&tmp, &e))?;
     // A link in the way is replaced, never written through.
     if fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
-        fs::remove_file(path).map_err(|e| io(path, &e))?;
+        remove_entry(path).map_err(|e| io(path, &e))?;
     }
     fs::rename(&tmp, path).map_err(|e| {
         let _ = fs::remove_file(&tmp);
@@ -112,7 +125,7 @@ fn undo_entries(entries: &[Entry], dir: &Path) -> Result<(), String> {
         match &entry.before {
             Before::Absent => {
                 if is_link || path.is_file() {
-                    fs::remove_file(&path).map_err(|e| io(&path, &e))?;
+                    remove_entry(&path).map_err(|e| io(&path, &e))?;
                 }
             }
             Before::File(name) => {
@@ -121,7 +134,7 @@ fn undo_entries(entries: &[Entry], dir: &Path) -> Result<(), String> {
             }
             Before::Link(target) => {
                 if is_link || path.is_file() {
-                    fs::remove_file(&path).map_err(|e| io(&path, &e))?;
+                    remove_entry(&path).map_err(|e| io(&path, &e))?;
                 }
                 symlink_dir(Path::new(target), &path).map_err(|e| io(&path, &e))?;
             }
@@ -350,7 +363,7 @@ impl Txn {
             return Ok(());
         }
         self.image(path)?;
-        fs::remove_file(path).map_err(|e| io(path, &e))
+        remove_entry(path).map_err(|e| io(path, &e))
     }
 
     /// Remove the empty folder `path`.
@@ -382,7 +395,7 @@ impl Txn {
         }
         self.image(link)?;
         if fs::symlink_metadata(link).is_ok() {
-            fs::remove_file(link).map_err(|e| io(link, &e))?;
+            remove_entry(link).map_err(|e| io(link, &e))?;
         }
         symlink_dir(target, link).map_err(|e| io(link, &e))
     }
@@ -401,7 +414,7 @@ impl Txn {
             return Ok(());
         }
         self.image(link)?;
-        fs::remove_file(link).map_err(|e| io(link, &e))
+        remove_entry(link).map_err(|e| io(link, &e))
     }
 
     /// The run succeeded: drop the journal.
@@ -428,5 +441,31 @@ impl Txn {
             let _ = fs::remove_dir(parent);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_link_to_a_folder_is_removed_and_what_it_points_to_stays() {
+        let dir = nvmod_testkit::TempDir::new("txn-link");
+        let target = dir.path().join("saves");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("Save1.fos"), b"keep").unwrap();
+        let link = dir.path().join("__MO_Saves");
+        symlink_dir(&target, &link).unwrap();
+        assert_eq!(fs::read(link.join("Save1.fos")).unwrap(), b"keep");
+        remove_entry(&link).unwrap();
+        assert!(fs::symlink_metadata(&link).is_err(), "the link is gone");
+        assert_eq!(fs::read(target.join("Save1.fos")).unwrap(), b"keep");
+        // A plain file is removed too; a real folder is not.
+        let file = dir.path().join("file");
+        fs::write(&file, b"x").unwrap();
+        remove_entry(&file).unwrap();
+        assert!(!file.exists());
+        assert!(remove_entry(&target).is_err());
+        assert!(target.join("Save1.fos").is_file());
     }
 }
