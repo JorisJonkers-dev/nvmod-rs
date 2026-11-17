@@ -1318,7 +1318,10 @@ fn init_makes_an_instance_and_refuses_a_second_one_in_the_same_folder() {
         .expect("makes")
         .done()
         .expect("not cancelled");
-    assert_eq!(made.instance, request.instance);
+    assert_eq!(
+        made.instance.canonicalize().expect("made"),
+        request.instance.canonicalize().expect("exists")
+    );
     assert!(request.instance.is_dir());
     let again = nvmod_api::init::create(&request, &mut NoProgress, &CancelToken::new());
     assert_eq!(again.expect_err("refused").kind, ErrorKind::Refused);
