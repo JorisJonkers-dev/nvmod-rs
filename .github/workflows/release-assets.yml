@@ -109,7 +109,7 @@ jobs:
           fi
           "$RUNNER_TEMP/smoke/nvmod-$VERSION-x86_64-${{ matrix.target }}/${{ matrix.exe }}" --version
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist-${{ matrix.target }}
           path: dist/
@@ -148,7 +148,7 @@ jobs:
             --override-filename sbom
           mkdir ../dist
           mv crates/nvmod-cli/sbom.json "../dist/nvmod-${TAG#v}.cdx.json"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist-sbom
           path: dist/
@@ -233,7 +233,7 @@ jobs:
             gh release edit "$TAG" --repo "$REPO" --notes-file "$RUNNER_TEMP/notes.md"
           fi
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: ${{ env.PUBLISH != 'true' }}
         with:
           name: release-assets-dry-run
