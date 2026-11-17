@@ -9,6 +9,7 @@ publish.workspace = true
 description = "The library API of nvmod: typed requests and results for mods, the Load order, saves and the run plan, with progress, cancel and copyable errors, called in process."
 
 [dependencies]
+nvmod-backup = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-modinstall = { workspace = true }

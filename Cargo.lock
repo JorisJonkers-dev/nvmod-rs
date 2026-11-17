@@ -692,6 +692,7 @@ name = "nvmod-api"
 version = "0.6.2"
 dependencies = [
  "loot-rs",
+ "nvmod-backup",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",

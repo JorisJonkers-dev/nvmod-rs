@@ -28,11 +28,16 @@
 //! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
+//! | [`backup::create`] | [`backup::CreateRequest`] | [`backup::CreateOutput`] |
+//! | [`backup::list`] | [`backup::ListRequest`] | [`backup::ListOutput`] |
+//! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |
+//! | [`backup::restore`] | [`backup::RestoreRequest`] | [`backup::RestoreOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
+pub mod backup;
 pub mod job;
 pub mod loadorder;
 pub mod mods;
