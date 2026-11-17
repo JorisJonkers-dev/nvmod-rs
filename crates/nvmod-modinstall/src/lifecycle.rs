@@ -787,8 +787,7 @@ pub fn list_categorised(
     only: Option<u32>,
 ) -> Vec<CategorisedRow> {
     let cats = fs::read(instance.root.join("categories.dat"))
-        .map(|b| nvmod_formats::categories::Categories::parse(&b))
-        .unwrap_or_default();
+        .map_or_default(|b| nvmod_formats::categories::Categories::parse(&b));
     let mods = instance.root.join("mods");
     crate::mods::list(instance, profile)
         .into_iter()
@@ -798,8 +797,7 @@ pub fn list_categorised(
                 .flatten()
                 .and_then(|f| read_limited(&mods.join(f).join("meta.ini")).ok())
                 .and_then(|b| MetaIni::parse(&b).fields().category)
-                .map(|c| nvmod_formats::categories::parse_ids(&c))
-                .unwrap_or_default();
+                .map_or_default(|c| nvmod_formats::categories::parse_ids(&c));
             let categories = ids
                 .into_iter()
                 .map(|id| CategoryRef {

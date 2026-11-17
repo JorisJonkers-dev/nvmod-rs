@@ -35,6 +35,20 @@ tasks:
       - cargo deny --locked check
       - cargo deny --locked --manifest-path fuzz/Cargo.toml check
 
+  audit:
+    desc: RustSec advisories with cargo audit, for the workspace and the fuzz workspace
+    cmds:
+      - cargo audit
+      - cargo audit --file fuzz/Cargo.lock
+
+  msrv:
+    desc: rust-version of every crate equals the toolchain of rust-toolchain.toml, so the pinned build is the MSRV build
+    cmd: |
+      declared="$(cargo metadata --format-version 1 --no-deps | jq -r '[.packages[].rust_version] | unique | join(",")')"
+      pinned="$(sed -n 's/^channel = "\([0-9]*\.[0-9]*\)\.[0-9]*"/\1/p' rust-toolchain.toml)"
+      echo "rust-version: $declared, rust-toolchain.toml: $pinned"
+      test "$declared" = "$pinned"
+
   secrets:
     desc: Scan every commit for secrets
     cmd: gitleaks git --redact --no-banner --config .gitleaks.toml .
@@ -61,6 +75,8 @@ tasks:
       - task: test
       - task: fuzz:check
       - task: deny
+      - task: audit
+      - task: msrv
       - task: secrets
       - task: lint:actions
       - task: guards

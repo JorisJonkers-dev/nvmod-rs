@@ -48,9 +48,39 @@ jobs:
     name: Quarantine
     uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
 
+  # nvmod's crates ship inside the Toolbox on Linux, Windows and macOS (Toolbox ADR-0006), so they build and test
+  # natively on all three. Linux runs in Pipeline Complete itself. Windows and macOS report only, without gating
+  # Pipeline Complete, until the failures listed in JorisJonkers-dev/nvmod-rs#98 pass; then drop continue-on-error
+  # and the exception for this job in the gate below.
+  platforms:
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+        with:
+          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Lint
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed-methods
+      - name: Test
+        if: ${{ !cancelled() }}
+        # Every failing test in one run, not only those of the first crate that fails.
+        run: cargo test --locked --workspace --no-fail-fast
+
   pipeline-complete:
     name: Pipeline Complete
-    needs: [hygiene, pr-title, quarantine]
+    needs: [hygiene, pr-title, quarantine, platforms]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -103,6 +133,12 @@ jobs:
       - name: Dependencies
         if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
         run: mise exec -- task deny
+      - name: Advisories (cargo audit)
+        if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
+        run: mise exec -- task audit
+      - name: MSRV
+        if: ${{ !cancelled() }}
+        run: mise exec -- task msrv
       - name: Secrets
         if: ${{ !cancelled() }}
         run: mise exec -- task secrets
@@ -116,12 +152,12 @@ jobs:
         if: ${{ !cancelled() }}
         run: mise exec -- task scripts
 
-      # A skipped job fails, except the two that only run on pull requests.
+      # A job that did not succeed fails the gate, except the two that only run on pull requests.
       - name: Reusable-workflow jobs passed
         if: ${{ !cancelled() }}
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           set -euo pipefail
-          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | "\(.key): \(.value.result)"' <<<"$NEEDS")"
+          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | select(.key != "platforms") | "\(.key): \(.value.result)"' <<<"$NEEDS")"
           if [ -n "$failed" ]; then echo "$failed"; exit 1; fi

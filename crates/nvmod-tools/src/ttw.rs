@@ -102,15 +102,12 @@ pub fn normalise(facts: &Facts, report: Option<&str>) -> Result<Value, ToolError
 /// Why a record that meets the contract is still not a good install, or `None` when it is one.
 #[must_use]
 pub fn failure(record: &Value) -> Option<String> {
-    let said = record["messages"]
-        .as_array()
-        .map(|m| {
-            m.iter()
-                .filter_map(Value::as_str)
-                .collect::<Vec<_>>()
-                .join("; ")
-        })
-        .unwrap_or_default();
+    let said = record["messages"].as_array().map_or_default(|m| {
+        m.iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>()
+            .join("; ")
+    });
     let why = if record["outcome"] != "success" {
         "the installer reports that it failed"
     } else if record["fallout3_verified"] != true {

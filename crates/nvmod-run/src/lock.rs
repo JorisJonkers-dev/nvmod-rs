@@ -260,7 +260,9 @@ mod tests {
         assert!(InstanceLock::acquire(dir.path(), "run x").is_ok());
     }
 
+    // Only Linux can tell that a pid is gone (pid_alive); elsewhere a lock is never taken over.
     #[test]
+    #[cfg(target_os = "linux")]
     fn a_dead_pid_is_taken_over() {
         let dir = TempDir::new("lock-dead");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
@@ -273,6 +275,23 @@ mod tests {
         let lock = InstanceLock::acquire(dir.path(), "stage").unwrap();
         assert_eq!(lock.took_over.as_ref().unwrap().command, "run gone");
         assert_eq!(InstanceLock::read(dir.path()).unwrap().command, "stage");
+    }
+
+    // Off Linux a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
+    #[test]
+    #[cfg(not(target_os = "linux"))]
+    fn elsewhere_a_lock_is_never_taken_over() {
+        let dir = TempDir::new("lock-kept");
+        fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
+        fs::write(
+            dir.path().join(LOCK_FILE),
+            r#"{"pid":4294967290,"started":1,"command":"run gone"}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            InstanceLock::acquire(dir.path(), "stage"),
+            Err(LockError::Held(h)) if h.command == "run gone"
+        ));
     }
 
     #[test]

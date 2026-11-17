@@ -96,6 +96,7 @@ impl Store {
             return Ok(target);
         }
         std::fs::create_dir_all(target.parent().unwrap_or(&self.root)).map_err(io)?;
+        #[cfg(unix)]
         make_executable(temp).map_err(io)?;
         std::fs::rename(temp, &target).map_err(io)?;
         Ok(target)
@@ -106,11 +107,6 @@ impl Store {
 fn make_executable(path: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
-}
-
-#[cfg(not(unix))]
-fn make_executable(_: &Path) -> std::io::Result<()> {
-    Ok(())
 }
 
 #[cfg(test)]

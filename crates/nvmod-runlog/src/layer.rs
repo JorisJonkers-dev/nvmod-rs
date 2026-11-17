@@ -85,11 +85,7 @@ where
     }
     let mut own = Fields::default();
     event.record(&mut own);
-    let mut message = own
-        .0
-        .remove("message")
-        .map(|v| text(&v))
-        .unwrap_or_default();
+    let mut message = own.0.remove("message").map_or_default(|v| text(&v));
     let mut columns = BTreeMap::new();
     for (key, value) in merged.into_iter().chain(own.0) {
         if COLUMNS.contains(&key.as_str()) {

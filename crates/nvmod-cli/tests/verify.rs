@@ -151,8 +151,7 @@ fn without_xnvse_the_plan_is_vanilla_and_says_so_with_xnvse_it_uses_the_loader()
             .as_array()
             .unwrap()
             .last()
-            .map(|v| v.as_str().unwrap().to_owned())
-            .unwrap_or_default();
+            .map_or_default(|v| v.as_str().unwrap().to_owned());
         let program = entry["program"].as_str().unwrap();
         assert!(
             last.ends_with("nvse_loader.exe") || program.ends_with("nvse_loader.exe"),

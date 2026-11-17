@@ -125,15 +125,13 @@ fn dependants_of(instance: &NvmodInstance, profile: &str, target: &str) -> Vec<S
 }
 
 fn known_categories(instance: &NvmodInstance) -> Vec<u32> {
-    std::fs::read(instance.root.join("categories.dat"))
-        .map(|b| {
-            nvmod_formats::categories::Categories::parse(&b)
-                .entries
-                .iter()
-                .map(|c| c.id)
-                .collect()
-        })
-        .unwrap_or_default()
+    std::fs::read(instance.root.join("categories.dat")).map_or_default(|b| {
+        nvmod_formats::categories::Categories::parse(&b)
+            .entries
+            .iter()
+            .map(|c| c.id)
+            .collect()
+    })
 }
 
 // One flat match over the command words reads better than ten helpers.

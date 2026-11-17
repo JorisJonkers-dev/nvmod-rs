@@ -19,7 +19,7 @@ fn is_master(name: &str) -> bool {
 /// # Errors
 /// The Mod is already listed.
 pub fn add_to_modlist(old: Option<&[u8]>, name: &str) -> Result<Vec<u8>, String> {
-    let text = old.map(decode).unwrap_or_default();
+    let text = old.map_or_default(decode);
     if Modlist::parse(&text)
         .entries
         .iter()
@@ -78,15 +78,13 @@ pub fn add_plugins(
     let plugins_in = old_plugins.map(decode);
     let order_text = old_order.map(decode);
     let read = |t: &Option<String>| -> Vec<String> {
-        t.as_deref()
-            .map(|t| {
-                lines(t)
-                    .map(str::trim)
-                    .filter(|l| !l.is_empty())
-                    .map(str::to_owned)
-                    .collect()
-            })
-            .unwrap_or_default()
+        t.as_deref().map_or_default(|t| {
+            lines(t)
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
     };
     let mut plugins = read(&plugins_in);
     let mut order = if order_text.is_some() {
@@ -169,7 +167,7 @@ pub fn remove_plugins(
     }
     let render = |list: Option<(Vec<String>, bool)>, old: Option<&[u8]>| -> String {
         list.map_or_else(
-            || old.map(decode).unwrap_or_default(),
+            || old.map_or_default(decode),
             |(l, _)| join(&l.iter().map(String::as_str).collect::<Vec<_>>()),
         )
     };

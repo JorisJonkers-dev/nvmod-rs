@@ -105,11 +105,11 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
                 "active": slot.active,
                 "installed": result.is_some(),
                 "group": result.map(|r| r.group.clone()),
-                "messages": result.map(|r| messages(&r.messages)).unwrap_or_default(),
-                "generated_messages": result.map(|r| messages(&r.generated_messages)).unwrap_or_default(),
-                "findings": result.map(|r| r.findings.iter().map(|f| serde_json::json!({
+                "messages": result.map_or_default(|r| messages(&r.messages)),
+                "generated_messages": result.map_or_default(|r| messages(&r.generated_messages)),
+                "findings": result.map_or_default(|r| r.findings.iter().map(|f| serde_json::json!({
                     "kind": finding_name(f.kind), "text": f.text, "hard": f.hard,
-                })).collect::<Vec<_>>()).unwrap_or_default(),
+                })).collect::<Vec<_>>()),
             })
         })
         .collect();

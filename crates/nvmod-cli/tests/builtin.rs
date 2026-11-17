@@ -233,10 +233,9 @@ fn on_nv_rs_no_extender_dll_is_required_and_coverage_comes_from_capabilities_jso
     assert!(finding(&report, "extender.missing", "nvse_1_4.dll").is_none());
     assert_eq!(report["target"], "nv-rs");
     assert_eq!(report["nv_rs"]["capabilities"]["status"], "used");
+    // Compared by path components, so a Windows path with `\` separators matches too.
     assert!(
-        report["nv_rs"]["capabilities"]["path"]
-            .as_str()
-            .unwrap()
+        std::path::Path::new(report["nv_rs"]["capabilities"]["path"].as_str().unwrap())
             .ends_with("nv-rs/capabilities.json")
     );
     let ext = report["nv_rs"]["extenders"].as_array().unwrap();

@@ -22,9 +22,8 @@ fn nvmod(args: &[&str], home: &Path, state: &Path) -> (i32, String, String) {
 }
 
 fn logs(state: &Path) -> Vec<std::path::PathBuf> {
-    let mut v: Vec<_> = fs::read_dir(state.join("logs"))
-        .map(|d| d.map(|e| e.unwrap().path()).collect())
-        .unwrap_or_default();
+    let mut v: Vec<_> =
+        fs::read_dir(state.join("logs")).map_or_default(|d| d.map(|e| e.unwrap().path()).collect());
     v.sort();
     v
 }

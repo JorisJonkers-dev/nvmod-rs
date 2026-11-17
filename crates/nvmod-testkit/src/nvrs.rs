@@ -175,7 +175,8 @@ impl FakeRelease {
 
     /// Write the release into `dir` (`hash` computes the SHA-256 hex of bytes). Returns the asset's bytes.
     pub fn write(&self, dir: &Path, hash: fn(&[u8]) -> String) -> Vec<u8> {
-        let work = dir.join(".pack");
+        let pack = dir.join(".pack");
+        let work = pack.join("root");
         let binary = if self.failing_check {
             FAKE_FAILING_RELEASE_BINARY
         } else {
@@ -191,7 +192,16 @@ impl FakeRelease {
             )
             .expect("make nv-viewer executable");
         }
-        let mut members = vec!["nv-rs/nv-viewer"];
+        // The escaping member is a real file one level above the folder tar packs from, named `../escaped`. `-P`
+        // keeps that name as given, where GNU tar would strip the leading `../`. Only GNU tar has `--transform`, so
+        // this works with the tar of Linux, macOS and Windows alike.
+        let mut members = if self.escaping_member {
+            std::fs::copy(work.join("nv-rs/nv-viewer"), pack.join("escaped"))
+                .expect("write the escaping member");
+            vec!["../escaped"]
+        } else {
+            vec!["nv-rs/nv-viewer"]
+        };
         if let Some(manifest) = &self.manifest {
             write_file(&work, "nv-rs/release-manifest.json", manifest.as_bytes());
             members.push("nv-rs/release-manifest.json");
@@ -210,11 +220,11 @@ impl FakeRelease {
             .arg("-C")
             .arg(&work);
         if self.escaping_member {
-            cmd.arg("--transform=s,^nv-rs/nv-viewer,../escaped,");
+            cmd.arg("-P");
         }
         let status = cmd.args(&members).status().expect("run tar");
         assert!(status.success(), "tar failed");
-        std::fs::remove_dir_all(&work).expect("remove pack folder");
+        std::fs::remove_dir_all(&pack).expect("remove pack folder");
         let bytes = std::fs::read(dir.join(FAKE_ASSET)).expect("read asset");
         let sums = if self.malformed_sums {
             "this is not a checksum list\n".to_owned()

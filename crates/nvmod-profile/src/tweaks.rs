@@ -71,8 +71,7 @@ fn tweak_files(mod_dir: &Path) -> Vec<PathBuf> {
 pub fn build(instance: &NvmodInstance, profile: &str) -> Vec<u8> {
     let dir = instance.profile_dir(profile);
     let list = nvmod_formats::text::read_limited(&dir.join("modlist.txt"))
-        .map(|b| Modlist::parse(&decode(&b)))
-        .unwrap_or_default();
+        .map_or_default(|b| Modlist::parse(&decode(&b)));
     let mut merged = Merged::new();
     // modlist.txt puts the highest priority first, and the later write wins: walk it backwards.
     for entry in list.entries.iter().rev() {

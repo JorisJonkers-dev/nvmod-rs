@@ -118,8 +118,7 @@ fn mod_name(request: &Request) -> Result<String, String> {
             let file = request
                 .archive
                 .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
+                .map_or_default(|n| n.to_string_lossy().into_owned());
             let stem = file.rsplit_once('.').map_or(file.as_str(), |(s, _)| s);
             stem.strip_suffix(".tar").unwrap_or(stem).to_owned()
         },
@@ -253,8 +252,7 @@ fn plan_fomod(root: &Path, items: &[fomod::FileItem]) -> Result<Plan, String> {
             }
             let file_name = source
                 .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
+                .map_or_default(|n| n.to_string_lossy().into_owned());
             let to = if into_folder {
                 format!("{destination}{file_name}")
             } else {
@@ -364,8 +362,7 @@ fn write_meta(mod_dir: &Path, archive: &Path) -> Result<(), String> {
     if archive.is_file() {
         let file = archive
             .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
+            .map_or_default(|n| n.to_string_lossy().into_owned());
         meta.set_installation_file(&file);
         if let Some(nexus) = nvmod_formats::metaini::parse_nexus_name(&file) {
             meta.set_modid(nexus.modid);

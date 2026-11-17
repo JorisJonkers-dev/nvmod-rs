@@ -30,8 +30,7 @@ impl Settings {
     pub fn read(dir: &Path) -> Settings {
         let text = nvmod_instance::find_ci(dir, "settings.ini")
             .and_then(|p| read_limited(&p).ok())
-            .map(|b| decode(&b))
-            .unwrap_or_default();
+            .map_or_default(|b| decode(&b));
         let ini = Ini::parse(&text);
         Settings {
             local_settings: truthy(ini.get("General", "LocalSettings")),

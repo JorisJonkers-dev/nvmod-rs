@@ -1,6 +1,7 @@
-# The one Rust compiler every build uses: this machine, agents and CI. Same pin as nv-rs and tools/*.
+# The one Rust compiler every build uses: this machine, agents and CI. 1.100.0 was released 2026-11-09 and is
+# taken once it has been out for 7 days, the same cooldown the registry applies to crates (.cargo/config.toml).
 # Move it on in a pull request of its own.
 [toolchain]
-channel = "1.99.1"
+channel = "1.100.0"
 profile = "minimal"
 components = ["rustfmt", "clippy", "llvm-tools-preview"]
