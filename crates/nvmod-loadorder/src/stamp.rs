@@ -35,12 +35,13 @@ fn shares_inode(_: &Path, meta: &fs::Metadata) -> bool {
 
 /// Whether the file has more than one name (a hard link). NTFS keeps the times with the file, not the name, just
 /// like an inode does, so a hard-linked plugin needs a copy of its own there too. The link count comes from the
-/// file's handle; the standard library does not give it on stable Rust.
+/// file's handle; the standard library does not give it on stable Rust. When it cannot be read the file counts as
+/// linked: a copy too many costs a little time, a stamp through a link changes the Mod folder.
 #[cfg(windows)]
 fn shares_inode(path: &Path, _: &fs::Metadata) -> bool {
     fs::File::open(path)
         .and_then(|file| winapi_util::file::information(&file))
-        .is_ok_and(|info| info.number_of_links() > 1)
+        .map_or(true, |info| info.number_of_links() > 1)
 }
 
 #[cfg(not(any(unix, windows)))]
