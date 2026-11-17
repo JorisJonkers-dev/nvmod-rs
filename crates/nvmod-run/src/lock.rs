@@ -61,10 +61,16 @@ fn now() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
-/// Whether the process `pid` is running. On Linux this reads `/proc` and a zombie counts as gone; elsewhere it
-/// answers `true`, so a lock is never taken over by guesswork (delete `.nvmod/lock` by hand there).
+/// Whether the process `pid` is running. On Linux this reads `/proc`, and a zombie counts as gone. On macOS and
+/// the other Unix systems it asks the kernel with signal 0 (`kill(pid, 0)`): a process that does not exist is gone,
+/// one that exists is running, even when it belongs to another user or is a zombie that its parent has not reaped
+/// yet. Elsewhere (Windows) it answers `true`, so a lock is never taken over by guesswork (delete `.nvmod/lock` by
+/// hand there). On Unix, pid 0 and pids above `i32::MAX` are never a running process.
 #[must_use]
 pub fn pid_alive(pid: u32) -> bool {
+    if cfg!(unix) && (pid == 0 || i32::try_from(pid).is_err()) {
+        return false;
+    }
     if cfg!(target_os = "linux") {
         match fs::read_to_string(format!("/proc/{pid}/stat")) {
             // The state letter follows the parenthesised name, which may itself contain parentheses.
@@ -72,11 +78,30 @@ pub fn pid_alive(pid: u32) -> bool {
                 .rsplit_once(')')
                 .and_then(|(_, rest)| rest.trim_start().chars().next())
                 .is_none_or(|state| state != 'Z' && state != 'X'),
-            Err(_) => false,
+            // No readable entry: gone, or hidden because `/proc` is mounted with `hidepid` (which also reads as
+            // not found). The kernel tells the two apart.
+            Err(_) => signal_alive(pid),
         }
     } else {
-        true
+        signal_alive(pid)
     }
+}
+
+/// `kill(pid, 0)`: no such process is gone; success, or a process nvmod may not signal, is running.
+#[cfg(unix)]
+fn signal_alive(pid: u32) -> bool {
+    use nix::errno::Errno;
+    use nix::sys::signal::kill;
+    use nix::unistd::Pid;
+    let Ok(raw) = i32::try_from(pid) else {
+        return false;
+    };
+    !matches!(kill(Pid::from_raw(raw), None), Err(Errno::ESRCH))
+}
+
+#[cfg(not(unix))]
+fn signal_alive(_: u32) -> bool {
+    true
 }
 
 /// A held lock. Dropping it removes the file unless the lock was handed to another process.
@@ -260,9 +285,9 @@ mod tests {
         assert!(InstanceLock::acquire(dir.path(), "run x").is_ok());
     }
 
-    // Only Linux can tell that a pid is gone (pid_alive); elsewhere a lock is never taken over.
+    // Linux and the other Unix systems can tell that a pid is gone (pid_alive); Windows cannot.
     #[test]
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     fn a_dead_pid_is_taken_over() {
         let dir = TempDir::new("lock-dead");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
@@ -277,9 +302,9 @@ mod tests {
         assert_eq!(InstanceLock::read(dir.path()).unwrap().command, "stage");
     }
 
-    // Off Linux a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
+    // On Windows a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
     #[test]
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     fn elsewhere_a_lock_is_never_taken_over() {
         let dir = TempDir::new("lock-kept");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
@@ -292,6 +317,24 @@ mod tests {
             InstanceLock::acquire(dir.path(), "stage"),
             Err(LockError::Held(h)) if h.command == "run gone"
         ));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn this_process_is_alive_and_impossible_pids_are_not() {
+        assert!(pid_alive(std::process::id()));
+        assert!(!pid_alive(0));
+        // As an i32 this would be -6, which kill(2) reads as a process group.
+        assert!(!pid_alive(4_294_967_290));
+        assert!(!pid_alive(u32::MAX));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn the_kill_check_finds_this_process_and_not_a_pid_beyond_any_limit() {
+        // The check macOS uses, run here too. No system hands out a pid this high (Linux stops at 2^22).
+        assert!(signal_alive(std::process::id()));
+        assert!(!signal_alive(2_147_483_000));
     }
 
     #[test]
