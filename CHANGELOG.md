@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.2...v0.7.0) (2026-11-17)
+
+
+### Features
+
+* **api:** add nvmod-api, a library API called in process ([#118](https://github.com/JorisJonkers-dev/nvmod-rs/issues/118)) ([4c83d52](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4c83d52df294ea50a472abed2d2de39c26789591))
+* **api:** backup jobs in the library API ([#127](https://github.com/JorisJonkers-dev/nvmod-rs/issues/127)) ([2bde9c1](https://github.com/JorisJonkers-dev/nvmod-rs/commit/2bde9c1b558e9e6a7ae9f1cb4b5df32a2538c0aa))
+* **api:** init job in the library API ([#135](https://github.com/JorisJonkers-dev/nvmod-rs/issues/135)) ([d6315b6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/d6315b6ec9213d3641f08eee8efcbcb93b646264))
+* **api:** plugin jobs in the library API ([#128](https://github.com/JorisJonkers-dev/nvmod-rs/issues/128)) ([1ff9c93](https://github.com/JorisJonkers-dev/nvmod-rs/commit/1ff9c93ba71030ee4b19dc13f566390a2b54d27e))
+* **api:** rollback and install jobs in the library API ([#130](https://github.com/JorisJonkers-dev/nvmod-rs/issues/130)) ([6d59ae1](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6d59ae1cd605a21110360d0324a2cdb632683fc7))
+* **api:** saves backup, restore and transfer jobs ([#133](https://github.com/JorisJonkers-dev/nvmod-rs/issues/133)) ([4c1b922](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4c1b922ed367168506849603f4cfa656bd8da635))
+* **api:** saves check and checksum jobs ([#132](https://github.com/JorisJonkers-dev/nvmod-rs/issues/132)) ([71d317b](https://github.com/JorisJonkers-dev/nvmod-rs/commit/71d317b01c8bddec62dd718ff56f125380f90922))
+* **api:** the install job takes answers and limits ([#136](https://github.com/JorisJonkers-dev/nvmod-rs/issues/136)) ([e89915f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/e89915f68baa0917bd08be2b80af0cccedae0020))
+
 ## [0.6.2](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.1...v0.6.2) (2026-11-17)
 
 
