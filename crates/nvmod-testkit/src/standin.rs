@@ -3,8 +3,9 @@
 //! file below the folder an `-o<folder>` argument names, and exits with a fixed code. It is compiled with the
 //! toolchain that builds the tests, so it starts wherever the tests run. A shell script does not start on Windows.
 //!
-//! Each behaviour is compiled once and kept in the temporary folder under a name made from a hash of its source, so
-//! the tests of one run, and later runs, share it.
+//! Each behaviour is compiled once and kept next to the test program, in the build folder, under a name made from a
+//! hash of its source, so the tests of one run, and later runs, share it. Nothing is taken from a folder other users
+//! can write to.
 
 // Test support: it runs `rustc`, which is not product code (ADR-0005).
 #![allow(clippy::disallowed_methods)]
@@ -124,11 +125,13 @@ fn main() {
             .expect("open the log");
         writeln!(file, "{line}").expect("write the log");
     }
+    // Like `echo text "$@"`: no space after the text when there are no arguments.
+    let say = |text: &str| if line.is_empty() { text.to_owned() } else { format!("{text} {line}") };
     if let Some(text) = OUT {
-        println!("{text} {line}");
+        println!("{}", say(text));
     }
     if let Some(text) = ERR {
-        eprintln!("{text} {line}");
+        eprintln!("{}", say(text));
     }
     if let Some((relative, contents)) = FILE {
         let dir = args.iter().find_map(|a| a.strip_prefix("-o")).expect("an -o<folder> argument");
@@ -162,7 +165,11 @@ fn hash(text: &str) -> u64 {
 fn build(source: &str) -> PathBuf {
     let rustc = rustc();
     let key = format!("{source}\n{}", rustc.display());
-    let cache = std::env::temp_dir().join("nvmod-testkit-standins");
+    // The build folder of the running test program (`target/...`), which only this user writes to.
+    let cache = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("nvmod-standins")))
+        .expect("the folder of the test program");
     let program = cache.join(format!(
         "standin-{:016x}{}",
         hash(&key),
@@ -254,8 +261,11 @@ mod tests {
             std::fs::read_to_string(target.join("Meshes/p.nif")).unwrap(),
             "packed\n"
         );
-        // A second call appends to the log.
+        // A second call appends to the log; without arguments the text stands alone, as `echo` prints it.
         Command::new(&tool).arg(&target_arg).output().unwrap();
+        let quiet = Standin::new().says("only").write(dir.path(), "bare");
+        let run = Command::new(&quiet).output().unwrap();
+        assert_eq!(String::from_utf8(run.stdout).unwrap(), "only\n");
         assert_eq!(
             std::fs::read_to_string(dir.path().join("tool.log"))
                 .unwrap()
