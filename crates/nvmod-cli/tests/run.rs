@@ -348,7 +348,8 @@ fn run_goes_through_proton_with_the_prefix_app_id_folder_and_staged_data() {
         rec["args"],
         format!("run {} -D:{wine_data} -x --extra two words", tool.display())
     );
-    assert_eq!(rec["pwd"], wd.to_str().unwrap());
+    // The shell's `pwd` gives the folder with its links resolved (`/private/var/...` on macOS).
+    assert_eq!(Path::new(&rec["pwd"]), std::fs::canonicalize(&wd).unwrap());
     assert_eq!(rec["prefix"], s.root().join("compatdata").to_str().unwrap());
     assert_eq!(rec["appid"], "42");
     assert_eq!(rec["data"], data.to_str().unwrap());
@@ -436,7 +437,11 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     let state_s = state.to_str().unwrap();
     let (code, out, err) = s.run(&["nv-rs", "--wait"], &[("XDG_STATE_HOME", state_s)]);
     assert_eq!(code, 0, "{err}");
-    let run = s.root().join("run/Default");
+    // nvmod works in the Instance and base copy it resolved through links, as the program's folder shows; on
+    // macOS the temporary folder `/var/...` is `/private/var/...`.
+    let root = std::fs::canonicalize(s.root()).unwrap();
+    let base = std::fs::canonicalize(s.base.path()).unwrap();
+    let run = root.join("run/Default");
     let rec = s.recorded();
     assert_eq!(rec["args"], run.to_str().unwrap());
     assert_eq!(rec["pwd"], run.to_str().unwrap());
@@ -457,11 +462,11 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     assert_eq!(rec["exe_bytes"], String::from_utf8_lossy(SENTINEL));
     assert_eq!(
         std::fs::read_link(run.join("FalloutNV.exe")).unwrap(),
-        s.base.path().join("FalloutNV.exe")
+        base.join("FalloutNV.exe")
     );
     assert_eq!(
         std::fs::read_link(run.join("Data")).unwrap(),
-        s.root().join("staging/Default/data")
+        root.join("staging/Default/data")
     );
     assert_eq!(real_copies_of_the_exe(s.inst.path()), Vec::<PathBuf>::new());
     assert_eq!(real_copies_of_the_exe(s.base.path()).len(), 1);
@@ -584,10 +589,7 @@ fn a_live_lock_refuses_every_writing_command_and_a_dead_one_is_taken_over() {
     // Read only commands and a dry run still work.
     assert_eq!(nvmod(&["exec", "list", "--instance", &r]).0, 0);
     assert_eq!(s.run(&["T", "--dry-run"], &[]).0, 0);
-    // A dead pid is taken over with an info line. Only Linux can tell that a pid is gone (nvmod_run::pid_alive).
-    if !cfg!(target_os = "linux") {
-        return;
-    }
+    // A dead pid is taken over with an info line.
     write_file(
         &s.root(),
         ".nvmod/lock",

@@ -61,10 +61,16 @@ fn now() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
-/// Whether the process `pid` is running. On Linux this reads `/proc` and a zombie counts as gone; elsewhere it
-/// answers `true`, so a lock is never taken over by guesswork (delete `.nvmod/lock` by hand there).
+/// Whether the process `pid` is running. On Linux this reads `/proc`, and a zombie counts as gone. On macOS and
+/// the other Unix systems it asks the kernel with signal 0 (`kill(pid, 0)`): a process that does not exist is gone,
+/// one that exists is running, even when it belongs to another user or is a zombie that its parent has not reaped
+/// yet. Elsewhere (Windows) it answers `true`, so a lock is never taken over by guesswork (delete `.nvmod/lock` by
+/// hand there). Pid 0 and pids above `i32::MAX` are never a running process.
 #[must_use]
 pub fn pid_alive(pid: u32) -> bool {
+    if pid == 0 || i32::try_from(pid).is_err() {
+        return false;
+    }
     if cfg!(target_os = "linux") {
         match fs::read_to_string(format!("/proc/{pid}/stat")) {
             // The state letter follows the parenthesised name, which may itself contain parentheses.
@@ -75,8 +81,25 @@ pub fn pid_alive(pid: u32) -> bool {
             Err(_) => false,
         }
     } else {
-        true
+        signal_alive(pid)
     }
+}
+
+/// `kill(pid, 0)`: no such process is gone; success, or a process nvmod may not signal, is running.
+#[cfg(unix)]
+fn signal_alive(pid: u32) -> bool {
+    use nix::errno::Errno;
+    use nix::sys::signal::kill;
+    use nix::unistd::Pid;
+    let Ok(raw) = i32::try_from(pid) else {
+        return false;
+    };
+    !matches!(kill(Pid::from_raw(raw), None), Err(Errno::ESRCH))
+}
+
+#[cfg(not(unix))]
+fn signal_alive(_: u32) -> bool {
+    true
 }
 
 /// A held lock. Dropping it removes the file unless the lock was handed to another process.
@@ -260,9 +283,9 @@ mod tests {
         assert!(InstanceLock::acquire(dir.path(), "run x").is_ok());
     }
 
-    // Only Linux can tell that a pid is gone (pid_alive); elsewhere a lock is never taken over.
+    // Linux and the other Unix systems can tell that a pid is gone (pid_alive); Windows cannot.
     #[test]
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     fn a_dead_pid_is_taken_over() {
         let dir = TempDir::new("lock-dead");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
@@ -277,9 +300,9 @@ mod tests {
         assert_eq!(InstanceLock::read(dir.path()).unwrap().command, "stage");
     }
 
-    // Off Linux a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
+    // On Windows a pid cannot be told dead, so the lock is kept rather than taken over by guesswork.
     #[test]
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(unix))]
     fn elsewhere_a_lock_is_never_taken_over() {
         let dir = TempDir::new("lock-kept");
         fs::create_dir_all(dir.path().join(".nvmod")).unwrap();
@@ -292,6 +315,40 @@ mod tests {
             InstanceLock::acquire(dir.path(), "stage"),
             Err(LockError::Held(h)) if h.command == "run gone"
         ));
+    }
+
+    #[test]
+    fn this_process_is_alive_and_impossible_pids_are_not() {
+        assert!(pid_alive(std::process::id()));
+        assert!(!pid_alive(0));
+        // As an i32 this would be -6, which kill(2) reads as a process group.
+        assert!(!pid_alive(4_294_967_290));
+        assert!(!pid_alive(u32::MAX));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_process_that_ended_and_was_reaped_is_gone() {
+        let mut child = std::process::Command::new("true").spawn().unwrap();
+        let pid = child.id();
+        child.wait().unwrap();
+        assert!(!pid_alive(pid));
+        // The check macOS uses agrees, here too.
+        assert!(!signal_alive(pid));
+        assert!(signal_alive(std::process::id()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_running_process_is_alive() {
+        let mut child = std::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
+        assert!(pid_alive(child.id()));
+        assert!(signal_alive(child.id()));
+        child.kill().unwrap();
+        child.wait().unwrap();
     }
 
     #[test]

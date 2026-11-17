@@ -922,6 +922,7 @@ dependencies = [
 name = "nvmod-run"
 version = "0.6.1"
 dependencies = [
+ "nix",
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
