@@ -443,16 +443,15 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     let base = std::fs::canonicalize(s.base.path()).unwrap();
     let run = root.join("run/Default");
     let rec = s.recorded();
-    assert_eq!(rec["args"], run.to_str().unwrap());
-    assert_eq!(rec["pwd"], run.to_str().unwrap());
-    assert_eq!(
-        rec["profile_file"],
-        run.join("linux_profile.txt").to_str().unwrap()
-    );
-    assert_eq!(
-        rec["userdata_line"],
-        format!("userdata = {}", run.join("userdata").display())
-    );
+    // Compared with links resolved on both sides: which spelling of the folder a value has is not the point.
+    let real = |p: &str| std::fs::canonicalize(p).unwrap_or_else(|e| panic!("{p}: {e}"));
+    assert_eq!(real(&rec["args"]), run);
+    assert_eq!(real(&rec["pwd"]), run);
+    assert_eq!(real(&rec["profile_file"]), run.join("linux_profile.txt"));
+    let userdata = rec["userdata_line"]
+        .strip_prefix("userdata = ")
+        .expect("a userdata line");
+    assert_eq!(real(userdata), run.join("userdata"));
     assert_eq!(rec["d3d9"], "wgpu");
     assert_eq!(
         (rec["sees_tex"].as_str(), rec["sees_base"].as_str()),
