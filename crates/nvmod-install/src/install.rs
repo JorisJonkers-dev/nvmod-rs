@@ -123,7 +123,9 @@ fn install_file(from: &Path, bin: &Path) -> Result<PathBuf, InstallError> {
 pub fn install(opts: &Options) -> Result<Installed, InstallError> {
     let instance = NvmodInstance::open(&opts.instance)
         .map_err(|e| InstallError::Refused(format!("not an nvmod Instance: {e}")))?;
-    let root = std::fs::canonicalize(&instance.root).map_err(|e| io(&instance.root, &e))?;
+    let root = std::fs::canonicalize(&instance.root)
+        .map(|p| nvmod_core::plain_path(&p))
+        .map_err(|e| io(&instance.root, &e))?;
     if root.join(FINAL).exists() {
         return Err(InstallError::Refused(format!(
             "nv-rs is already installed in {}; nvmod does not overwrite it",

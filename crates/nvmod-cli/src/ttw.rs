@@ -181,7 +181,7 @@ fn prepare(args: &Args, err: &mut dyn Write) -> Result<Ready, u8> {
     Ok(Ready {
         instance,
         profile,
-        fallout3: std::fs::canonicalize(&fallout3).unwrap_or(fallout3),
+        fallout3: std::fs::canonicalize(&fallout3).map_or(fallout3, |p| nvmod_core::plain_path(&p)),
         installer,
         sha256,
         name: entry.name.clone(),
@@ -240,7 +240,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(code) => return code,
     };
     let root = match std::fs::canonicalize(&ready.instance.root) {
-        Ok(r) => r,
+        Ok(r) => nvmod_core::plain_path(&r),
         Err(e) => return refused(err, &format!("{}: {e}", ready.instance.root.display())),
     };
     let scratch = Scratch(root.join(SCRATCH));
@@ -253,8 +253,10 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     }
 
     // The installer's own command line: `install --mpi <package> --fo3 <dir> --fnv <dir> --dest <dir>`.
-    let base = std::fs::canonicalize(&ready.instance.config.base)
-        .unwrap_or_else(|_| ready.instance.config.base.clone());
+    let base = std::fs::canonicalize(&ready.instance.config.base).map_or_else(
+        |_| ready.instance.config.base.clone(),
+        |p| nvmod_core::plain_path(&p),
+    );
     let mut words = vec!["install".to_owned()];
     if let Some(package) = args.option("package") {
         words.extend(["--mpi".to_owned(), package.to_owned()]);

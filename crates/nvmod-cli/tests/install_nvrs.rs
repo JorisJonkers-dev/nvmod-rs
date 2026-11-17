@@ -167,7 +167,8 @@ fn the_check_is_run_against_the_data_folder_of_the_base_copy_and_reported() {
     let rig = Rig::new();
     let (code, out, err) = rig.install(&["--source", rig.source(), "--cargo", CARGO]);
     assert_eq!(code, 0, "{out}\n{err}");
-    let data = std::fs::canonicalize(rig.base.path()).unwrap().join("Data");
+    let data =
+        nvmod_core::plain_path(&std::fs::canonicalize(rig.base.path()).unwrap()).join("Data");
     assert!(
         out.contains(&format!("fake check passed {} --check", data.display())),
         "{out}"
@@ -232,7 +233,8 @@ fn a_release_manifest_gives_the_check_command() {
     let (code, out, err) =
         rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
     assert_eq!(code, 0, "{out}\n{err}");
-    let data = std::fs::canonicalize(rig.base.path()).unwrap().join("Data");
+    let data =
+        nvmod_core::plain_path(&std::fs::canonicalize(rig.base.path()).unwrap()).join("Data");
     assert!(
         out.contains(&format!("{} --check --from-manifest", data.display())),
         "{out}"

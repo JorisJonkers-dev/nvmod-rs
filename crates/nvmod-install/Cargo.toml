@@ -9,6 +9,7 @@ publish.workspace = true
 description = "Installs nv-rs into an nvmod Instance: builds it from source or fetches and verifies the fork's release, then runs `nv-viewer <data folder> --check`."
 
 [dependencies]
+nvmod-core = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-runner = { workspace = true }
 nvmod-tools = { workspace = true }
