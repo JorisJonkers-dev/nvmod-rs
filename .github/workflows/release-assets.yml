@@ -240,6 +240,123 @@ jobs:
           path: dist/
           retention-days: 7
 
+  # The archives of the release as OCI packages on ghcr.io, as the Toolbox's packages ADR decides:
+  # ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:<version>-<target>. Only for a published release, never for a dry run.
+  # Both archives are checked before anything is pushed. Each pushed digest is attested in the registry; the job then
+  # pulls every digest anonymously and compares its SHA-256, so a package that is not public fails the release.
+  # The repository variable NVMOD_FIRST_PACKAGE_PUSH=true skips only that pull, for the first push of a new package
+  # (ghcr.io creates it private; make it public, then remove the variable).
+  packages:
+    name: OCI packages
+    needs: publish
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # add the package references to the release notes
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      OUT: packages
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dist-{linux,windows}
+          merge-multiple: true
+          path: dist
+      - uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+      - name: Check the archives
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          mkdir -p "$OUT"
+          cp "dist/nvmod-$VERSION-x86_64-linux.tar.zst" "dist/nvmod-$VERSION-x86_64-windows.zip" "$OUT/"
+          zstd -t "$OUT/nvmod-$VERSION-x86_64-linux.tar.zst"
+          unzip -t "$OUT/nvmod-$VERSION-x86_64-windows.zip" >/dev/null
+          ls -l "$OUT"
+      - name: Push packages
+        id: push
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          echo "$GH_TOKEN" | oras login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          push_one() {
+            local target="$1" archive="$2"
+            local ref="ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:${VERSION}-x86_64-${target}"
+            (cd "$OUT" && oras push "$ref" "$(basename "$archive")" \
+              --annotation "org.opencontainers.image.source=https://github.com/${REPO}" \
+              --annotation "org.opencontainers.image.revision=${GITHUB_SHA}" \
+              --annotation "org.opencontainers.image.licenses=GPL-3.0-only")
+            oras resolve "$ref" | tr -d '\n' >"$OUT/${target}.digest"
+            sha256sum "$archive" | awk '{print $1}' >"$OUT/${target}.sha256"
+            echo "pushed $ref $(cat "$OUT/${target}.digest")"
+          }
+          push_one linux "$OUT/nvmod-$VERSION-x86_64-linux.tar.zst"
+          push_one windows "$OUT/nvmod-$VERSION-x86_64-windows.zip"
+          {
+            echo "digest_linux=$(cat "$OUT/linux.digest")"
+            echo "digest_windows=$(cat "$OUT/windows.digest")"
+          } >>"$GITHUB_OUTPUT"
+      - name: Attest the Linux package
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod
+          subject-digest: ${{ steps.push.outputs.digest_linux }}
+          push-to-registry: true
+      - name: Attest the Windows package
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod
+          subject-digest: ${{ steps.push.outputs.digest_windows }}
+          push-to-registry: true
+      # The attestations above are pushed with the login of the push step; the pull below is anonymous.
+      - name: Log out of the registry
+        run: oras logout ghcr.io
+      - name: Verify the packages are public
+        if: ${{ vars.NVMOD_FIRST_PACKAGE_PUSH != 'true' }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          check() {
+            local target="$1" archive="$2"
+            local digest sha pulled
+            digest="$(cat "$OUT/${target}.digest")"
+            sha="$(cat "$OUT/${target}.sha256")"
+            rm -rf "$OUT/pull-${target}"
+            mkdir -p "$OUT/pull-${target}"
+            oras pull "ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod@${digest}" -o "$OUT/pull-${target}"
+            pulled="$(sha256sum "$OUT/pull-${target}/$(basename "$archive")" | awk '{print $1}')"
+            echo "$target: pulled $pulled (expected $sha)"
+            test "$pulled" = "$sha"
+          }
+          check linux "nvmod-$VERSION-x86_64-linux.tar.zst"
+          check windows "nvmod-$VERSION-x86_64-windows.zip"
+      - name: Record the package references
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          summary="$(mktemp)"
+          {
+            echo "## OCI packages"
+            echo
+            echo "| Name | Tag | Digest | Archive SHA-256 |"
+            echo "| --- | --- | --- | --- |"
+            for target in linux windows; do
+              echo "| ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod | ${VERSION}-x86_64-${target} | $(cat "$OUT/${target}.digest") | $(cat "$OUT/${target}.sha256") |"
+            done
+          } >"$summary"
+          cat "$summary" >>"$GITHUB_STEP_SUMMARY"
+          notes="$(mktemp)"
+          { gh release view "$TAG" --repo "$REPO" --json body --jq .body; printf '\n'; cat "$summary"; } >"$notes"
+          gh release edit "$TAG" --repo "$REPO" --notes-file "$notes"
+
   # The Toolbox's component-bump.yml opens the pull request that moves its nvmod pin to the new tag
   # (rauls-trusty-toolbox#17). Only for a published release, never for a dry run.
   toolbox:
