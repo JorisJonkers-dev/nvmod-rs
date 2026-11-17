@@ -143,6 +143,9 @@ pub fn create(
         return Ok(Outcome::Cancelled);
     }
     progress.report(&Event::step("create-snapshot", "backup.create.creating"));
+    if cancel.is_cancelled() {
+        return Ok(Outcome::Cancelled);
+    }
     let now = request.now.unwrap_or_else(clock::now);
     let snapshot = nvmod_backup::create(&instance, &profile, now, request.with_saves).map_err(
         |e| match e {
@@ -202,6 +205,9 @@ pub fn prune(
     if let Some(n) = request.days {
         config.daily_days = u32::try_from(n).unwrap_or(u32::MAX);
     }
+    if cancel.is_cancelled() {
+        return Ok(Outcome::Cancelled);
+    }
     let now = request.now.unwrap_or_else(clock::now);
     let report = nvmod_backup::prune(&instance, &profile, &config, now, request.dry_run).map_err(
         |e| match e {
@@ -246,6 +252,9 @@ pub fn restore(
         ));
     }
     progress.report(&Event::step("restore-snapshot", "backup.restore.restoring"));
+    if cancel.is_cancelled() {
+        return Ok(Outcome::Cancelled);
+    }
     let now = request.now.unwrap_or_else(clock::now);
     let report =
         nvmod_backup::restore(&instance, &profile, &request.id, now).map_err(|e| match e {

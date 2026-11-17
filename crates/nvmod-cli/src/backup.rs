@@ -157,7 +157,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                         );
                         let _ = writeln!(
                             out,
-                            "the state before is the snapshot `{}`",
+                            "the state before is the snapshot `{}`; restore it to undo",
                             restored.report.pre_restore
                         );
                     }
