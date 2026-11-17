@@ -15,7 +15,9 @@ use nvmod_api::plugins::{
 use nvmod_api::run::PlanRequest;
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
-use nvmod_testkit::{BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, write_file};
+use nvmod_testkit::{
+    BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, write_file,
+};
 use std::fs;
 use std::path::PathBuf;
 
