@@ -350,25 +350,20 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     } else {
         std::path::PathBuf::from(args.option("masterlist").unwrap_or_default())
     };
-    let masterlist = match nvmod_loadorder::load_masterlist(&masterlist_path) {
-        Ok(m) => m,
-        Err(Error::Refused(why) | Error::Failed(why)) => return refused(&why, err),
+    let request = nvmod_api::loadorder::SortRequest {
+        instance: root.to_path_buf(),
+        profile: Some(profile),
+        masterlist: masterlist_path,
+        apply: args.flag("apply"),
     };
-    let proposal = match nvmod_loadorder::propose(&instance, &profile, &masterlist) {
-        Ok(p) => p,
-        Err(Error::Refused(why) | Error::Failed(why)) => return refused(&why, err),
-    };
-    let applied = if args.flag("apply") {
-        match nvmod_loadorder::apply(&instance, &proposal) {
-            Ok(a) => Some(a),
-            Err(Error::Refused(why)) => return refused(&why, err),
-            Err(Error::Failed(why)) => {
-                let _ = writeln!(err, "nvmod sort: {why}");
-                return ROLLED_BACK;
-            }
-        }
-    } else {
-        None
+    let (proposal, applied) = match nvmod_api::loadorder::sort(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(done)) => (done.proposal, done.applied),
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return crate::job_failure("sort", &e, err),
     };
     if args.flag("json") {
         let _ = writeln!(

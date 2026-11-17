@@ -688,6 +688,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-api"
+version = "0.6.2"
+dependencies = [
+ "loot-rs",
+ "nvmod-instance",
+ "nvmod-loadorder",
+ "nvmod-modinstall",
+ "nvmod-profile",
+ "nvmod-run",
+ "nvmod-saves",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nvmod-backup"
 version = "0.6.2"
 dependencies = [
@@ -726,6 +743,7 @@ dependencies = [
  "ctrlc",
  "jsonschema",
  "loot-rs",
+ "nvmod-api",
  "nvmod-backup",
  "nvmod-catalog",
  "nvmod-conflicts",

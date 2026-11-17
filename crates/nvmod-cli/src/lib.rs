@@ -292,6 +292,29 @@ pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8
     code
 }
 
+/// Print a failed job of the library API (`nvmod-api`) the way the command line always has, and return its exit
+/// code: a refusal is 2, a verification failure 3, a failed step 4.
+pub(crate) fn job_failure(command: &str, e: &nvmod_api::JobError, err: &mut dyn Write) -> u8 {
+    match e.kind {
+        nvmod_api::ErrorKind::Refused => {
+            let _ = writeln!(err, "nvmod {command}: refused: {}", e.summary);
+            REFUSED
+        }
+        nvmod_api::ErrorKind::Corrupt => {
+            let _ = writeln!(
+                err,
+                "nvmod {command}: verification failed: {}; nothing was changed",
+                e.summary
+            );
+            VERIFICATION
+        }
+        _ => {
+            let _ = writeln!(err, "nvmod {command}: {}", e.summary);
+            ROLLED_BACK
+        }
+    }
+}
+
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
 pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
