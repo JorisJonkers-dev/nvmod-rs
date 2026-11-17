@@ -34,7 +34,7 @@ fn sample() -> (TempDir, TempDir) {
 }
 
 #[test]
-fn the_instance_is_read_with_wine_paths_mapped() {
+fn the_instance_is_read_with_its_paths_mapped_to_this_machine() {
     let (game, root) = sample();
     let instance = Mo2Instance::open(root.path()).unwrap();
     assert_eq!(instance.game_name, "TTW");
