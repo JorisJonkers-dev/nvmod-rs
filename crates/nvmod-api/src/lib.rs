@@ -28,6 +28,8 @@
 //! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
+//! | [`saves::check`] | [`saves::CheckRequest`] | [`saves::CheckOutput`] |
+//! | [`saves::checksum`] | [`saves::ChecksumRequest`] | [`saves::ChecksumOutput`] |
 //! | [`backup::create`] | [`backup::CreateRequest`] | [`backup::CreateOutput`] |
 //! | [`backup::list`] | [`backup::ListRequest`] | [`backup::ListOutput`] |
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |

@@ -1101,3 +1101,70 @@ fn install_cancelled_before_changes_nothing() {
     );
     assert!(!s.root().join("mods/Cancelled").exists());
 }
+
+#[test]
+fn saves_check_on_a_good_save_is_clean() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(
+        s.root().join("profiles/Default/saves/Save 1.fos"),
+        SaveBuilder::new(1).plugins(&["FalloutNV.esm"]).build(),
+    )
+    .unwrap();
+    let request = nvmod_api::saves::CheckRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let checked = nvmod_api::saves::check(&request, &mut NoProgress, &CancelToken::new())
+        .expect("checks")
+        .done()
+        .expect("not cancelled");
+    assert!(checked.clean);
+    assert!(checked.report.clean);
+}
+
+#[test]
+fn saves_checksum_is_stable_across_calls() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"abc").unwrap();
+    let request = nvmod_api::saves::ChecksumRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let first = nvmod_api::saves::checksum(&request, &mut NoProgress, &CancelToken::new())
+        .expect("checksums")
+        .done()
+        .expect("not cancelled");
+    let second = nvmod_api::saves::checksum(&request, &mut NoProgress, &CancelToken::new())
+        .expect("checksums")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(first, second);
+}
+
+#[test]
+fn saves_check_cancelled_before_the_read_is_a_result() {
+    let s = Scratch::new();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = nvmod_api::saves::CheckRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let outcome = nvmod_api::saves::check(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+}
