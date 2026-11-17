@@ -30,6 +30,9 @@
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
 //! | [`saves::check`] | [`saves::CheckRequest`] | [`saves::CheckOutput`] |
 //! | [`saves::checksum`] | [`saves::ChecksumRequest`] | [`saves::ChecksumOutput`] |
+//! | [`saves::backup`] | [`saves::BackupRequest`] | [`saves::BackupOutput`] |
+//! | [`saves::restore`] | [`saves::RestoreRequest`] | [`saves::RestoreOutput`] |
+//! | [`saves::transfer`] | [`saves::TransferRequest`] | [`saves::TransferOutput`] |
 //! | [`backup::create`] | [`backup::CreateRequest`] | [`backup::CreateOutput`] |
 //! | [`backup::list`] | [`backup::ListRequest`] | [`backup::ListOutput`] |
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |

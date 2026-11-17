@@ -1168,3 +1168,139 @@ fn saves_check_cancelled_before_the_read_is_a_result() {
     let outcome = nvmod_api::saves::check(&request, &mut NoProgress, &cancel).expect("no error");
     assert!(matches!(outcome, Outcome::Cancelled));
 }
+
+#[test]
+fn saves_backup_writes_a_copy() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"x").unwrap();
+    let request = nvmod_api::saves::BackupRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let backed = nvmod_api::saves::backup(&request, &mut NoProgress, &CancelToken::new())
+        .expect("backs up")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(backed.backup.files, 1);
+    assert!(
+        s.root()
+            .join(".nvmod")
+            .join("saves-backup")
+            .join(&backed.backup.id)
+            .join("files")
+            .join("Save 1.fos")
+            .exists()
+    );
+}
+
+#[test]
+fn saves_restore_brings_back_the_original() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"x").unwrap();
+    let backup_request = nvmod_api::saves::BackupRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    nvmod_api::saves::backup(&backup_request, &mut NoProgress, &CancelToken::new())
+        .expect("backs up")
+        .done()
+        .expect("not cancelled");
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"y").unwrap();
+    let restore_request = nvmod_api::saves::RestoreRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+        id: "latest".into(),
+    };
+    let restored =
+        nvmod_api::saves::restore(&restore_request, &mut NoProgress, &CancelToken::new())
+            .expect("restores")
+            .done()
+            .expect("not cancelled");
+    assert_eq!(restored.report.files, 1);
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/saves/Save 1.fos")).unwrap(),
+        b"x"
+    );
+}
+
+#[test]
+fn saves_transfer_copies_between_two_profiles() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"x").unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.nvse"), b"y").unwrap();
+    let instance = NvmodInstance::open(&s.root()).expect("open");
+    instance.create_profile("Other").expect("create profile");
+    fs::write(
+        s.root().join("profiles/Other/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Other/saves")).unwrap();
+    let request = nvmod_api::saves::TransferRequest {
+        instance: s.root(),
+        from: "Default".into(),
+        to: "Other".into(),
+        prefix: None,
+        force: false,
+    };
+    let transferred = nvmod_api::saves::transfer(&request, &mut NoProgress, &CancelToken::new())
+        .expect("transfers")
+        .done()
+        .expect("not cancelled");
+    assert!(transferred.report.copied.contains(&"Save 1.fos".to_owned()));
+    assert_eq!(
+        fs::read(s.root().join("profiles/Other/saves/Save 1.fos")).unwrap(),
+        b"x"
+    );
+}
+
+#[test]
+fn saves_backup_cancelled_before_write_changes_nothing() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Save 1.fos"), b"x").unwrap();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let before = s.root().join(".nvmod").join("saves-backup").exists();
+    let outcome = nvmod_api::saves::backup(
+        &nvmod_api::saves::BackupRequest {
+            instance: s.root(),
+            profile: None,
+            prefix: None,
+        },
+        &mut NoProgress,
+        &cancel,
+    )
+    .expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        s.root().join(".nvmod").join("saves-backup").exists(),
+        before
+    );
+}
