@@ -81,6 +81,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         let _ = writeln!(err, "{USAGE_TEXT}");
         return USAGE;
     }
+    if sub == "list" {
+        return list(&args, out, err);
+    }
     let root = Path::new(args.option("instance").unwrap_or_default());
     let opened = if matches!(sub, "backup" | "restore" | "transfer") {
         NvmodInstance::open(root)
@@ -121,7 +124,6 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(e) => return failure(&e, err),
     };
     match sub {
-        "list" => list(&cx, &profile, &location, out),
         "check" => check(&cx, &profile, &location, out, err),
         "checksum" => checksum(&cx, &profile, &location, out),
         "backup" => backup(&cx, &profile, &location, out, err),
@@ -129,13 +131,28 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     }
 }
 
-fn list(cx: &Cx, profile: &str, location: &Location, out: &mut dyn Write) -> u8 {
-    let saves = nvmod_saves::list(&location.dir);
-    if cx.json {
+/// `saves list`, through the library API.
+fn list(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let request = nvmod_api::saves::ListRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        prefix: args.option("prefix").map(PathBuf::from),
+    };
+    let listed = match nvmod_api::saves::list(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(listed)) => listed,
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return crate::job_failure("saves", &e, err),
+    };
+    let (profile, saves) = (&listed.profile, &listed.saves);
+    if args.flag("json") {
         print_json(
             out,
             &serde_json::json!({
-                "schema_version": 1, "profile": profile, "dir": location.dir.display().to_string(), "saves": saves,
+                "schema_version": 1, "profile": profile, "dir": listed.dir.display().to_string(), "saves": saves,
             }),
         );
     } else {
@@ -143,9 +160,9 @@ fn list(cx: &Cx, profile: &str, location: &Location, out: &mut dyn Write) -> u8 
             out,
             "nvmod saves: profile `{profile}`, {} save(s) in {}",
             saves.len(),
-            location.dir.display()
+            listed.dir.display()
         );
-        for s in &saves {
+        for s in saves {
             let detail = s.problem.as_ref().map_or_else(
                 || format!("{} plugin(s)", s.plugins.unwrap_or(0)),
                 |p| format!("unreadable: {p}"),

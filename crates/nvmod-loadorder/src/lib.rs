@@ -203,14 +203,28 @@ pub fn propose(
     profile: &str,
     masterlist: &Masterlist,
 ) -> Result<Proposal, Error> {
+    propose_with(instance, profile, masterlist, &SortOptions::default())
+}
+
+/// [`propose`] with the loot-rs options given: a cancel token and a progress hook, for a caller that runs the sort
+/// as a job.
+///
+/// # Errors
+/// As [`propose`]; a cancelled sort is `Refused` with loot-rs's reason (the caller asked, so it knows).
+pub fn propose_with(
+    instance: &NvmodInstance,
+    profile: &str,
+    masterlist: &Masterlist,
+    options: &SortOptions,
+) -> Result<Proposal, Error> {
     let data = staging_data(instance, profile)?;
     let current = read_slots(&instance.profile_dir(profile))?;
     let slots: Vec<PluginSlot> = current
         .iter()
         .map(|s| PluginSlot::new(s.name.clone(), s.active))
         .collect();
-    let output = sort(&slots, masterlist, &data, &SortOptions::default())
-        .map_err(|e| Error::Refused(describe(&e)))?;
+    let output =
+        sort(&slots, masterlist, &data, options).map_err(|e| Error::Refused(describe(&e)))?;
     let mut proposed = place_not_installed(&current, &output, &slots);
     let locks = read_locks(&instance.profile_dir(profile))?;
     enforce_locks(&mut proposed, &locks);

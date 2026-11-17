@@ -1,0 +1,27 @@
+[package]
+name = "nvmod-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "The library API of nvmod: typed requests and results for mods, the Load order, saves and the run plan, with progress, cancel and copyable errors, called in process."
+
+[dependencies]
+nvmod-instance = { workspace = true }
+nvmod-loadorder = { workspace = true }
+nvmod-modinstall = { workspace = true }
+nvmod-profile = { workspace = true }
+nvmod-run = { workspace = true }
+nvmod-saves = { workspace = true }
+loot-rs = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+nvmod-stage = { workspace = true }
+nvmod-testkit = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

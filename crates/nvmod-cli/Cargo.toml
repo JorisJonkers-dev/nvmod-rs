@@ -33,6 +33,7 @@ nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
 nvmod-loadorder = { workspace = true }
+nvmod-api = { workspace = true }
 nvmod-tools = { workspace = true }
 nvmod-runlog = { workspace = true }
 tracing = { workspace = true }
