@@ -2,7 +2,7 @@
 //! `nvmod stage` and the Doctor's view of the Staging tree, run as a program against a scratch Instance made by
 //! `nvmod init` from a synthetic base copy. Mods and profiles are written as files, in code.
 
-use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{BaseBuilder, TempDir, case_sensitive, snapshot, write_file};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -284,7 +284,6 @@ fn the_doctor_says_when_no_staging_tree_was_built() {
     );
 }
 
-#[cfg(unix)]
 #[test]
 fn the_doctor_reports_mods_whose_files_collide_after_lowercasing() {
     let s = Scratch::new();
@@ -292,14 +291,32 @@ fn the_doctor_reports_mods_whose_files_collide_after_lowercasing() {
     s.mod_file("Clash", "textures/wall.dds", b"two");
     s.mod_file("Fine", "Textures/Floor.dds", b"ok");
     s.modlist("Default", "+Clash\r\n+Fine\r\n");
+    let hits = |report: &Value| -> Vec<Value> {
+        report["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|f| f["code"] == "stage.case-collision")
+            .cloned()
+            .collect()
+    };
+    if !case_sensitive(&s.root()) {
+        // macOS and Windows: the second file replaced the first under the first spelling, so the Mod holds one
+        // file, nothing collides, and the Staging tree has that file.
+        let (_, report) = s.doctor(&[]);
+        assert!(hits(&report).is_empty(), "{report}");
+        assert_eq!(s.stage(&[]).0, 0);
+        assert_eq!(
+            std::fs::read(s.staged("Default", "textures/wall.dds")).unwrap(),
+            b"two"
+        );
+        let (_, report) = s.doctor(&[]);
+        assert!(hits(&report).is_empty(), "{report}");
+        return;
+    }
     // Before staging, and after (staging still succeeds and picks one file, the same every time).
     let (_, report) = s.doctor(&[]);
-    let hits: Vec<&Value> = report["findings"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|f| f["code"] == "stage.case-collision")
-        .collect();
+    let hits = hits(&report);
     assert_eq!(hits.len(), 1, "{report}");
     assert_eq!(hits[0]["subject"], "Clash");
     assert!(

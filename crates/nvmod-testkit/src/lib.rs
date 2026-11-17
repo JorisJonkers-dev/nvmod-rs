@@ -5,6 +5,7 @@
 mod archive;
 mod base;
 mod bsa;
+mod case;
 mod links;
 mod mo2;
 mod nvrs;
@@ -16,6 +17,7 @@ mod standin;
 pub use archive::{TarBuilder, ZipBuilder};
 pub use base::{BaseBuilder, Store, snapshot};
 pub use bsa::BsaBuilder;
+pub use case::case_sensitive;
 pub use links::{link_count, same_file};
 pub use mo2::{Mo2Builder, ModSpec, TempDir, write_file};
 pub use nvrs::{

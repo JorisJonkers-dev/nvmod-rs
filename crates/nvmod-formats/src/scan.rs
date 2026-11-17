@@ -85,10 +85,14 @@ mod tests {
         touch(&dir.join("nvse/plugins/b.dll"));
         touch(&dir.join("meshes/x.nif"));
         touch(&dir.join("NVSE/Plugins/hidden.dll.mohidden"));
-        assert_eq!(
-            files_under(&dir, "nvse"),
+        let listed = if nvmod_testkit::case_sensitive(&dir) {
             ["NVSE/Plugins/a.dll", "nvse/plugins/b.dll"]
-        );
+        } else {
+            // macOS and Windows: `nvse/plugins` is the folder `NVSE/Plugins`, which keeps the spelling it was made
+            // with, and that is the one listed.
+            ["NVSE/Plugins/a.dll", "NVSE/Plugins/b.dll"]
+        };
+        assert_eq!(files_under(&dir, "nvse"), listed);
         assert_eq!(
             files_under(&dir.join("missing"), "nvse"),
             Vec::<String>::new()
