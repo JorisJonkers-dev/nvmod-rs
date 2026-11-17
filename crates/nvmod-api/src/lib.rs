@@ -24,6 +24,8 @@
 //! | --- | --- | --- |
 //! | [`mods::list`] | [`mods::ListRequest`] | [`mods::ListOutput`] |
 //! | [`mods::change`] | [`mods::ChangeRequest`] | [`mods::Report`] |
+//! | [`plugins::list`] | [`plugins::ListRequest`] | [`plugins::ListReport`] |
+//! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
 //! | [`backup::create`] | [`backup::CreateRequest`] | [`backup::CreateOutput`] |
@@ -39,6 +41,7 @@ pub mod backup;
 pub mod job;
 pub mod loadorder;
 pub mod mods;
+pub mod plugins;
 pub mod run;
 pub mod saves;
 
