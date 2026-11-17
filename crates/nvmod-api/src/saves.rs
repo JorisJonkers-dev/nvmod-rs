@@ -50,12 +50,13 @@ pub fn list(
         return Ok(Outcome::Cancelled);
     }
     let instance = crate::open(&request.instance, false, LIST)?;
+    // The profile first: a profile that cannot be chosen is refused before the prefix matters, as it always was.
+    let profile = crate::profile(&instance, request.profile.as_deref(), LIST)?;
     let prefix = request
         .prefix
         .clone()
         .unwrap_or_else(|| instance.root.join("compatdata"));
     let target = Target::from_prefix(&prefix);
-    let profile = crate::profile(&instance, request.profile.as_deref(), LIST)?;
     let Location { dir, local } = nvmod_saves::locate(&instance, &profile, target.as_ref().ok())
         .map_err(|e| match (e, &target) {
             (Error::Refused(why), Err(no_prefix)) => {

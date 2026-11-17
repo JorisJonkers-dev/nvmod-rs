@@ -116,7 +116,7 @@ pub(crate) fn run_with(
     ) {
         Ok(nvmod_api::Outcome::Done(plan)) => plan,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
-        Err(e) => return refuse(&e.summary, err),
+        Err(e) => return crate::job_failure("run", &e, err),
     };
     let dry = a.flag("dry-run");
     if dry {

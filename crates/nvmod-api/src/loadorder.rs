@@ -57,7 +57,8 @@ fn failure(error: Error) -> JobError {
 /// # Errors
 /// [`ErrorKind::Refused`] when the Instance, the profile, the Staging tree, the lists or the masterlist are
 /// missing or unreadable, or loot-rs refuses the input (rules that contradict each other); [`ErrorKind::Failed`]
-/// when a write failed and the profile was put back.
+/// when a write failed and the profile was put back; [`ErrorKind::Internal`] when the sort panicked and no stop
+/// had been asked for.
 pub fn sort(
     request: &SortRequest,
     progress: &mut dyn Progress,
@@ -74,54 +75,10 @@ pub fn sort(
     ));
     let masterlist = nvmod_loadorder::load_masterlist(&request.masterlist).map_err(|e| {
         // A masterlist that cannot be read is a refusal, as on the command line.
-        match e {
-            Error::Refused(why) | Error::Failed(why) => {
-                JobError::new(ErrorKind::Refused, SORT, why)
-            }
-        }
+        JobError::new(ErrorKind::Refused, SORT, reason(&e))
     })?;
-    // loot-rs reports from its own threads; the events cross to this thread, which owns `progress`.
-    let (send, receive) = mpsc::channel();
-    let options = SortOptions::default()
-        .with_cancel(cancel.to_loot())
-        .with_progress(ProgressHook::new(move |p| {
-            let _ = send.send(p);
-        }));
-    let proposed = std::thread::scope(|scope| {
-        let worker = scope.spawn(|| {
-            let result = nvmod_loadorder::propose_with(&instance, &profile, &masterlist, &options);
-            drop(options);
-            result
-        });
-        for p in receive {
-            let (step, label) = step_of(p.stage);
-            progress.report(&Event {
-                step,
-                label,
-                done: Some(p.done as u64),
-                total: Some(p.total as u64),
-            });
-        }
-        worker.join()
-    });
-    let proposal = match proposed {
-        Ok(Ok(proposal)) => proposal,
-        Ok(Err(_)) if cancel.is_cancelled() => return Ok(Outcome::Cancelled),
-        Ok(Err(e)) => {
-            return Err(match e {
-                // propose refuses for every reason it gives; keep it a refusal.
-                Error::Refused(why) | Error::Failed(why) => {
-                    JobError::new(ErrorKind::Refused, SORT, why)
-                }
-            });
-        }
-        Err(_) => {
-            return Err(JobError::new(
-                ErrorKind::Internal,
-                SORT,
-                "the sort stopped on an internal error; nothing was written",
-            ));
-        }
+    let Some(proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
+        return Ok(Outcome::Cancelled);
     };
     if !request.apply {
         return Ok(Outcome::Done(SortOutput {
@@ -138,4 +95,66 @@ pub fn sort(
         proposal,
         applied: Some(applied),
     }))
+}
+
+/// The words of a Load order error, whichever side it came from.
+fn reason(error: &Error) -> String {
+    match error {
+        Error::Refused(why) | Error::Failed(why) => why.clone(),
+    }
+}
+
+/// Let loot-rs propose the order, reporting its stages as they happen. `Ok(None)` is a cancelled sort: loot-rs
+/// stopped because the token was used, or the worker panicked after the token was used (the panic of a sort that
+/// was asked to stop is not a bug worth an [`ErrorKind::Internal`]).
+///
+/// # Errors
+/// As [`sort`] without the write: a refusal of the Staging tree, the lists or the rules, and
+/// [`ErrorKind::Internal`] when the worker panicked and no stop had been asked for.
+fn propose(
+    instance: &nvmod_instance::NvmodInstance,
+    profile: &str,
+    masterlist: &loot_rs::api::Masterlist,
+    progress: &mut dyn Progress,
+    cancel: &CancelToken,
+) -> Result<Option<Proposal>, JobError> {
+    // loot-rs reports from its own threads; the events cross to this thread, which owns `progress`. The hook
+    // stops reporting once the token is used, so a cancelled sort does not wait for a progress event first.
+    let (send, receive) = mpsc::channel();
+    let stop = cancel.clone();
+    let options = SortOptions::default()
+        .with_cancel(cancel.to_loot())
+        .with_progress(ProgressHook::new(move |p| {
+            if !stop.is_cancelled() {
+                let _ = send.send(p);
+            }
+        }));
+    let proposed = std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            let result = nvmod_loadorder::propose_with(instance, profile, masterlist, &options);
+            drop(options);
+            result
+        });
+        for p in receive {
+            let (step, label) = step_of(p.stage);
+            progress.report(&Event {
+                step,
+                label,
+                done: Some(p.done as u64),
+                total: Some(p.total as u64),
+            });
+        }
+        worker.join()
+    });
+    match proposed {
+        Ok(Ok(proposal)) => Ok(Some(proposal)),
+        // A cancelled sort is a result, whether loot-rs said so or the worker died on the way out.
+        Ok(Err(_) | Err(_)) if cancel.is_cancelled() => Ok(None),
+        Ok(Err(e)) => Err(failure(e)),
+        Err(_) => Err(JobError::new(
+            ErrorKind::Internal,
+            SORT,
+            "the sort stopped on an internal error; nothing was written",
+        )),
+    }
 }

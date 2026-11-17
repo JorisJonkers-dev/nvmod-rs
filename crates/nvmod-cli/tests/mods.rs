@@ -100,6 +100,35 @@ fn names(v: &Value) -> Vec<String> {
 }
 
 #[test]
+fn a_category_that_is_not_a_number_is_refused_but_a_folder_that_is_not_an_instance_is_refused_first() {
+    let s = Scratch::new(true);
+    let before = snapshot(&s.root());
+    // A folder that is not an Instance is the older check and keeps its own words.
+    let notes = s.inst.path().join("not-an-instance");
+    fs::create_dir_all(&notes).unwrap();
+    let (code, out, err) = nvmod(&[
+        "mods",
+        "list",
+        "--instance",
+        notes.to_str().unwrap(),
+        "--category",
+        "x",
+    ]);
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains("is not an nvmod Instance"), "{err}");
+    assert!(out.is_empty(), "{out}");
+    // An Instance with a bad id says what the option takes, and lists nothing.
+    let (code, out, err) = s.run(&["list", "--category", "x"]);
+    assert_eq!(code, 2, "{err}");
+    assert_eq!(
+        err,
+        "nvmod mods: refused: --category takes a category id (a number)\n"
+    );
+    assert!(out.is_empty(), "{out}");
+    assert_eq!(snapshot(&s.root()), before, "a refusal changes nothing");
+}
+
+#[test]
 fn list_prints_the_priority_order_as_json_and_text() {
     let s = Scratch::new(true);
     let (code, out, err) = s.run(&["list", "--json"]);

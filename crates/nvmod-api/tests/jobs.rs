@@ -7,7 +7,7 @@ use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
 use nvmod_api::run::PlanRequest;
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
-use nvmod_testkit::{BaseBuilder, PeBuilder, PluginBuilder, TempDir, write_file};
+use nvmod_testkit::{BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, write_file};
 use std::fs;
 use std::path::PathBuf;
 
@@ -205,6 +205,84 @@ fn a_cancelled_sort_is_a_result_and_writes_nothing() {
 }
 
 #[test]
+fn a_sort_cancelled_while_loot_rs_runs_is_a_result_and_writes_nothing() {
+    let s = Scratch::new();
+    let before = (
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+    );
+    let cancel = CancelToken::new();
+    // The first stage loot-rs reports is where the caller asks it to stop, as a GUI would when the user closes
+    // the window: the sort itself is stopped, not only the job before it started.
+    let mut progress = |_: &Event| cancel.cancel();
+    let outcome = sort(&s.sort_request(true), &mut progress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled), "{outcome:?}");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before.0
+    );
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+        before.1
+    );
+}
+
+#[test]
+fn the_first_progress_event_is_reading_the_masterlist() {
+    let s = Scratch::new();
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    sort(&s.sort_request(false), &mut progress, &CancelToken::new()).expect("sorts");
+    let first = events.first().expect("an event");
+    assert_eq!(first.step, "read-masterlist");
+    assert_eq!(first.label, "loadorder.sort.reading-masterlist");
+    assert_eq!((first.done, first.total), (None, None));
+}
+
+#[test]
+fn a_sort_reports_every_stage_with_counts_and_a_stable_label() {
+    let s = Scratch::new();
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    sort(&s.sort_request(false), &mut progress, &CancelToken::new()).expect("sorts");
+    let plugins = events
+        .iter()
+        .find(|e| e.step == "read-plugins")
+        .expect("the reading stage");
+    assert_eq!(plugins.label, "loadorder.sort.reading-plugins");
+    assert_eq!(plugins.total, Some(3), "the three plugins of the lists");
+    assert!(plugins.done.is_some_and(|done| done <= 3), "{plugins:?}");
+    for e in &events {
+        assert!(!e.label.is_empty() && !e.step.is_empty(), "{e:?}");
+    }
+}
+
+#[test]
+fn a_sort_that_loot_rs_refuses_is_a_refusal() {
+    let s = Scratch::new();
+    fs::write(
+        s.inst.path().join("masterlist.yaml"),
+        "plugins:\n  - name: 'Base.esp'\n    after: [Patch.esp]\n",
+    )
+    .unwrap();
+    let error = sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "loadorder.sort");
+    assert!(error.summary.contains("loot-rs cannot sort"), "{error}");
+}
+
+#[test]
+fn a_profile_without_a_staging_tree_is_refused_with_the_stage_command() {
+    let s = Scratch::new();
+    fs::remove_dir_all(s.root().join("staging")).unwrap();
+    let error = sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert!(error.summary.contains("nvmod stage"), "{error}");
+}
+
+#[test]
 fn a_missing_masterlist_is_a_refusal_with_copyable_text() {
     let s = Scratch::new();
     let mut request = s.sort_request(false);
@@ -241,6 +319,11 @@ fn saves_list_reads_the_profile_saves() {
         .done()
         .expect("not cancelled");
     assert!(listed.local);
+    assert_eq!(
+        listed.dir,
+        s.root().join("profiles/Default/saves"),
+        "a local profile reads its own saves folder"
+    );
     assert_eq!(listed.saves.len(), 1);
     assert_eq!(listed.saves[0].name, "Save 1.fos");
 }
@@ -299,6 +382,360 @@ fn requests_round_trip_through_json() {
     let text = serde_json::to_string(&request).unwrap();
     let back: ChangeRequest = serde_json::from_str(&text).unwrap();
     assert_eq!(back, request);
+}
+
+#[test]
+fn every_request_round_trips_through_json() {
+    let sort_request = SortRequest {
+        instance: PathBuf::from("/x"),
+        profile: Some("Default".into()),
+        masterlist: PathBuf::from("/x/masterlist.yaml"),
+        apply: true,
+    };
+    let text = serde_json::to_string(&sort_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<SortRequest>(&text).unwrap(),
+        sort_request
+    );
+    let saves_request = nvmod_api::saves::ListRequest {
+        instance: PathBuf::from("/x"),
+        profile: None,
+        prefix: Some(PathBuf::from("/p")),
+    };
+    let text = serde_json::to_string(&saves_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<nvmod_api::saves::ListRequest>(&text).unwrap(),
+        saves_request
+    );
+    let plan_request = PlanRequest {
+        instance: PathBuf::from("/x"),
+        profile: None,
+        target: "game".into(),
+        args: vec!["-w".into()],
+        proton: Some("proton".into()),
+        steam_client: Some(PathBuf::from("/s")),
+        via_proton: true,
+        viewer: Some(PathBuf::from("/v")),
+        shared_root: Some(PathBuf::from("/n")),
+        restage: true,
+        no_stage: false,
+    };
+    let text = serde_json::to_string(&plan_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<PlanRequest>(&text).unwrap(),
+        plan_request
+    );
+}
+
+#[test]
+fn a_request_without_its_optional_fields_takes_the_documented_defaults() {
+    // A hand written request (a plan in a file) may leave out the optional fields: they are `None` or empty.
+    let plan: PlanRequest =
+        serde_json::from_str(r#"{"instance": "/x", "profile": null, "target": "game"}"#).unwrap();
+    assert_eq!(plan.args, Vec::<String>::new());
+    assert_eq!(plan.proton, None);
+    assert_eq!(plan.steam_client, None);
+    assert!(!plan.via_proton && !plan.restage && !plan.no_stage);
+    let saves: nvmod_api::saves::ListRequest =
+        serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
+    assert_eq!(saves.prefix, None);
+    let list: ListRequest =
+        serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
+    assert_eq!(list.category, None);
+}
+
+#[test]
+fn a_change_is_written_as_an_action_tag_and_a_place_tag() {
+    let change = Change::Move {
+        name: "A".into(),
+        to: Place::Position(3),
+    };
+    assert_eq!(
+        serde_json::to_value(&change).unwrap(),
+        serde_json::json!({"action": "move", "name": "A", "to": {"at": "position", "of": 3}})
+    );
+    let enable = Change::Enable {
+        mods: vec!["A".into()],
+    };
+    assert_eq!(
+        serde_json::to_value(&enable).unwrap(),
+        serde_json::json!({"action": "enable", "mods": ["A"]})
+    );
+    let before = Place::Before("B".into());
+    assert_eq!(
+        serde_json::to_value(&before).unwrap(),
+        serde_json::json!({"at": "before", "of": "B"})
+    );
+    assert_eq!(
+        serde_json::to_value(Place::Top).unwrap(),
+        serde_json::json!({"at": "top"})
+    );
+}
+
+#[test]
+fn an_error_kind_has_a_stable_code() {
+    for (kind, code) in [
+        (ErrorKind::Refused, "refused"),
+        (ErrorKind::Corrupt, "corrupt"),
+        (ErrorKind::Failed, "failed"),
+        (ErrorKind::Internal, "internal"),
+    ] {
+        assert_eq!(kind.code(), code);
+        assert_eq!(serde_json::to_value(kind).unwrap(), serde_json::json!(code));
+    }
+}
+
+#[test]
+fn a_cancel_token_already_used_stops_every_job_before_it_touches_the_instance() {
+    let dir = TempDir::new("api-cancel");
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let instance = dir.path().to_path_buf();
+    let list = ListRequest {
+        instance: instance.clone(),
+        profile: None,
+        category: None,
+    };
+    let change = ChangeRequest {
+        instance: instance.clone(),
+        profile: None,
+        change: Change::Enable {
+            mods: Vec::new(),
+        },
+        dry_run: false,
+    };
+    let saves = nvmod_api::saves::ListRequest {
+        instance: instance.clone(),
+        profile: None,
+        prefix: None,
+    };
+    let plan = PlanRequest {
+        instance,
+        profile: None,
+        target: "game".into(),
+        args: Vec::new(),
+        proton: None,
+        steam_client: None,
+        via_proton: false,
+        viewer: None,
+        shared_root: None,
+        restage: false,
+        no_stage: false,
+    };
+    // The folder is not an Instance at all: a cancelled job is a result, not a refusal.
+    assert!(matches!(
+        nvmod_api::mods::list(&list, &mut NoProgress, &cancel),
+        Ok(Outcome::Cancelled)
+    ));
+    assert!(matches!(
+        nvmod_api::mods::change(&change, &mut NoProgress, &cancel),
+        Ok(Outcome::Cancelled)
+    ));
+    assert!(matches!(
+        nvmod_api::saves::list(&saves, &mut NoProgress, &cancel),
+        Ok(Outcome::Cancelled)
+    ));
+    assert!(matches!(
+        nvmod_api::run::plan(&plan, &mut NoProgress, &cancel),
+        Ok(Outcome::Cancelled)
+    ));
+}
+
+#[test]
+fn a_mods_change_of_an_unknown_mod_is_a_refusal() {
+    let s = Scratch::new();
+    let request = ChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: Change::Enable {
+            mods: vec!["Nope".into()],
+        },
+        dry_run: false,
+    };
+    let error = nvmod_api::mods::change(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "mods.change");
+}
+
+#[test]
+fn a_saves_profile_that_cannot_be_chosen_is_refused_before_the_prefix_is_looked_at() {
+    let s = Scratch::new();
+    // The profile keeps its saves in a prefix that does not exist, and the profile asked for is not there either:
+    // the profile is the reason, as on the command line.
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=false\r\n",
+    )
+    .unwrap();
+    let request = nvmod_api::saves::ListRequest {
+        instance: s.root(),
+        profile: Some("Missing".into()),
+        prefix: None,
+    };
+    let error = nvmod_api::saves::list(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "saves.list");
+    assert!(error.summary.contains("Missing"), "{error}");
+    assert!(!error.summary.contains("prefix"), "{error}");
+}
+
+#[test]
+fn a_saves_profile_in_a_prefix_that_was_not_found_is_refused_with_the_prefix_in_words() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=false\r\n",
+    )
+    .unwrap();
+    let request = nvmod_api::saves::ListRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let error = nvmod_api::saves::list(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert!(error.summary.contains("prefix"), "{error}");
+}
+
+#[test]
+fn a_run_plan_for_an_unknown_target_is_a_refusal() {
+    let s = Scratch::new();
+    let request = PlanRequest {
+        instance: s.root(),
+        profile: None,
+        target: "No Such Tool".into(),
+        args: Vec::new(),
+        proton: None,
+        steam_client: None,
+        via_proton: false,
+        viewer: None,
+        shared_root: None,
+        restage: false,
+        no_stage: true,
+    };
+    let error = nvmod_api::run::plan(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "run.plan");
+}
+
+#[test]
+fn a_save_that_cannot_be_read_is_listed_as_unreadable_not_as_an_error() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("profiles/Default/settings.ini"),
+        "[General]\r\nLocalSaves=true\r\n",
+    )
+    .unwrap();
+    fs::create_dir_all(s.root().join("profiles/Default/saves")).unwrap();
+    fs::write(
+        s.root().join("profiles/Default/saves/Save 1.fos"),
+        SaveBuilder::new(1).plugins(&["FalloutNV.esm"]).build(),
+    )
+    .unwrap();
+    fs::write(s.root().join("profiles/Default/saves/Cut.fos"), b"FO3SAVEGAME\0").unwrap();
+    let request = nvmod_api::saves::ListRequest {
+        instance: s.root(),
+        profile: None,
+        prefix: None,
+    };
+    let listed = nvmod_api::saves::list(&request, &mut NoProgress, &CancelToken::new())
+        .expect("lists")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(listed.saves.len(), 2);
+    assert_eq!(listed.saves[0].name, "Cut.fos");
+    assert_eq!(listed.saves[0].status, "unreadable");
+    assert_eq!(listed.saves[1].plugins, Some(1));
+}
+
+#[test]
+fn a_mods_list_with_a_category_keeps_only_that_category() {
+    let s = Scratch::new();
+    fs::write(
+        s.root().join("mods/Patch/meta.ini"),
+        "[General]\r\ncategory=7,\r\n",
+    )
+    .unwrap();
+    let all = ListRequest {
+        instance: s.root(),
+        profile: None,
+        category: None,
+    };
+    let listed = nvmod_api::mods::list(&all, &mut NoProgress, &CancelToken::new())
+        .expect("lists")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(listed.mods.len(), 2);
+    let only = ListRequest {
+        category: Some(7),
+        ..all
+    };
+    let listed = nvmod_api::mods::list(&only, &mut NoProgress, &CancelToken::new())
+        .expect("lists")
+        .done()
+        .expect("not cancelled");
+    let names: Vec<&str> = listed.mods.iter().map(|r| r.row.name.as_str()).collect();
+    assert_eq!(names, ["Patch"]);
+}
+
+#[test]
+fn a_mods_list_gives_each_mod_its_categories_named_by_categories_dat() {
+    let s = Scratch::new();
+    write_file(&s.root(), "categories.dat", b"7|Patch fixes|1|0\r\n");
+    fs::write(
+        s.root().join("mods/Patch/meta.ini"),
+        "[General]\r\ncategory=7,\r\n",
+    )
+    .unwrap();
+    let request = ListRequest {
+        instance: s.root(),
+        profile: None,
+        category: None,
+    };
+    let listed = nvmod_api::mods::list(&request, &mut NoProgress, &CancelToken::new())
+        .expect("lists")
+        .done()
+        .expect("not cancelled");
+    let patch = &listed.mods[0];
+    assert_eq!(patch.row.name, "Patch");
+    assert_eq!(patch.categories.len(), 1);
+    assert_eq!(patch.categories[0].id, 7);
+    assert_eq!(patch.categories[0].name.as_deref(), Some("Patch fixes"));
+    assert!(listed.mods[1].categories.is_empty());
+}
+
+#[test]
+fn a_mods_change_reports_a_failing_step_as_failed() {
+    let s = Scratch::new();
+    let request = ChangeRequest {
+        instance: s.root(),
+        profile: None,
+        change: Change::Disable {
+            mods: vec!["Patch".into()],
+        },
+        dry_run: false,
+    };
+    // The same injected failure the command line tests use: the step fails and the profile is put back. The
+    // variable is set and removed around the call, and no other test of this binary reads it.
+    // SAFETY: `set_var` is unsafe in edition 2024 because another thread could read the environment at once; the
+    // other tests of this binary never read `NVMOD_FAIL_AT`.
+    unsafe { std::env::set_var("NVMOD_FAIL_AT", "lists") };
+    let changed = nvmod_api::mods::change(&request, &mut NoProgress, &CancelToken::new());
+    // SAFETY: as above; the variable is removed before anything else runs.
+    unsafe { std::env::remove_var("NVMOD_FAIL_AT") };
+    let error = changed.expect_err("failed");
+    assert_eq!(error.kind, ErrorKind::Failed);
+    assert_eq!(error.job, "mods.change");
+    assert!(error.summary.contains("rolled back"), "{error}");
+    let modlist = fs::read_to_string(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    assert!(
+        modlist.contains("+Patch"),
+        "the profile was put back: {modlist}"
+    );
 }
 
 #[test]

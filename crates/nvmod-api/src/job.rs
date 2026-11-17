@@ -82,6 +82,12 @@ impl CancelToken {
     }
 }
 
+impl From<&Self> for CancelToken {
+    fn from(token: &Self) -> Self {
+        token.clone()
+    }
+}
+
 /// How a job ended when it did not fail. A cancelled job is a result, not an error: it stopped at a safe point
 /// and wrote nothing after it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,10 +162,15 @@ impl JobError {
     #[must_use]
     pub fn copy_text(&self) -> String {
         let summary = match std::env::var("HOME") {
-            Ok(home) if home.trim_end_matches('/').len() > 1 => {
-                tilde(&self.summary, home.trim_end_matches('/'))
+            Ok(home) => {
+                let home = home.trim_end_matches('/');
+                if home.len() > 1 {
+                    tilde(&self.summary, home)
+                } else {
+                    self.summary.clone()
+                }
             }
-            _ => self.summary.clone(),
+            Err(_) => self.summary.clone(),
         };
         format!(
             "nvmod {}\njob: {}\nerror: {}\n{summary}",
@@ -217,6 +228,23 @@ mod tests {
         );
         assert_eq!(tilde("/home/someone2/Data", home), "/home/someone2/Data");
         assert_eq!(tilde("at /home/someone", home), "at ~");
+    }
+
+    #[test]
+    fn a_home_directory_with_a_trailing_slash_is_written_as_a_tilde_too() {
+        let home = "/home/someone";
+        assert_eq!(tilde("/home/someone/Data", home), "~/Data");
+        assert_eq!(tilde("at /home/someone/", home), "at ~/");
+        assert_eq!(tilde("/home/someone", home), "~");
+    }
+
+    #[test]
+    fn a_cancel_token_from_a_reference_is_a_clone_of_the_same_request() {
+        let token = CancelToken::new();
+        let copy = CancelToken::from(&token);
+        assert!(!copy.is_cancelled());
+        copy.cancel();
+        assert!(token.is_cancelled());
     }
 
     #[test]
