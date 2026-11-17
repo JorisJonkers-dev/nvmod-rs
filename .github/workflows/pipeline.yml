@@ -49,9 +49,8 @@ jobs:
     uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
 
   # nvmod's crates ship inside the Toolbox on Linux, Windows and macOS (Toolbox ADR-0006), so they build and test
-  # natively on all three. Linux runs in Pipeline Complete itself. Windows and macOS report only, without gating
-  # Pipeline Complete, until the failures listed in JorisJonkers-dev/nvmod-rs#98 pass; then drop continue-on-error
-  # and the exception for this job in the gate below.
+  # natively on all three. Linux runs in Pipeline Complete itself; this job runs Windows and macOS, and Pipeline
+  # Complete gates on it.
   platforms:
     name: Build and test (${{ matrix.os }})
     strategy:
@@ -60,7 +59,6 @@ jobs:
         os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -159,5 +157,5 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           set -euo pipefail
-          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | select(.key != "platforms") | "\(.key): \(.value.result)"' <<<"$NEEDS")"
+          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | "\(.key): \(.value.result)"' <<<"$NEEDS")"
           if [ -n "$failed" ]; then echo "$failed"; exit 1; fi
