@@ -5,6 +5,7 @@ use nvmod_catalog::{Catalog, Kind};
 use nvmod_core::Severity;
 use nvmod_doctor::{Report, run};
 use nvmod_formats::Mo2Instance;
+use nvmod_formats::winpath::PathStyle;
 use nvmod_testkit::{Mo2Builder, ModSpec, PeBuilder, TempDir, write_file};
 use std::path::Path;
 
@@ -470,15 +471,24 @@ fn an_unusable_game_path_is_a_warning_not_a_failure() {
     write_file(
         root.path(),
         "ModOrganizer.ini",
-        b"[General]\r\ngamePath=@ByteArray(C:\\\\Games\\\\FNV)\r\n",
+        b"[General]\r\ngamePath=@ByteArray(C:\\\\nvmod-no-such-game\\\\FNV)\r\n",
     );
     write_file(root.path(), "profiles/Default/modlist.txt", b"");
     let instance = Mo2Instance::open(root.path()).unwrap();
     let profile = instance.load_profile("Default").unwrap();
     let report = run(&instance, &profile, None, &Catalog::builtin());
     assert!(
-        codes(&report).contains(&"game.path-unusable")
-            && codes(&report).contains(&"instance.path-unresolved")
+        codes(&report).contains(&"game.path-unusable"),
+        "{:?}",
+        codes(&report)
+    );
+    // Under Wine `C:` has no mapping, which is reported too; on Windows it is a drive and the folder is only
+    // missing.
+    assert_eq!(
+        codes(&report).contains(&"instance.path-unresolved"),
+        PathStyle::host() == PathStyle::Wine,
+        "{:?}",
+        codes(&report)
     );
     let report = run(
         &instance,
