@@ -78,8 +78,8 @@ pub fn pid_alive(pid: u32) -> bool {
                 .rsplit_once(')')
                 .and_then(|(_, rest)| rest.trim_start().chars().next())
                 .is_none_or(|state| state != 'Z' && state != 'X'),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
-            // `/proc` hides other users' processes when mounted with `hidepid`: ask the kernel instead.
+            // No readable entry: gone, or hidden because `/proc` is mounted with `hidepid` (which also reads as
+            // not found). The kernel tells the two apart.
             Err(_) => signal_alive(pid),
         }
     } else {
