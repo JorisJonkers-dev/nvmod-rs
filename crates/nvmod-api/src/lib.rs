@@ -37,6 +37,7 @@
 //! | [`backup::list`] | [`backup::ListRequest`] | [`backup::ListOutput`] |
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |
 //! | [`backup::restore`] | [`backup::RestoreRequest`] | [`backup::RestoreOutput`] |
+//! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::Report`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
@@ -45,6 +46,7 @@
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
 pub mod backup;
+pub mod init;
 pub mod install;
 pub mod job;
 pub mod loadorder;
