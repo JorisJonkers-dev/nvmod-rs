@@ -460,11 +460,11 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     // The executable is a link to the base copy's, never a copy.
     assert_eq!(rec["exe_bytes"], String::from_utf8_lossy(SENTINEL));
     assert_eq!(
-        std::fs::read_link(run.join("FalloutNV.exe")).unwrap(),
+        std::fs::canonicalize(std::fs::read_link(run.join("FalloutNV.exe")).unwrap()).unwrap(),
         base.join("FalloutNV.exe")
     );
     assert_eq!(
-        std::fs::read_link(run.join("Data")).unwrap(),
+        std::fs::canonicalize(std::fs::read_link(run.join("Data")).unwrap()).unwrap(),
         root.join("staging/Default/data")
     );
     assert_eq!(real_copies_of_the_exe(s.inst.path()), Vec::<PathBuf>::new());
