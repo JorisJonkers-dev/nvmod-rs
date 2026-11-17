@@ -2,6 +2,7 @@
 //! Installing a Mod from an archive into a profile, and taking the last install back.
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
+pub use nvmod_modinstall::Question;
 pub use nvmod_modinstall::Report;
 pub use nvmod_modinstall::RollbackReport;
 use nvmod_modinstall::{InstallError, Request as ModInstallRequest};
@@ -26,6 +27,25 @@ pub struct InstallRequest {
     /// Plan only: nothing is written.
     #[serde(default)]
     pub dry_run: bool,
+    /// A JSON file with answers to the FOMOD's questions.
+    #[serde(default)]
+    pub answers: Option<PathBuf>,
+    /// Extract with this tool instead of the built-in readers.
+    #[serde(default)]
+    pub extract_tool: Option<PathBuf>,
+    /// The most bytes the extraction may write; `None` for the default limit.
+    #[serde(default)]
+    pub max_extract_bytes: Option<u64>,
+}
+
+/// The result of [`install`].
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "kebab-case", tag = "outcome", content = "result")]
+pub enum InstallOutput {
+    /// The Mod was installed, or would be with a dry run.
+    Installed(Report),
+    /// The FOMOD needs answers before anything can be installed; nothing was written.
+    Questions(Vec<Question>),
 }
 
 /// What [`rollback`] needs.
@@ -37,6 +57,9 @@ pub struct RollbackRequest {
 
 /// Install `request.archive` into `request.profile` of the Instance, or plan to.
 ///
+/// A FOMOD whose choices cannot be inferred is a result, not an error: [`InstallOutput::Questions`] carries the
+/// questions and nothing was written, and a second call with `request.answers` completes the install.
+///
 /// # Errors
 /// [`ErrorKind::Refused`] before anything was written; [`ErrorKind::Failed`] when a step failed and the Instance
 /// was put back.
@@ -44,7 +67,7 @@ pub fn install(
     request: &InstallRequest,
     progress: &mut dyn Progress,
     cancel: &CancelToken,
-) -> Result<Outcome<Report>, JobError> {
+) -> Result<Outcome<InstallOutput>, JobError> {
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -57,24 +80,26 @@ pub fn install(
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
+    let mut limits = nvmod_modinstall::Limits::default();
+    if let Some(max_bytes) = request.max_extract_bytes {
+        limits.max_bytes = max_bytes;
+    }
     let mod_request = ModInstallRequest {
         instance: &instance,
         profile: &profile,
         archive: &request.archive,
         name: request.name.as_deref(),
         dry_run: request.dry_run,
-        answers: None,
-        extract_tool: None,
-        limits: nvmod_modinstall::Limits::default(),
+        answers: request.answers.as_deref(),
+        extract_tool: request.extract_tool.as_deref(),
+        limits,
     };
     match nvmod_modinstall::install(&mod_request) {
-        Ok(report) => Ok(Outcome::Done(report)),
+        Ok(report) => Ok(Outcome::Done(InstallOutput::Installed(report))),
+        Err(InstallError::Questions(questions)) => {
+            Ok(Outcome::Done(InstallOutput::Questions(questions)))
+        }
         Err(InstallError::Refused(why)) => Err(JobError::new(ErrorKind::Refused, INSTALL, why)),
-        Err(InstallError::Questions(_)) => Err(JobError::new(
-            ErrorKind::Refused,
-            INSTALL,
-            "the FOMOD needs answers",
-        )),
         Err(InstallError::Failed(why)) => Err(JobError::new(ErrorKind::Failed, INSTALL, why)),
     }
 }

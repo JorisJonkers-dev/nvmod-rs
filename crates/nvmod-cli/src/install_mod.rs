@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod install <archive> --instance <dir> ...` and `nvmod rollback --instance <dir>`.
 
-use crate::{FOUND, OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
-use nvmod_api::install::RollbackRequest;
+use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
+use nvmod_api::install::{InstallOutput, InstallRequest, Question, Report, RollbackRequest};
 use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_instance::{InstanceError, NvmodInstance};
-use nvmod_modinstall::{InstallError, Limits, Report, Request};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--extract-tool <path>] [--max-extract-bytes <n>] [--json]";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
@@ -82,6 +81,33 @@ fn print_report(out: &mut dyn Write, report: &Report, json: bool) {
     }
 }
 
+fn print_questions(out: &mut dyn Write, questions: &[Question], json: bool) {
+    if json {
+        print_json(
+            out,
+            &serde_json::json!({ "status": "questions", "questions": questions }),
+        );
+        return;
+    }
+    let _ = writeln!(
+        out,
+        "nvmod install: the FOMOD needs answers (nothing was changed); give them with --answers <file>:"
+    );
+    for q in questions {
+        let _ = writeln!(
+            out,
+            "  {} ({}, choose {} to {})",
+            q.id,
+            q.kind.as_str(),
+            q.min,
+            q.max
+        );
+        for o in &q.options {
+            let _ = writeln!(out, "    - {}: {}", o.name, o.description);
+        }
+    }
+}
+
 pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
         args,
@@ -106,75 +132,35 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             return USAGE;
         }
     };
-    let mut limits = Limits::default();
+    let mut max_extract_bytes = None;
     if let Some(text) = args.option("max-extract-bytes") {
         let Ok(n) = text.parse() else {
             let _ = writeln!(err, "nvmod install: --max-extract-bytes wants a number");
             return USAGE;
         };
-        limits.max_bytes = n;
+        max_extract_bytes = Some(n);
     }
-    let instance = match open(&args, "install", err) {
-        Ok(i) => i,
-        Err(code) => return code,
-    };
-    let profile = match instance.resolve_profile(args.option("profile")) {
-        Ok(p) => p,
-        Err(e) => {
-            let _ = writeln!(err, "nvmod install: refused: {e}");
-            return REFUSED;
-        }
-    };
-    let request = Request {
-        instance: &instance,
-        profile: &profile,
-        archive: Path::new(&args.positional[0]),
-        name: args.option("name"),
+    let request = InstallRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        archive: PathBuf::from(&args.positional[0]),
+        name: args.option("name").map(str::to_owned),
         dry_run: args.flag("dry-run"),
-        answers: args.option("answers").map(Path::new),
-        extract_tool: args.option("extract-tool").map(Path::new),
-        limits,
+        answers: args.option("answers").map(PathBuf::from),
+        extract_tool: args.option("extract-tool").map(PathBuf::from),
+        max_extract_bytes,
     };
-    match nvmod_modinstall::install(&request) {
-        Ok(report) => {
+    match nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(InstallOutput::Installed(report))) => {
             print_report(out, &report, args.flag("json"));
             OK
         }
-        Err(InstallError::Questions(questions)) => {
-            if args.flag("json") {
-                print_json(
-                    out,
-                    &serde_json::json!({ "status": "questions", "questions": questions }),
-                );
-            } else {
-                let _ = writeln!(
-                    out,
-                    "nvmod install: the FOMOD needs answers (nothing was changed); give them with --answers <file>:"
-                );
-                for q in &questions {
-                    let _ = writeln!(
-                        out,
-                        "  {} ({}, choose {} to {})",
-                        q.id,
-                        q.kind.as_str(),
-                        q.min,
-                        q.max
-                    );
-                    for o in &q.options {
-                        let _ = writeln!(out, "    - {}: {}", o.name, o.description);
-                    }
-                }
-            }
+        Ok(Outcome::Done(InstallOutput::Questions(questions))) => {
+            print_questions(out, &questions, args.flag("json"));
             FOUND
         }
-        Err(InstallError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod install: refused: {why}");
-            REFUSED
-        }
-        Err(InstallError::Failed(why)) => {
-            let _ = writeln!(err, "nvmod install: {why}");
-            ROLLED_BACK
-        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("install", &e, err),
     }
 }
 
