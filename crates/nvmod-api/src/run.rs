@@ -44,6 +44,16 @@ pub struct PlanRequest {
     pub no_stage: bool,
 }
 
+/// The words of a refusal of the run plan. nvmod-run names the command line options it refuses (`--proton`); a
+/// caller of this API gave a field of the request instead, so a reason that names an option is said again without
+/// it.
+fn refusal(why: &str) -> String {
+    match why.strip_prefix("--proton ") {
+        Some(rest) => format!("the Proton program {rest}"),
+        None => why.to_owned(),
+    }
+}
+
 /// Plan a run for the host platform: the program, its arguments and environment, the staged `Data` folder and
 /// what happens to the Staging tree first. Reads only and starts nothing.
 ///
@@ -74,7 +84,7 @@ pub fn plan(
         shared_root: request.shared_root.clone(),
     };
     let mut plan =
-        nvmod_run::plan(&inner).map_err(|why| JobError::new(ErrorKind::Refused, PLAN, why))?;
+        nvmod_run::plan(&inner).map_err(|why| JobError::new(ErrorKind::Refused, PLAN, refusal(&why)))?;
     plan.staging = nvmod_run::plan_staging(&instance, &profile, request.restage, request.no_stage);
     Ok(Outcome::Done(plan))
 }

@@ -73,10 +73,7 @@ pub fn sort(
         "read-masterlist",
         "loadorder.sort.reading-masterlist",
     ));
-    let masterlist = nvmod_loadorder::load_masterlist(&request.masterlist).map_err(|e| {
-        // A masterlist that cannot be read is a refusal, as on the command line.
-        JobError::new(ErrorKind::Refused, SORT, reason(&e))
-    })?;
+    let masterlist = nvmod_loadorder::load_masterlist(&request.masterlist).map_err(failure)?;
     let Some(proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
         return Ok(Outcome::Cancelled);
     };
@@ -95,13 +92,6 @@ pub fn sort(
         proposal,
         applied: Some(applied),
     }))
-}
-
-/// The words of a Load order error, whichever side it came from.
-fn reason(error: &Error) -> String {
-    match error {
-        Error::Refused(why) | Error::Failed(why) => why.clone(),
-    }
 }
 
 /// Let loot-rs propose the order, reporting its stages as they happen. `Ok(None)` is a cancelled sort: loot-rs
@@ -130,10 +120,10 @@ fn propose(
             }
         }));
     let proposed = std::thread::scope(|scope| {
-        let worker = scope.spawn(|| {
-            let result = nvmod_loadorder::propose_with(instance, profile, masterlist, &options);
-            drop(options);
-            result
+        // The worker owns the options, and with them the only sender: when it ends, the channel ends and the loop
+        // below finishes, whether the sort returned, refused or panicked.
+        let worker = scope.spawn(move || {
+            nvmod_loadorder::propose_with(instance, profile, masterlist, &options)
         });
         for p in receive {
             let (step, label) = step_of(p.stage);
