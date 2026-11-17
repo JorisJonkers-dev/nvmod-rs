@@ -498,7 +498,11 @@ fn the_shipped_lock_lists_loot_rs_as_linked() {
         .find(|l| l.starts_with("loot-rs "))
         .unwrap_or_else(|| panic!("no loot-rs line: {out}"));
     let version = line.split_whitespace().nth(1).unwrap();
-    assert_eq!(line, format!("loot-rs {version} linked (tag v{version})"), "{out}");
+    assert_eq!(
+        line,
+        format!("loot-rs {version} linked (tag v{version})"),
+        "{out}"
+    );
 }
 
 #[test]
