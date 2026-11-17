@@ -696,6 +696,7 @@ dependencies = [
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
+ "nvmod-plugins",
  "nvmod-profile",
  "nvmod-run",
  "nvmod-saves",
