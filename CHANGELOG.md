@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.0...v0.6.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** pin dependencies ([#99](https://github.com/JorisJonkers-dev/nvmod-rs/issues/99)) ([c0b384f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/c0b384f9acfeb94d6e82114cdfbc2ec46e38c445))
+
 ## [0.6.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.5.0...v0.6.0) (2026-11-16)
 
 
