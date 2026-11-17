@@ -14,11 +14,11 @@ nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-runner = { workspace = true }
 nvmod-stage = { workspace = true }
-roxmltree = "0.21.2"
+roxmltree = "=0.21.2"
 serde = { workspace = true }
 serde_json = { workspace = true }
-tar = { version = "0.4.46", default-features = false }
-zip = { version = "9.4.1", default-features = false, features = ["deflate"] }
+tar = { version = "=0.4.46", default-features = false }
+zip = { version = "=9.4.1", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }

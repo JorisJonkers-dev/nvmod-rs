@@ -9,7 +9,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4"
+libfuzzer-sys = "=0.4.13"
 nvmod-core = { path = "../crates/nvmod-core" }
 nvmod-pe = { path = "../crates/nvmod-pe" }
 nvmod-bsa = { path = "../crates/nvmod-bsa" }
