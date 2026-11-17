@@ -1408,3 +1408,41 @@ fn saves_backup_cancelled_before_write_changes_nothing() {
         before
     );
 }
+
+#[test]
+fn init_makes_an_instance_and_refuses_a_second_one_in_the_same_folder() {
+    let base = TempDir::new("api-init-base");
+    BaseBuilder::steam().write(base.path());
+    let inst = TempDir::new("api-init-inst");
+    let request = nvmod_api::init::CreateRequest {
+        instance: inst.path().join("fnv"),
+        base: base.path().to_path_buf(),
+    };
+    let made = nvmod_api::init::create(&request, &mut NoProgress, &CancelToken::new())
+        .expect("makes")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(
+        made.instance.canonicalize().expect("made"),
+        request.instance.canonicalize().expect("exists")
+    );
+    assert!(request.instance.is_dir());
+    let again = nvmod_api::init::create(&request, &mut NoProgress, &CancelToken::new());
+    assert_eq!(again.expect_err("refused").kind, ErrorKind::Refused);
+}
+
+#[test]
+fn init_cancelled_before_it_starts_writes_nothing() {
+    let base = TempDir::new("api-init-base2");
+    BaseBuilder::steam().write(base.path());
+    let inst = TempDir::new("api-init-inst2");
+    let request = nvmod_api::init::CreateRequest {
+        instance: inst.path().join("fnv"),
+        base: base.path().to_path_buf(),
+    };
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let outcome = nvmod_api::init::create(&request, &mut NoProgress, &cancel).expect("runs");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert!(!request.instance.exists());
+}
