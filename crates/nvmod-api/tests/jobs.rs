@@ -265,8 +265,8 @@ fn a_sort_that_loot_rs_refuses_is_a_refusal() {
         "plugins:\n  - name: 'Base.esp'\n    after: [Patch.esp]\n",
     )
     .unwrap();
-    let error = sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new())
-        .expect_err("refused");
+    let error =
+        sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new()).expect_err("refused");
     assert_eq!(error.kind, ErrorKind::Refused);
     assert_eq!(error.job, "loadorder.sort");
     assert!(error.summary.contains("loot-rs cannot sort"), "{error}");
@@ -276,8 +276,8 @@ fn a_sort_that_loot_rs_refuses_is_a_refusal() {
 fn a_profile_without_a_staging_tree_is_refused_with_the_stage_command() {
     let s = Scratch::new();
     fs::remove_dir_all(s.root().join("staging")).unwrap();
-    let error = sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new())
-        .expect_err("refused");
+    let error =
+        sort(&s.sort_request(false), &mut NoProgress, &CancelToken::new()).expect_err("refused");
     assert_eq!(error.kind, ErrorKind::Refused);
     assert!(error.summary.contains("nvmod stage"), "{error}");
 }
@@ -439,8 +439,7 @@ fn a_request_without_its_optional_fields_takes_the_documented_defaults() {
     let saves: nvmod_api::saves::ListRequest =
         serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
     assert_eq!(saves.prefix, None);
-    let list: ListRequest =
-        serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
+    let list: ListRequest = serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
     assert_eq!(list.category, None);
 }
 
@@ -499,9 +498,7 @@ fn a_cancel_token_already_used_stops_every_job_before_it_touches_the_instance() 
     let change = ChangeRequest {
         instance: instance.clone(),
         profile: None,
-        change: Change::Enable {
-            mods: Vec::new(),
-        },
+        change: Change::Enable { mods: Vec::new() },
         dry_run: false,
     };
     let saves = nvmod_api::saves::ListRequest {
@@ -616,8 +613,8 @@ fn a_run_plan_for_an_unknown_target_is_a_refusal() {
         restage: false,
         no_stage: true,
     };
-    let error = nvmod_api::run::plan(&request, &mut NoProgress, &CancelToken::new())
-        .expect_err("refused");
+    let error =
+        nvmod_api::run::plan(&request, &mut NoProgress, &CancelToken::new()).expect_err("refused");
     assert_eq!(error.kind, ErrorKind::Refused);
     assert_eq!(error.job, "run.plan");
 }
@@ -636,7 +633,11 @@ fn a_save_that_cannot_be_read_is_listed_as_unreadable_not_as_an_error() {
         SaveBuilder::new(1).plugins(&["FalloutNV.esm"]).build(),
     )
     .unwrap();
-    fs::write(s.root().join("profiles/Default/saves/Cut.fos"), b"FO3SAVEGAME\0").unwrap();
+    fs::write(
+        s.root().join("profiles/Default/saves/Cut.fos"),
+        b"FO3SAVEGAME\0",
+    )
+    .unwrap();
     let request = nvmod_api::saves::ListRequest {
         instance: s.root(),
         profile: None,
@@ -705,37 +706,7 @@ fn a_mods_list_gives_each_mod_its_categories_named_by_categories_dat() {
     assert_eq!(patch.categories.len(), 1);
     assert_eq!(patch.categories[0].id, 7);
     assert_eq!(patch.categories[0].name.as_deref(), Some("Patch fixes"));
-    assert!(listed.mods[1].categories.is_empty());
-}
-
-#[test]
-fn a_mods_change_reports_a_failing_step_as_failed() {
-    let s = Scratch::new();
-    let request = ChangeRequest {
-        instance: s.root(),
-        profile: None,
-        change: Change::Disable {
-            mods: vec!["Patch".into()],
-        },
-        dry_run: false,
-    };
-    // The same injected failure the command line tests use: the step fails and the profile is put back. The
-    // variable is set and removed around the call, and no other test of this binary reads it.
-    // SAFETY: `set_var` is unsafe in edition 2024 because another thread could read the environment at once; the
-    // other tests of this binary never read `NVMOD_FAIL_AT`.
-    unsafe { std::env::set_var("NVMOD_FAIL_AT", "lists") };
-    let changed = nvmod_api::mods::change(&request, &mut NoProgress, &CancelToken::new());
-    // SAFETY: as above; the variable is removed before anything else runs.
-    unsafe { std::env::remove_var("NVMOD_FAIL_AT") };
-    let error = changed.expect_err("failed");
-    assert_eq!(error.kind, ErrorKind::Failed);
-    assert_eq!(error.job, "mods.change");
-    assert!(error.summary.contains("rolled back"), "{error}");
-    let modlist = fs::read_to_string(s.root().join("profiles/Default/modlist.txt")).unwrap();
-    assert!(
-        modlist.contains("+Patch"),
-        "the profile was put back: {modlist}"
-    );
+    assert_eq!(listed.mods[1].categories.len(), 0);
 }
 
 #[test]

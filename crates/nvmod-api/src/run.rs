@@ -83,8 +83,8 @@ pub fn plan(
         viewer: request.viewer.clone(),
         shared_root: request.shared_root.clone(),
     };
-    let mut plan =
-        nvmod_run::plan(&inner).map_err(|why| JobError::new(ErrorKind::Refused, PLAN, refusal(&why)))?;
+    let mut plan = nvmod_run::plan(&inner)
+        .map_err(|why| JobError::new(ErrorKind::Refused, PLAN, refusal(&why)))?;
     plan.staging = nvmod_run::plan_staging(&instance, &profile, request.restage, request.no_stage);
     Ok(Outcome::Done(plan))
 }

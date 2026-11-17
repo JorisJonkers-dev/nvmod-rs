@@ -111,20 +111,19 @@ fn propose(
     // loot-rs reports from its own threads; the events cross to this thread, which owns `progress`. The hook
     // stops reporting once the token is used, so a cancelled sort does not wait for a progress event first.
     let (send, receive) = mpsc::channel();
-    let stop = cancel.clone();
+    let hook_cancel = cancel.clone();
     let options = SortOptions::default()
         .with_cancel(cancel.to_loot())
         .with_progress(ProgressHook::new(move |p| {
-            if !stop.is_cancelled() {
+            if !hook_cancel.is_cancelled() {
                 let _ = send.send(p);
             }
         }));
     let proposed = std::thread::scope(|scope| {
         // The worker owns the options, and with them the only sender: when it ends, the channel ends and the loop
         // below finishes, whether the sort returned, refused or panicked.
-        let worker = scope.spawn(move || {
-            nvmod_loadorder::propose_with(instance, profile, masterlist, &options)
-        });
+        let worker = scope
+            .spawn(move || nvmod_loadorder::propose_with(instance, profile, masterlist, &options));
         for p in receive {
             let (step, label) = step_of(p.stage);
             progress.report(&Event {
@@ -139,7 +138,7 @@ fn propose(
     match proposed {
         Ok(Ok(proposal)) => Ok(Some(proposal)),
         // A cancelled sort is a result, whether loot-rs said so or the worker died on the way out.
-        Ok(Err(_) | Err(_)) if cancel.is_cancelled() => Ok(None),
+        Ok(Err(_)) | Err(_) if cancel.is_cancelled() => Ok(None),
         Ok(Err(e)) => Err(failure(e)),
         Err(_) => Err(JobError::new(
             ErrorKind::Internal,

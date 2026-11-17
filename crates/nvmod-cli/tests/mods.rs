@@ -100,7 +100,8 @@ fn names(v: &Value) -> Vec<String> {
 }
 
 #[test]
-fn a_category_that_is_not_a_number_is_refused_but_a_folder_that_is_not_an_instance_is_refused_first() {
+fn a_category_that_is_not_a_number_is_refused_but_a_folder_that_is_not_an_instance_is_refused_first()
+ {
     let s = Scratch::new(true);
     let before = snapshot(&s.root());
     // A folder that is not an Instance is the older check and keeps its own words.
