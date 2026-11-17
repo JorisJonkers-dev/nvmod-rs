@@ -5,6 +5,7 @@
 mod archive;
 mod base;
 mod bsa;
+mod links;
 mod mo2;
 mod nvrs;
 mod pe;
@@ -14,6 +15,7 @@ mod save;
 pub use archive::{TarBuilder, ZipBuilder};
 pub use base::{BaseBuilder, Store, snapshot};
 pub use bsa::BsaBuilder;
+pub use links::{link_count, same_file};
 pub use mo2::{Mo2Builder, ModSpec, TempDir, write_file};
 pub use nvrs::{
     FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FAKE_FAILING_RELEASE_BINARY,

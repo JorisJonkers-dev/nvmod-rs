@@ -10,5 +10,8 @@ description = "Builds synthetic PE files and MO2 instances in code, so no real g
 
 [dependencies]
 
+[target.'cfg(windows)'.dependencies]
+winapi-util = "=0.1.11"
+
 [lints]
 workspace = true

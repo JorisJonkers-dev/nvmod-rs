@@ -26,14 +26,25 @@ pub(crate) struct Stamp {
     linked: bool,
 }
 
+/// Whether the file has more than one name (a hard link), so that a new time would show in the Mod folder too.
 #[cfg(unix)]
-fn shares_inode(meta: &fs::Metadata) -> bool {
+fn shares_inode(_: &Path, meta: &fs::Metadata) -> bool {
     use std::os::unix::fs::MetadataExt;
     meta.nlink() > 1
 }
 
-#[cfg(not(unix))]
-fn shares_inode(_: &fs::Metadata) -> bool {
+/// Whether the file has more than one name (a hard link). NTFS keeps the times with the file, not the name, just
+/// like an inode does, so a hard-linked plugin needs a copy of its own there too. The link count comes from the
+/// file's handle; the standard library does not give it on stable Rust.
+#[cfg(windows)]
+fn shares_inode(path: &Path, _: &fs::Metadata) -> bool {
+    fs::File::open(path)
+        .and_then(|file| winapi_util::file::information(&file))
+        .is_ok_and(|info| info.number_of_links() > 1)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn shares_inode(_: &Path, _: &fs::Metadata) -> bool {
     false
 }
 
@@ -49,7 +60,7 @@ pub(crate) fn plan(data: &Path, order: &[Slot]) -> Vec<Stamp> {
             continue;
         };
         let time = target_time(index);
-        let linked = shares_inode(&meta);
+        let linked = shares_inode(&path, &meta);
         if linked || meta.modified().ok() != Some(time) {
             stamps.push(Stamp { path, time, linked });
         }

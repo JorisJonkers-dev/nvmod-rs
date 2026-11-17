@@ -2,7 +2,9 @@
 //! `nvmod sort`, run as a program against a scratch Instance made by `nvmod init` and `nvmod stage`. Plugins are
 //! synthetic headers built by the testkit and the masterlist is written here in code; no game data is used.
 
-use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{
+    BaseBuilder, PluginBuilder, TempDir, link_count, same_file, snapshot, write_file,
+};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -260,29 +262,18 @@ fn the_mod_folders_are_untouched_when_the_staged_files_get_their_times() {
         assert_eq!(&fs::read(s.mod_file(f)).unwrap(), bytes);
     }
     assert_eq!(snapshot(&s.root().join("mods")), mods_before);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        for f in files {
-            let mod_inode = fs::metadata(s.mod_file(f)).unwrap();
-            let name = f.rsplit('/').next().unwrap();
-            let staged = fs::metadata(s.staged(name)).unwrap();
-            assert_ne!(mod_inode.ino(), staged.ino(), "{f} is still linked");
-            assert_eq!(staged.nlink(), 1);
-            assert_eq!(mod_inode.nlink(), 1);
-        }
+    for f in files {
+        let name = f.rsplit('/').next().unwrap();
+        let (from_mod, staged) = (s.mod_file(f), s.staged(name));
+        assert!(!same_file(&from_mod, &staged), "{f} is still linked");
+        assert_eq!(link_count(&staged), 1);
+        assert_eq!(link_count(&from_mod), 1);
     }
     // Files that are not plugins stay hard links to the Mod.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        assert_eq!(
-            fs::metadata(s.mod_file("Core/Textures/Dirt.dds"))
-                .unwrap()
-                .ino(),
-            fs::metadata(s.staged("textures/dirt.dds")).unwrap().ino()
-        );
-    }
+    assert!(same_file(
+        &s.mod_file("Core/Textures/Dirt.dds"),
+        &s.staged("textures/dirt.dds")
+    ));
 }
 
 #[test]
@@ -325,15 +316,10 @@ fn rollback_undoes_the_sort() {
     assert_eq!(s.profile_file("modlist.txt"), lists_before.2);
     assert!(s.mod_file("Core/Base.esp").is_file(), "the Mod stays");
     assert_eq!(mtime(&s.mod_file("Core/Base.esp")), mod_times);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        assert_eq!(
-            fs::metadata(s.staged("base.esp")).unwrap().ino(),
-            fs::metadata(s.mod_file("Core/Base.esp")).unwrap().ino(),
-            "the Staging tree is linked again"
-        );
-    }
+    assert!(
+        same_file(&s.staged("base.esp"), &s.mod_file("Core/Base.esp")),
+        "the Staging tree is linked again"
+    );
     let (code, _, err) = nvmod(&["rollback", "--instance", s.root().to_str().unwrap()]);
     assert_eq!(code, 2, "{err}");
 }
