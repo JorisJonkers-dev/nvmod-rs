@@ -3,6 +3,9 @@
 //! (APFS) and Windows (NTFS) do not, and there `Textures/Wall.dds` and `textures/wall.dds` are one file.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static PROBES: AtomicU32 = AtomicU32::new(0);
 
 /// Whether the file system of `dir` (which must exist) keeps `a` and `A` apart. It writes and removes a probe file.
 ///
@@ -10,14 +13,16 @@ use std::path::Path;
 /// When the probe file cannot be written.
 #[must_use]
 pub fn case_sensitive(dir: &Path) -> bool {
-    let probe = dir.join(format!(".nvmod-Case-Probe-{}", std::process::id()));
+    // One name per call, so tests probing one folder at the same time do not see each other's probe.
+    let n = PROBES.fetch_add(1, Ordering::Relaxed);
+    let probe = dir.join(format!(".nvmod-Case-Probe-{}-{n}", std::process::id()));
     std::fs::write(&probe, b"").unwrap_or_else(|e| panic!("{}: {e}", probe.display()));
     let lower = dir.join(
         probe
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or_default()
-            .to_lowercase(),
+            .to_ascii_lowercase(),
     );
     let sensitive = !lower.exists();
     let _ = std::fs::remove_file(&probe);
