@@ -154,17 +154,18 @@ fn mask_paths(text: &str) -> String {
             && path_may_start_after(prev)
             && chars.get(i + 1) == Some(&':')
             && matches!(chars.get(i + 2), Some('\\' | '/'));
-        let unc = c == '\\'
-            && chars.get(i + 1) == Some(&'\\')
+        // `\\server\share`, and `//server/share`, which Windows takes too.
+        let unc = matches!(c, '\\' | '/')
+            && chars.get(i + 1) == Some(&c)
             && path_may_start_after(prev)
             && chars
                 .get(i + 2)
-                .is_some_and(|n| !n.is_whitespace() && *n != '\\');
+                .is_some_and(|n| !n.is_whitespace() && !matches!(n, '\\' | '/'));
         if unix || windows || unc {
             // Skip the drive's colon before looking for the end, also in a verbatim `\\?\C:` or `\\.\C:`.
             let verbatim_drive = unc
                 && matches!(chars.get(i + 2), Some('?' | '.'))
-                && chars.get(i + 3) == Some(&'\\')
+                && chars.get(i + 3) == Some(&c)
                 && chars.get(i + 4).is_some_and(char::is_ascii_alphabetic)
                 && chars.get(i + 5) == Some(&':');
             let mut j = if verbatim_drive {
@@ -176,7 +177,9 @@ fn mask_paths(text: &str) -> String {
             };
             // A quoted path may hold spaces: it runs to the matching quote.
             let quote = prev.filter(|q| matches!(q, '"' | '\''));
-            while j < chars.len() && quote.map_or(!ends_path(chars[j]), |q| chars[j] != q) {
+            // A UNC path runs on past a colon too (`\\host:8080\x` is not a drive and must not leave its rest).
+            let ends = |ch: char| ends_path(ch) && !(unc && ch == ':');
+            while j < chars.len() && quote.map_or(!ends(chars[j]), |q| chars[j] != q) {
                 j += 1;
             }
             out.push_str(PATH_MASK);
@@ -322,6 +325,9 @@ mod tests {
             r"\\?\C:\Users\me\x.esm",
             r"\\?\UNC\server\share\x",
             r"\\.\C:\Users\me",
+            r"\\host:8080\share\me",
+            "//nas/games/me",
+            "//?/C:/Users/me",
         ] {
             assert_eq!(
                 r.apply(&format!("open {path} failed")),
