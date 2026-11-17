@@ -53,6 +53,7 @@ fn resolve(path: &Path) -> PathBuf {
     let mut head = abs.as_path();
     loop {
         if let Ok(real) = head.canonicalize() {
+            let real = nvmod_core::plain_path(&real);
             return rest.iter().rev().fold(real, |p, name| p.join(name));
         }
         match (head.parent(), head.file_name()) {

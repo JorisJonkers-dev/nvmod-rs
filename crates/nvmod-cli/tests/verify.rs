@@ -109,6 +109,8 @@ fn the_json_report_carries_the_doctor_report_and_both_launch_entries() {
     assert_eq!(code, 0, "{doc}");
     assert_eq!(doc["verified"], true);
     assert_eq!(doc["schema_version"], 1);
+    // Paths are plain, never the verbatim form (`\\?\C:\...`) that canonicalising gives on Windows.
+    assert!(!doc.to_string().contains(r"\\?\\"), "{doc}");
     assert!(doc["doctor"]["findings"].is_array());
     let entries = doc["launch_plan"]["entries"].as_array().unwrap();
     let linux = entries.iter().find(|e| e["platform"] == "linux").unwrap();

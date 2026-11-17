@@ -251,7 +251,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(why) => return refused(err, &why),
     };
     let request = Request {
-        data: std::fs::canonicalize(&data).unwrap_or(data),
+        data: std::fs::canonicalize(&data).map_or(data, |p| nvmod_core::plain_path(&p)),
         plugins,
         world: args.option("world").map(str::to_owned),
         blocks: args.flag("blocks"),
