@@ -10,7 +10,7 @@ description = "The NVSE plugin catalogue (data/nvse-plugins.toml): loading, vali
 
 [dependencies]
 serde = { workspace = true }
-toml = { version = "1", default-features = false, features = ["parse", "serde"] }
+toml = { version = "=1.2.1+spec-1.1.0", default-features = false, features = ["parse", "serde"] }
 
 [dev-dependencies]
 proptest = { workspace = true }

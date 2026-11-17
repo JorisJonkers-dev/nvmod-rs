@@ -40,12 +40,12 @@ loot-rs = { workspace = true }
 nvmod-pe = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-ctrlc = { version = "3.5.2", features = ["termination"] }
+ctrlc = { version = "=3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
 nvmod-plugins = { workspace = true }
-jsonschema = { version = "0.30", default-features = false }
+jsonschema = { version = "=0.30.0", default-features = false }
 
 [lints]
 workspace = true
