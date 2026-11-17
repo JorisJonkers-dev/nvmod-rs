@@ -65,10 +65,10 @@ fn now() -> u64 {
 /// the other Unix systems it asks the kernel with signal 0 (`kill(pid, 0)`): a process that does not exist is gone,
 /// one that exists is running, even when it belongs to another user or is a zombie that its parent has not reaped
 /// yet. Elsewhere (Windows) it answers `true`, so a lock is never taken over by guesswork (delete `.nvmod/lock` by
-/// hand there). Pid 0 and pids above `i32::MAX` are never a running process.
+/// hand there). On Unix, pid 0 and pids above `i32::MAX` are never a running process.
 #[must_use]
 pub fn pid_alive(pid: u32) -> bool {
-    if pid == 0 || i32::try_from(pid).is_err() {
+    if cfg!(unix) && (pid == 0 || i32::try_from(pid).is_err()) {
         return false;
     }
     if cfg!(target_os = "linux") {
@@ -78,7 +78,9 @@ pub fn pid_alive(pid: u32) -> bool {
                 .rsplit_once(')')
                 .and_then(|(_, rest)| rest.trim_start().chars().next())
                 .is_none_or(|state| state != 'Z' && state != 'X'),
-            Err(_) => false,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            // `/proc` hides other users' processes when mounted with `hidepid`: ask the kernel instead.
+            Err(_) => signal_alive(pid),
         }
     } else {
         signal_alive(pid)
@@ -318,6 +320,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn this_process_is_alive_and_impossible_pids_are_not() {
         assert!(pid_alive(std::process::id()));
         assert!(!pid_alive(0));
