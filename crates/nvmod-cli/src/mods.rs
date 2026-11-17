@@ -139,9 +139,9 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         let category = match args.option("category").map(str::parse::<u32>) {
             Some(Ok(id)) => Some(id),
             Some(Err(_)) => {
-                // The command line checks the id before it opens the Instance, as it always did: a folder that is
-                // not an Instance is still refused first (exit 2), and a bad id is refused with its own words
-                // (exit 2) without listing anything.
+                // The command line opens the Instance before it checks the id, as it always did: a folder that is
+                // not an Instance, or a missing profile, is still refused first, and a bad id is then refused with
+                // its own words (exit 2) without printing a listing.
                 let request = ListRequest {
                     instance,
                     profile,

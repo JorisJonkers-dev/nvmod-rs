@@ -77,14 +77,15 @@ pub fn sort(
     let Some(proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
         return Ok(Outcome::Cancelled);
     };
+    // A stop asked for while loot-rs finished its last step still wins, whether or not the proposal is applied.
+    if cancel.is_cancelled() {
+        return Ok(Outcome::Cancelled);
+    }
     if !request.apply {
         return Ok(Outcome::Done(SortOutput {
             proposal,
             applied: None,
         }));
-    }
-    if cancel.is_cancelled() {
-        return Ok(Outcome::Cancelled);
     }
     progress.report(&Event::step("write-lists", "loadorder.sort.writing"));
     let applied = nvmod_loadorder::apply(&instance, &proposal).map_err(failure)?;
