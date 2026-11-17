@@ -2,12 +2,11 @@
 //! `nvmod mods list|enable|disable|reorder`: the Mods of a profile, in priority order (the first is the highest
 //! priority). A change is journaled like an install, so `nvmod rollback` takes it back.
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args, mods_life};
-use nvmod_instance::NvmodInstance;
-use nvmod_modinstall::lifecycle;
-use nvmod_modinstall::mods::{self, Change, ModRow, ModsError, Place, Report};
+use crate::{OK, USAGE, args::Args, mods_life};
+use nvmod_api::mods::{Change, ChangeRequest, ListRequest, ModRow, Place, Report};
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 const USAGE_TEXT: &str = "usage: nvmod mods list --instance <dir> [--profile <name>] [--json]
        nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
@@ -112,8 +111,8 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let names: Vec<String> = args.positional[1..].to_vec();
     let change = match sub {
         "list" if names.is_empty() => None,
-        "enable" if !names.is_empty() => Some(Change::Enable(names)),
-        "disable" if !names.is_empty() => Some(Change::Disable(names)),
+        "enable" if !names.is_empty() => Some(Change::Enable { mods: names }),
+        "disable" if !names.is_empty() => Some(Change::Disable { mods: names }),
         "reorder" if names.len() == 1 => {
             let Some(to) = place_of(&args) else {
                 let _ = writeln!(
@@ -132,54 +131,70 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let refused = |why: &str, err: &mut dyn Write| {
-        let _ = writeln!(err, "nvmod mods: refused: {why}");
-        REFUSED
-    };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let opened = if change.is_some() {
-        NvmodInstance::open(root)
-    } else {
-        NvmodInstance::open_read_only(root)
-    };
-    let instance = match opened {
-        Ok(i) => i,
-        Err(e) => return refused(&crate::install_mod::describe_open_error(root, &e), err),
-    };
-    let profile = match instance.resolve_profile(args.option("profile")) {
-        Ok(p) => p,
-        Err(e) => return refused(&e.to_string(), err),
-    };
+    let instance = PathBuf::from(args.option("instance").unwrap_or_default());
+    let profile = args.option("profile").map(str::to_owned);
     let json = args.flag("json");
+    let cancel = CancelToken::new();
     let Some(change) = change else {
-        let only = match args.option("category").map(str::parse::<u32>) {
+        let category = match args.option("category").map(str::parse::<u32>) {
             Some(Ok(id)) => Some(id),
-            Some(Err(_)) => return refused("--category takes a category id (a number)", err),
+            Some(Err(_)) => {
+                // The command line checks the id before it opens the Instance, as it always did.
+                let request = ListRequest {
+                    instance,
+                    profile,
+                    category: None,
+                };
+                if let Err(e) = nvmod_api::mods::list(&request, &mut NoProgress, &cancel) {
+                    return crate::job_failure("mods", &e, err);
+                }
+                let _ = writeln!(
+                    err,
+                    "nvmod mods: refused: --category takes a category id (a number)"
+                );
+                return crate::REFUSED;
+            }
             None => None,
         };
-        let listed = lifecycle::list_categorised(&instance, &profile, only);
-        let rows: Vec<ModRow> = listed.iter().map(|r| r.row.clone()).collect();
+        let request = ListRequest {
+            instance,
+            profile,
+            category,
+        };
+        let listed = match nvmod_api::mods::list(&request, &mut NoProgress, &cancel) {
+            Ok(Outcome::Done(listed)) => listed,
+            Ok(Outcome::Cancelled) => return crate::REFUSED,
+            Err(e) => return crate::job_failure("mods", &e, err),
+        };
+        let rows: Vec<ModRow> = listed.mods.iter().map(|r| r.row.clone()).collect();
         if json {
             let _ = writeln!(
                 out,
                 "{}",
                 serde_json::to_string_pretty(
-                    &serde_json::json!({ "profile": profile, "mods": listed })
+                    &serde_json::json!({ "profile": listed.profile, "mods": listed.mods })
                 )
                 .unwrap_or_default()
             );
         } else {
             let _ = writeln!(
                 out,
-                "nvmod mods: profile `{profile}`, {} entr(ies)",
+                "nvmod mods: profile `{}`, {} entr(ies)",
+                listed.profile,
                 rows.len()
             );
             print_rows(out, &rows);
         }
         return OK;
     };
-    match mods::apply(&instance, &profile, &change, args.flag("dry-run")) {
-        Ok(report) => {
+    let request = ChangeRequest {
+        instance,
+        profile,
+        change,
+        dry_run: args.flag("dry-run"),
+    };
+    match nvmod_api::mods::change(&request, &mut NoProgress, &cancel) {
+        Ok(Outcome::Done(report)) => {
             if json {
                 let _ = writeln!(
                     out,
@@ -191,10 +206,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             }
             OK
         }
-        Err(ModsError::Refused(why)) => refused(&why, err),
-        Err(ModsError::Failed(why)) => {
-            let _ = writeln!(err, "nvmod mods: {why}");
-            ROLLED_BACK
-        }
+        Ok(Outcome::Cancelled) => crate::REFUSED,
+        Err(e) => crate::job_failure("mods", &e, err),
     }
 }

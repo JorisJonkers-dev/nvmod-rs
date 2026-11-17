@@ -9,7 +9,7 @@
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
 use nvmod_instance::NvmodInstance;
-use nvmod_run::{InstanceLock, Launcher, LockError, Platform, ProcessLauncher, Request};
+use nvmod_run::{InstanceLock, Launcher, LockError, ProcessLauncher};
 use nvmod_stage::{Options, StageError};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -89,13 +89,12 @@ pub(crate) fn run_with(
         Ok(p) => p,
         Err(e) => return refuse(&e.to_string(), err),
     };
-    let request = Request {
-        instance: &instance,
-        profile: &profile,
-        target: &a.positional[0],
-        args: extra,
-        proton: a.option("proton"),
-        platform: Platform::host(),
+    let request = nvmod_api::run::PlanRequest {
+        instance: root.to_path_buf(),
+        profile: Some(profile.clone()),
+        target: a.positional[0].clone(),
+        args: extra.to_vec(),
+        proton: a.option("proton").map(str::to_owned),
         steam_client: steam_client(),
         via_proton: a.flag("via-proton"),
         viewer: a
@@ -107,13 +106,18 @@ pub(crate) fn run_with(
             .or_else(|| {
                 std::env::var_os("HOME").map(|h| PathBuf::from(h).join(nvmod_run::SHARED_ROOT))
             }),
+        restage: a.flag("restage"),
+        no_stage: a.flag("no-stage"),
     };
-    let mut plan = match nvmod_run::plan(&request) {
-        Ok(p) => p,
-        Err(why) => return refuse(&why, err),
+    let mut plan = match nvmod_api::run::plan(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(plan)) => plan,
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return refuse(&e.summary, err),
     };
-    plan.staging =
-        nvmod_run::plan_staging(&instance, &profile, a.flag("restage"), a.flag("no-stage"));
     let dry = a.flag("dry-run");
     if dry {
         if !a.flag("no-profile") {
