@@ -3,9 +3,8 @@
 //! copy is only read.
 
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
-use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 const USAGE_LINE: &str = "usage: nvmod init --base <dir> --instance <dir>";
 
@@ -27,25 +26,32 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let base = Path::new(args.option("base").unwrap_or_default());
-    match NvmodInstance::create(root, base) {
-        Ok(instance) => {
+    let request = nvmod_api::init::CreateRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        base: PathBuf::from(args.option("base").unwrap_or_default()),
+    };
+    match nvmod_api::init::create(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(made)) => {
             let _ = writeln!(
                 out,
                 "nvmod init: made an Instance at {} for the {} base copy {}",
-                instance.root.display(),
-                instance.config.storefront,
-                instance.config.base.display()
+                made.instance.display(),
+                made.storefront,
+                made.base.display()
             );
             OK
         }
-        Err(InstanceError::Refused(reason)) => {
-            let _ = writeln!(err, "nvmod init: refused: {reason}");
+        Ok(nvmod_api::Outcome::Cancelled) => REFUSED,
+        Err(e) if e.kind == nvmod_api::ErrorKind::Refused => {
+            let _ = writeln!(err, "nvmod init: refused: {}", e.summary);
             REFUSED
         }
-        Err(why) => {
-            let _ = writeln!(err, "nvmod init: {why}");
+        Err(e) => {
+            let _ = writeln!(err, "nvmod init: {}", e.summary);
             FOUND
         }
     }
