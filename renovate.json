@@ -1,4 +1,40 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>JorisJonkers-dev/renovate-config"]
+  "extends": ["github>JorisJonkers-dev/renovate-config"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "tools.lock.toml names the loot-rs version and tag that Cargo.toml links, and a test keeps them equal. Follow the same loot-rs release tags so the lock moves with the Cargo.toml tag.",
+      "managerFilePatterns": ["/^tools\\.lock\\.toml$/"],
+      "matchStrings": [
+        "name = \"loot-rs\"\\nversion = \"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "loot-rs",
+      "packageNameTemplate": "JorisJonkers-dev/loot-rs",
+      "datasourceTemplate": "github-tags",
+      "depTypeTemplate": "tools-lock-version",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "The tag line of the same loot-rs entry.",
+      "managerFilePatterns": ["/^tools\\.lock\\.toml$/"],
+      "matchStrings": [
+        "git = \"https://github\\.com/JorisJonkers-dev/loot-rs\"\\ntag = \"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "loot-rs",
+      "packageNameTemplate": "JorisJonkers-dev/loot-rs",
+      "datasourceTemplate": "github-tags",
+      "depTypeTemplate": "tools-lock-tag"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "One pull request per loot-rs release: the Cargo.toml tag, Cargo.lock and both tools.lock.toml lines move together, in the group the shared preset gives first-party Cargo git dependencies.",
+      "matchDepNames": ["loot-rs"],
+      "groupName": "jorisjonkers-dev cargo git dependencies",
+      "minimumReleaseAge": null,
+      "schedule": ["at any time"]
+    }
+  ]
 }

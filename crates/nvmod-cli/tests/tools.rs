@@ -492,7 +492,13 @@ fn a_lock_that_breaks_the_rules_is_refused_with_the_reason() {
 fn the_shipped_lock_lists_loot_rs_as_linked() {
     let (code, out, err) = nvmod(&["tools", "list"]);
     assert_eq!(code, 0, "{err}");
-    assert!(out.contains("loot-rs 0.5.0 linked (tag v0.5.0)"), "{out}");
+    // No version here: a loot-rs bump moves the lock and the Cargo.toml tag, and this test must stay green.
+    let line = out
+        .lines()
+        .find(|l| l.starts_with("loot-rs "))
+        .unwrap_or_else(|| panic!("no loot-rs line: {out}"));
+    let version = line.split_whitespace().nth(1).unwrap();
+    assert_eq!(line, format!("loot-rs {version} linked (tag v{version})"), "{out}");
 }
 
 #[test]
