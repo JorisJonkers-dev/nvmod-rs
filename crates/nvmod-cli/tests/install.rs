@@ -2,9 +2,7 @@
 //! `nvmod install` and `nvmod rollback`, run as a program against a scratch Instance made by `nvmod init`.
 //! Archives are built in code by the testkit; no mod data is used.
 
-use nvmod_testkit::{
-    BaseBuilder, TarBuilder, TempDir, ZipBuilder, snapshot, write_file, write_script,
-};
+use nvmod_testkit::{BaseBuilder, Standin, TarBuilder, TempDir, ZipBuilder, snapshot, write_file};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -298,11 +296,9 @@ fn an_archive_without_a_built_in_reader_goes_through_the_extraction_tool() {
     let archive = s.archive("Packed.7z");
     std::fs::write(&archive, b"7z\xBC\xAF not really").unwrap();
     // A stand-in for 7z: `tool x -y -o<dir> <archive>` writes one file into <dir>.
-    let tool = write_script(
-        s.work.path(),
-        "fake7z",
-        "out=$(printf '%s' \"$3\" | cut -c3-); mkdir -p \"$out/Meshes\"; echo packed > \"$out/Meshes/p.nif\"",
-    );
+    let tool = Standin::new()
+        .extracts("Meshes/p.nif", "packed\n")
+        .write(s.work.path(), "fake7z");
     let (code, _, err) = s.install(&archive, &["--extract-tool", tool.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(

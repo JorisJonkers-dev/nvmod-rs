@@ -15,6 +15,10 @@ const EXCEPTIONS: &[(&str, &str)] = &[
         "nvmod-testkit/src/nvrs.rs",
         "test support that builds fixture archives with tar and chmod",
     ),
+    (
+        "nvmod-testkit/src/standin.rs",
+        "test support that compiles stand-in programs with rustc",
+    ),
 ];
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {

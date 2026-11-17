@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod install-nv-rs`, run as a program against a scratch Instance made by `nvmod init` from a synthetic base
-//! copy. The nv-rs source is a tiny cargo workspace written by the test, the release is a fake local one, and
-//! `gh` and `curl` are shell scripts that record how they were called, and the fake `nv-viewer` answers `--check`. No network, no game.
+//! copy. The nv-rs source is a tiny cargo workspace written by the test, the release is a fake local one, `gh` and
+//! `curl` are compiled stand-ins that record how they were called, and the fake `nv-viewer` answers `--check`. No
+//! network, no game.
 
 use nvmod_install::sha256_hex;
 use nvmod_testkit::{
-    BaseBuilder, FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FAKE_RELEASE_BINARY, FakeNvRs,
-    FakeRelease, FakeServer, Reply, TempDir, snapshot, write_script,
+    BaseBuilder, FAKE_ASSET, FAKE_BUILT_BANNER, FAKE_CHECK_REFUSED, FakeNvRs, FakeRelease,
+    FakeServer, Reply, Standin, TempDir, fake_release_binary, nv_viewer_name, snapshot,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -67,11 +68,12 @@ impl Rig {
         nvmod(&args)
     }
 
-    /// A `gh` that records its arguments and exits with `code`.
+    /// A `gh` that records its arguments in `gh.log` and exits with `code`.
     fn gh(&self, code: i32) -> String {
-        let log = self.tools.path().join("gh.log");
-        let body = format!("echo \"$@\" >> {}\nexit {code}", log.display());
-        write_script(self.tools.path(), "gh", &body)
+        Standin::new()
+            .logging()
+            .exits(code)
+            .write(self.tools.path(), "gh")
             .to_str()
             .unwrap()
             .to_owned()
@@ -89,7 +91,7 @@ impl Rig {
     }
 
     fn bin(&self) -> PathBuf {
-        self.root().join("nv-rs/bin/nv-viewer")
+        self.root().join("nv-rs/bin").join(nv_viewer_name())
     }
 
     fn source(&self) -> &str {
@@ -306,7 +308,7 @@ fn without_a_toolchain_the_release_is_fetched_verified_and_installed() {
     let (code, out, err) =
         rig.install(&["--cargo", &cargo, "--release-url", &release, "--gh", &gh]);
     assert_eq!(code, 0, "{out}\n{err}");
-    assert_eq!(std::fs::read(rig.bin()).unwrap(), FAKE_RELEASE_BINARY);
+    assert_eq!(std::fs::read(rig.bin()).unwrap(), fake_release_binary());
     let calls = rig.gh_calls();
     assert_eq!(calls.len(), 1);
     assert!(calls[0].starts_with("attestation verify "), "{calls:?}");
@@ -368,7 +370,7 @@ fn the_release_can_be_requested_even_with_a_toolchain() {
         &gh,
     ]);
     assert_eq!(code, 0, "{err}");
-    assert_eq!(std::fs::read(rig.bin()).unwrap(), FAKE_RELEASE_BINARY);
+    assert_eq!(std::fs::read(rig.bin()).unwrap(), fake_release_binary());
 }
 
 fn verification_fails(rig: &Rig, release: &FakeRelease, gh_code: i32) -> String {
@@ -523,11 +525,10 @@ fn a_malformed_response_aborts_without_retrying() {
 fn every_fetch_has_a_60_second_timeout_and_a_timeout_is_retried() {
     let rig = Rig::new();
     let log = rig.tools.path().join("curl.log");
-    let curl = write_script(
-        rig.tools.path(),
-        "curl",
-        &format!("echo \"$@\" >> {}\nexit 28", log.display()),
-    );
+    let curl = Standin::new()
+        .logging()
+        .exits(28)
+        .write(rig.tools.path(), "curl");
     let (gh, cargo) = (rig.gh(0), absent_cargo(&rig));
     let mut args = fetch_args("http://example.invalid", &gh, &cargo);
     args.extend(["--curl", curl.to_str().unwrap()]);
