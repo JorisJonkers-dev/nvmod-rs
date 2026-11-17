@@ -68,6 +68,11 @@ impl Redactor {
         let text = text.trim_end_matches(['/', '\\']);
         if text.len() > 1 {
             self.folders.push((text.to_owned(), placeholder.to_owned()));
+            // Windows takes either slash, and a program may print `C:/Users/me` for `C:\Users\me`.
+            if text.contains('\\') {
+                self.folders
+                    .push((text.replace('\\', "/"), placeholder.to_owned()));
+            }
             // Longest first, so `$INSTANCE` wins over `~` for a folder below the home directory.
             self.folders
                 .sort_by_key(|(f, _)| std::cmp::Reverse(f.len()));
@@ -130,7 +135,8 @@ fn ends_path(c: char) -> bool {
         )
 }
 
-/// Replace every absolute path that is left (a `/…` path, or `C:\…` and `C:/…` on Windows) with [`PATH_MASK`].
+/// Replace every absolute path that is left (a `/…` path; `C:\…` and `C:/…`; a UNC path `\\server\…`, and the
+/// verbatim forms `\\?\C:\…` and `\\?\UNC\…` of Windows) with [`PATH_MASK`].
 fn mask_paths(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
@@ -148,12 +154,32 @@ fn mask_paths(text: &str) -> String {
             && path_may_start_after(prev)
             && chars.get(i + 1) == Some(&':')
             && matches!(chars.get(i + 2), Some('\\' | '/'));
-        if unix || windows {
-            // Skip the drive's colon before looking for the end.
-            let mut j = if windows { i + 2 } else { i + 1 };
+        // `\\server\share`, and `//server/share`, which Windows takes too.
+        let unc = matches!(c, '\\' | '/')
+            && chars.get(i + 1) == Some(&c)
+            && path_may_start_after(prev)
+            && chars
+                .get(i + 2)
+                .is_some_and(|n| !n.is_whitespace() && !matches!(n, '\\' | '/'));
+        if unix || windows || unc {
+            // Skip the drive's colon before looking for the end, also in a verbatim `\\?\C:` or `\\.\C:`.
+            let verbatim_drive = unc
+                && matches!(chars.get(i + 2), Some('?' | '.'))
+                && chars.get(i + 3) == Some(&c)
+                && chars.get(i + 4).is_some_and(char::is_ascii_alphabetic)
+                && chars.get(i + 5) == Some(&':');
+            let mut j = if verbatim_drive {
+                i + 6
+            } else if windows || unc {
+                i + 2
+            } else {
+                i + 1
+            };
             // A quoted path may hold spaces: it runs to the matching quote.
             let quote = prev.filter(|q| matches!(q, '"' | '\''));
-            while j < chars.len() && quote.map_or(!ends_path(chars[j]), |q| chars[j] != q) {
+            // A UNC path runs on past a colon too (`\\host:8080\x` is not a drive and must not leave its rest).
+            let ends = |ch: char| ends_path(ch) && !(unc && ch == ':');
+            while j < chars.len() && quote.map_or(!ends(chars[j]), |q| chars[j] != q) {
                 j += 1;
             }
             out.push_str(PATH_MASK);
@@ -289,6 +315,48 @@ mod tests {
             "fetch https://github.com/a/b"
         );
         assert_eq!(r.apply("3/4 done and/or more"), "3/4 done and/or more");
+    }
+
+    #[test]
+    fn unc_and_verbatim_windows_paths_are_masked_whole() {
+        let r = redactor();
+        for path in [
+            r"\\server\share\me\x.esm",
+            r"\\?\C:\Users\me\x.esm",
+            r"\\?\UNC\server\share\x",
+            r"\\.\C:\Users\me",
+            r"\\host:8080\share\me",
+            "//nas/games/me",
+            "//?/C:/Users/me",
+        ] {
+            assert_eq!(
+                r.apply(&format!("open {path} failed")),
+                "open <path> failed"
+            );
+            assert_eq!(r.apply(&format!("path=\"{path}\"")), "path=\"<path>\"");
+        }
+        assert_eq!(
+            r.apply(r"a \\ b"),
+            r"a \\ b",
+            "a lone pair of backslashes stays"
+        );
+    }
+
+    #[test]
+    fn a_windows_folder_is_found_with_either_slash() {
+        let r = Redactor::new()
+            .with_folder(Path::new(r"C:\Users\me"), "~")
+            .with_folder(Path::new(r"C:\Users\me\games\inst"), "$INSTANCE");
+        assert_eq!(
+            r.apply(r"wrote C:\Users\me\games\inst\mods\a"),
+            r"wrote $INSTANCE\mods\a"
+        );
+        assert_eq!(
+            r.apply("wrote C:/Users/me/games/inst/mods/a"),
+            "wrote $INSTANCE/mods/a"
+        );
+        assert_eq!(r.apply("in C:/Users/me/cfg"), "in ~/cfg");
+        assert_eq!(r.apply(r"in C:\Users\mentor\x"), "in <path>");
     }
 
     #[test]

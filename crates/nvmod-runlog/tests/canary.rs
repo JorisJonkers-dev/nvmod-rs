@@ -11,6 +11,12 @@ use tracing::level_filters::LevelFilter;
 
 const TOKEN: &str = "ghp_CanaryToken0123456789abcdefXYZ";
 const OUTSIDE: &str = "/mnt/elsewhere/SteamLibrary/canary-game";
+/// The same on Windows: a drive path, a UNC path and the verbatim form `canonicalize` gives.
+const OUTSIDE_WINDOWS: [&str; 3] = [
+    r"D:\SteamLibrary\canary-drive",
+    r"\\nas\games\canary-share",
+    r"\\?\E:\SteamLibrary\canary-verbatim",
+];
 
 #[test]
 fn a_planted_token_and_an_outside_path_never_reach_the_run_log() {
@@ -30,6 +36,9 @@ fn a_planted_token_and_an_outside_path_never_reach_the_run_log() {
     });
     let secret = Secret::new(TOKEN.to_owned());
     tracing::info!("plain message with {TOKEN} and {OUTSIDE}/x.esm");
+    for path in OUTSIDE_WINDOWS {
+        tracing::info!(path, "a Windows path: {path}\\x.esm");
+    }
     tracing::info!(token = TOKEN, path = OUTSIDE, "fields");
     tracing::info!(secret = ?secret, shown = %secret, "a secret value");
     tracing::info!(path = %instance.join("mods/a").display(), "inside the instance");
@@ -51,24 +60,33 @@ fn a_planted_token_and_an_outside_path_never_reach_the_run_log() {
     session.finish(3);
 
     let log = std::fs::read_to_string(&path).unwrap();
-    assert!(!log.contains(TOKEN), "token reached the log:\n{log}");
-    assert!(
-        !log.contains("canary-game") && !log.contains("/mnt/elsewhere"),
-        "outside path reached the log:\n{log}"
-    );
-    assert!(
-        !log.contains(&home.path().display().to_string()),
-        "home reached the log:\n{log}"
-    );
-    assert!(
-        log.contains("$INSTANCE/mods/a") && log.contains("~/cfg"),
-        "{log}"
-    );
-
     let lines: Vec<serde_json::Value> = log
         .lines()
         .map(|l| serde_json::from_str(l).unwrap())
         .collect();
+    // The text as written, with JSON's escapes undone: a Windows path is checked with single backslashes.
+    let text: String = lines
+        .iter()
+        .flat_map(|l| l.as_object().unwrap().values())
+        .filter_map(serde_json::Value::as_str)
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(!text.contains(TOKEN), "token reached the log:\n{log}");
+    assert!(
+        !text.contains("canary-") && !text.contains("/mnt/elsewhere"),
+        "outside path reached the log:\n{log}"
+    );
+    assert!(
+        !text.contains(&home.path().display().to_string()),
+        "home reached the log:\n{log}"
+    );
+    // The rest of a path keeps the separators it had: the native one, then the `/` of the joined part.
+    let sep = std::path::MAIN_SEPARATOR;
+    assert!(
+        text.contains(&format!("$INSTANCE{sep}mods/a")) && text.contains(&format!("~{sep}cfg")),
+        "{log}"
+    );
+
     assert_eq!(lines[0]["kind"], "header");
     assert_eq!(lines[0]["log_schema"], 1);
     let last = lines.last().unwrap();
