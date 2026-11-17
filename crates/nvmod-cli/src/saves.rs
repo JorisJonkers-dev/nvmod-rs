@@ -84,6 +84,12 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     if sub == "list" {
         return list(&args, out, err);
     }
+    if sub == "check" {
+        return check(&args, out, err);
+    }
+    if sub == "checksum" {
+        return checksum(&args, out, err);
+    }
     let root = Path::new(args.option("instance").unwrap_or_default());
     let opened = if matches!(sub, "backup" | "restore" | "transfer") {
         NvmodInstance::open(root)
@@ -124,8 +130,6 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(e) => return failure(&e, err),
     };
     match sub {
-        "check" => check(&cx, &profile, &location, out, err),
-        "checksum" => checksum(&cx, &profile, &location, out),
         "backup" => backup(&cx, &profile, &location, out, err),
         _ => restore(&cx, &profile, &location, &args.positional[1], out, err),
     }
@@ -174,57 +178,78 @@ fn list(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     OK
 }
 
-fn check(
-    cx: &Cx,
-    profile: &str,
-    location: &Location,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> u8 {
-    match nvmod_saves::check(cx.instance, profile, location) {
-        Ok(report) => {
-            if cx.json {
-                print_json(
-                    out,
-                    &serde_json::json!({ "schema_version": 1, "report": report }),
-                );
-            } else {
-                let _ = writeln!(
-                    out,
-                    "nvmod saves: profile `{profile}`, {} save(s) checked against {} active plugin(s)",
-                    report.saves.len(),
-                    report.active
-                );
-                for s in report.saves.iter().filter(|s| s.status != "ok") {
-                    match s.status {
-                        "unreadable" => {
-                            let _ = writeln!(
-                                out,
-                                "  {}: unreadable: {}",
-                                s.name,
-                                s.problem.as_deref().unwrap_or("")
-                            );
-                        }
-                        _ => {
-                            let _ = writeln!(
-                                out,
-                                "  {}: needs plugins the profile has not active: {}",
-                                s.name,
-                                s.missing.join(", ")
-                            );
-                        }
-                    }
+fn check(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let request = nvmod_api::saves::CheckRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        prefix: args.option("prefix").map(PathBuf::from),
+    };
+    let checked = match nvmod_api::saves::check(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(checked)) => checked,
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return crate::job_failure("saves", &e, err),
+    };
+    let profile = &checked.profile;
+    let report = &checked.report;
+    if args.flag("json") {
+        print_json(
+            out,
+            &serde_json::json!({ "schema_version": 1, "report": report }),
+        );
+    } else {
+        let _ = writeln!(
+            out,
+            "nvmod saves: profile `{profile}`, {} save(s) checked against {} active plugin(s)",
+            report.saves.len(),
+            report.active
+        );
+        for s in report.saves.iter().filter(|s| s.status != "ok") {
+            match s.status {
+                "unreadable" => {
+                    let _ = writeln!(
+                        out,
+                        "  {}: unreadable: {}",
+                        s.name,
+                        s.problem.as_deref().unwrap_or("")
+                    );
+                }
+                _ => {
+                    let _ = writeln!(
+                        out,
+                        "  {}: needs plugins the profile has not active: {}",
+                        s.name,
+                        s.missing.join(", ")
+                    );
                 }
             }
-            if report.clean { OK } else { FOUND }
         }
-        Err(e) => failure(&e, err),
     }
+    if report.clean { OK } else { FOUND }
 }
 
-fn checksum(cx: &Cx, profile: &str, location: &Location, out: &mut dyn Write) -> u8 {
-    let sums = nvmod_saves::checksums(&location.dir);
-    if cx.json {
+fn checksum(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let request = nvmod_api::saves::ChecksumRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        prefix: args.option("prefix").map(PathBuf::from),
+    };
+    let summed = match nvmod_api::saves::checksum(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(summed)) => summed,
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return crate::job_failure("saves", &e, err),
+    };
+    let profile = &summed.profile;
+    let dir = &summed.dir;
+    let sums = &summed.files;
+    if args.flag("json") {
         let files: Vec<serde_json::Value> = sums
             .iter()
             .map(|(name, (size, sha))| serde_json::json!({ "name": name, "size": size, "sha256": sha }))
@@ -232,11 +257,11 @@ fn checksum(cx: &Cx, profile: &str, location: &Location, out: &mut dyn Write) ->
         print_json(
             out,
             &serde_json::json!({
-                "schema_version": 1, "profile": profile, "dir": location.dir.display().to_string(), "files": files,
+                "schema_version": 1, "profile": profile, "dir": dir.display().to_string(), "files": files,
             }),
         );
     } else {
-        for (name, (size, sha)) in &sums {
+        for (name, (size, sha)) in sums {
             let _ = writeln!(out, "{sha}  {size:>10}  {name}");
         }
     }
