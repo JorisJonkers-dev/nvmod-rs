@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.2](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.1...v0.6.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* **formats:** keep the paths of a native Windows MO2 as host paths ([#104](https://github.com/JorisJonkers-dev/nvmod-rs/issues/104)) ([0a2fa75](https://github.com/JorisJonkers-dev/nvmod-rs/commit/0a2fa7585791b3b57bfbc74f061f1e054eb49b62))
+* **install:** pass the Windows build environment to cargo ([#103](https://github.com/JorisJonkers-dev/nvmod-rs/issues/103)) ([d10cc4f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/d10cc4fb02c064cc9a1ab775d1e4b141479e88c0))
+* **loadorder:** give hard-linked plugins a copy of their own on Windows ([#106](https://github.com/JorisJonkers-dev/nvmod-rs/issues/106)) ([77b0fd1](https://github.com/JorisJonkers-dev/nvmod-rs/commit/77b0fd162e82258261af8b7c6c4bb2fe3f7e76bb))
+* **profile:** remove the save folder link the Windows way ([#105](https://github.com/JorisJonkers-dev/nvmod-rs/issues/105)) ([d01f2a9](https://github.com/JorisJonkers-dev/nvmod-rs/commit/d01f2a9325cec9c110249db46675c2007439d05a))
+* **runlog:** mask UNC and verbatim Windows paths in the run log ([#108](https://github.com/JorisJonkers-dev/nvmod-rs/issues/108)) ([b94df65](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b94df65a5927d52350e35f45ad1a4d563a60444a))
+* **run:** tell on macOS when the holder of the Instance lock is gone, and gate on Windows and macOS ([#110](https://github.com/JorisJonkers-dev/nvmod-rs/issues/110)) ([e9b7592](https://github.com/JorisJonkers-dev/nvmod-rs/commit/e9b7592a4ce75093fd3c7195b2df57002f44d238))
+* write plain Windows paths instead of verbatim ones ([#107](https://github.com/JorisJonkers-dev/nvmod-rs/issues/107)) ([db980d3](https://github.com/JorisJonkers-dev/nvmod-rs/commit/db980d317f78d92ca0aaa01afb2cf4622341b30f))
+
 ## [0.6.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.0...v0.6.1) (2026-11-17)
 
 
