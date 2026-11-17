@@ -5,12 +5,15 @@
 use nvmod_api::backup::{
     CreateRequest, ListRequest as BackupListRequest, PruneRequest, RestoreRequest,
 };
+use nvmod_api::install::{InstallRequest, RollbackRequest};
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
 use nvmod_api::run::PlanRequest;
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
-use nvmod_testkit::{BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, write_file};
+use nvmod_testkit::{
+    BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, write_file,
+};
 use std::fs;
 use std::path::PathBuf;
 
@@ -430,6 +433,26 @@ fn every_request_round_trips_through_json() {
         serde_json::from_str::<PlanRequest>(&text).unwrap(),
         plan_request
     );
+    let install_request = InstallRequest {
+        instance: PathBuf::from("/x"),
+        profile: Some("Default".into()),
+        archive: PathBuf::from("/a.zip"),
+        name: Some("Mod".into()),
+        dry_run: true,
+    };
+    let text = serde_json::to_string(&install_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<InstallRequest>(&text).unwrap(),
+        install_request
+    );
+    let rollback_request = RollbackRequest {
+        instance: PathBuf::from("/x"),
+    };
+    let text = serde_json::to_string(&rollback_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<RollbackRequest>(&text).unwrap(),
+        rollback_request
+    );
 }
 
 #[test]
@@ -446,6 +469,11 @@ fn a_request_without_its_optional_fields_takes_the_documented_defaults() {
     assert_eq!(saves.prefix, None);
     let list: ListRequest = serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
     assert_eq!(list.category, None);
+    let install: InstallRequest =
+        serde_json::from_str(r#"{"instance": "/x", "profile": null, "archive": "/a.zip"}"#)
+            .unwrap();
+    assert_eq!(install.name, None);
+    assert!(!install.dry_run);
 }
 
 #[test]
@@ -859,4 +887,87 @@ fn backup_cancel_before_create_writes_nothing() {
         s.root().join(".nvmod").join("backups").exists(),
         before_backups
     );
+}
+
+#[test]
+fn install_dry_run_writes_nothing() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-install-work");
+    let archive = work.path().join("Dry.zip");
+    ZipBuilder::new()
+        .file("Meshes/a.nif", b"a")
+        .file("Dry.esp", b"p")
+        .write(&archive);
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let request = InstallRequest {
+        instance: s.root(),
+        profile: None,
+        archive,
+        name: None,
+        dry_run: true,
+    };
+    let report = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
+        .expect("installs")
+        .done()
+        .expect("not cancelled");
+    assert!(report.dry_run);
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+    assert!(!s.root().join("mods/Dry").exists());
+}
+
+#[test]
+fn install_for_real_then_rollback_removes_it() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-install-work");
+    let archive = work.path().join("Better.zip");
+    ZipBuilder::new().file("Better.esp", b"p").write(&archive);
+    let request = InstallRequest {
+        instance: s.root(),
+        profile: None,
+        archive,
+        name: None,
+        dry_run: false,
+    };
+    let _ = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
+        .expect("installs")
+        .done()
+        .expect("not cancelled");
+    assert!(s.root().join("mods/Better").is_dir());
+    let rollback_request = RollbackRequest { instance: s.root() };
+    let _ = nvmod_api::install::rollback(&rollback_request, &mut NoProgress, &CancelToken::new())
+        .expect("rolls back")
+        .done()
+        .expect("not cancelled");
+    assert!(!s.root().join("mods/Better").exists());
+}
+
+#[test]
+fn install_cancelled_before_changes_nothing() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-install-work");
+    let archive = work.path().join("Cancelled.zip");
+    ZipBuilder::new()
+        .file("Cancelled.esp", b"p")
+        .write(&archive);
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let request = InstallRequest {
+        instance: s.root(),
+        profile: None,
+        archive,
+        name: None,
+        dry_run: false,
+    };
+    let outcome =
+        nvmod_api::install::install(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+    assert!(!s.root().join("mods/Cancelled").exists());
 }

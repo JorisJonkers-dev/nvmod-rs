@@ -30,12 +30,15 @@
 //! | [`backup::list`] | [`backup::ListRequest`] | [`backup::ListOutput`] |
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |
 //! | [`backup::restore`] | [`backup::RestoreRequest`] | [`backup::RestoreOutput`] |
+//! | [`install::install`] | [`install::InstallRequest`] | [`install::Report`] |
+//! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
 pub mod backup;
+pub mod install;
 pub mod job;
 pub mod loadorder;
 pub mod mods;
