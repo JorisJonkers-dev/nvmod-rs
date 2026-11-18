@@ -231,9 +231,11 @@ fn a_base_copy_without_a_data_folder_is_a_refusal() {
     let empty = TempDir::new("tree-nobase");
     let file = s.root().join("nvmod-instance.json");
     let text = std::fs::read_to_string(&file).unwrap();
-    let base = s.base.path().display().to_string();
+    // The Instance file holds the path as JSON text, so a Windows path has its backslashes escaped.
+    let json_path = |path: &std::path::Path| path.display().to_string().replace('\\', "\\\\");
+    let base = json_path(s.base.path());
     assert!(text.contains(&base), "the Instance names its base copy");
-    let moved = text.replace(&base, &empty.path().display().to_string());
+    let moved = text.replace(&base, &json_path(empty.path()));
     std::fs::write(&file, moved).unwrap();
     let error = refused(&s.request());
     assert_eq!(error.kind, ErrorKind::Refused);
