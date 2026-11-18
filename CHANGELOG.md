@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.7.0...v0.8.0) (2026-11-18)
+
+
+### Features
+
+* **api:** add the install-nv-rs job ([#163](https://github.com/JorisJonkers-dev/nvmod-rs/issues/163)) ([8c58c83](https://github.com/JorisJonkers-dev/nvmod-rs/commit/8c58c83fb94671cc03dbdabfa8317a6b298f28c4))
+* **api:** add the ttw job ([#162](https://github.com/JorisJonkers-dev/nvmod-rs/issues/162)) ([a021304](https://github.com/JorisJonkers-dev/nvmod-rs/commit/a021304d28149d9e8aa74964c8801ccdc9febb34))
+* **api:** import-mo2 job in the library API ([#159](https://github.com/JorisJonkers-dev/nvmod-rs/issues/159)) ([ca3a831](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ca3a831928449f66d9e7b75a9764599a46adc10e))
+* **api:** profile create job in the library API ([#154](https://github.com/JorisJonkers-dev/nvmod-rs/issues/154)) ([459fb90](https://github.com/JorisJonkers-dev/nvmod-rs/commit/459fb9050e931a6c13d79c6fde30131c01b07808))
+* **api:** sort apply and stamp job in the library API ([#161](https://github.com/JorisJonkers-dev/nvmod-rs/issues/161)) ([4c918df](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4c918df34f095881ce997b499c7ab89f2b74d681))
+* **api:** stage job in the library API ([#156](https://github.com/JorisJonkers-dev/nvmod-rs/issues/156)) ([bdb5b76](https://github.com/JorisJonkers-dev/nvmod-rs/commit/bdb5b76a8217bd5ac2aa1f6dbd79b57d0e95860d))
+* **api:** target job in the library API ([#157](https://github.com/JorisJonkers-dev/nvmod-rs/issues/157)) ([db443d3](https://github.com/JorisJonkers-dev/nvmod-rs/commit/db443d3036ebd5dad38b0a253b4e21a59d05a735))
+* **api:** verify job in the library API ([#160](https://github.com/JorisJonkers-dev/nvmod-rs/issues/160)) ([4cb98b7](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4cb98b7f804eb21d198cf22aa84af88b122059c0))
+
 ## [0.7.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.6.2...v0.7.0) (2026-11-17)
 
 
