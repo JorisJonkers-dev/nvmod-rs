@@ -1,2 +1,0 @@
-{"arch":"x86_64","kind":"header","log_schema":1,"note":"not a contract: keys may change with log_schema","nvmod_version":"0.9.0","os":"linux","run_id":"20261118T205102319-3503350","ts":"2026-11-18T20:51:02.319Z"}
-{"duration_ms":0,"exit_code":5,"level":"info","msg":"command finished","op":"lod","run_id":"20261118T205102319-3503350","step":null,"tool":null,"tool_version":null,"ts":"2026-11-18T20:51:02.319Z"}
