@@ -1482,9 +1482,7 @@ fn stage_builds_the_tree_of_a_profile() {
     assert_eq!(staged.report.manifest.files, 3);
     assert_eq!(staged.report.manifest.overridden, 0);
     assert!(
-        staged
-            .report
-            .tree
+        std::path::Path::new(&staged.report.tree)
             .ends_with(std::path::Path::new("staging").join("Default").join("data"))
     );
     assert_eq!(
