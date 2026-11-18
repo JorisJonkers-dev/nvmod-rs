@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.9.0...v0.10.0) (2026-11-18)
+
+
+### Features
+
+* **modinstall:** read 7z and compressed tar archives in process ([#185](https://github.com/JorisJonkers-dev/nvmod-rs/issues/185)) ([959227a](https://github.com/JorisJonkers-dev/nvmod-rs/commit/959227a33a89fba9ba89cc299d5279b4ae77bf60))
+
 ## [0.9.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.8.1...v0.9.0) (2026-11-18)
 
 
