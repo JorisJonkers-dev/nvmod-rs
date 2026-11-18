@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod profile create --instance <dir> [--name <name>]`: make an empty profile (default name `Default`).
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
-use nvmod_instance::{InstanceError, NvmodInstance};
+use crate::{OK, REFUSED, USAGE, args::Args};
+use nvmod_api::profile::CreateRequest;
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use std::io::Write;
 use std::path::Path;
 
@@ -23,23 +24,16 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let name = args.option("name").unwrap_or("Default");
-    let made = NvmodInstance::open(root)
-        .map_err(|e| InstanceError::Refused(crate::install_mod::describe_open_error(root, &e)))
-        .and_then(|instance| instance.create_profile(name));
-    match made {
-        Ok(()) => {
-            let _ = writeln!(out, "nvmod profile: made the profile `{name}`");
+    let request = CreateRequest {
+        instance: Path::new(args.option("instance").unwrap_or_default()).to_path_buf(),
+        name: args.option("name").map(str::to_owned),
+    };
+    match nvmod_api::profile::create(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(made)) => {
+            let _ = writeln!(out, "nvmod profile: made the profile `{}`", made.profile);
             OK
         }
-        Err(InstanceError::Io(why)) => {
-            let _ = writeln!(err, "nvmod profile: {why}");
-            ROLLED_BACK
-        }
-        Err(why) => {
-            let _ = writeln!(err, "nvmod profile: refused: {why}");
-            REFUSED
-        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("profile", &e, err),
     }
 }
