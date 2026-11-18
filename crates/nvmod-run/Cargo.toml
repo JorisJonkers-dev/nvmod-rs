@@ -19,7 +19,7 @@ serde_json = { workspace = true }
 
 # kill(pid, 0) to tell whether a lock holder still runs, off Linux (already in the tree through ctrlc).
 [target.'cfg(unix)'.dependencies]
-nix = { version = "=0.31.3", default-features = false, features = ["signal"] }
+nix = { version = "0.31.3", default-features = false, features = ["signal"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
