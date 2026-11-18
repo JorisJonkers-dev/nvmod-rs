@@ -1545,7 +1545,9 @@ fn a_stage_cancelled_before_the_write_changes_nothing() {
     let outcome = nvmod_api::stage::stage(&request, &mut NoProgress, &cancel).expect("no error");
     assert!(matches!(outcome, Outcome::Cancelled));
     assert!(!s.root().join("staging").exists());
+}
 
+#[test]
 fn profile_create_makes_an_empty_profile_with_the_master_as_its_only_plugin() {
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
