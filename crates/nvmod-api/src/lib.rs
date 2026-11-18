@@ -43,6 +43,7 @@
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
+//! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
@@ -57,7 +58,11 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
+<<<<<<< HEAD
 pub mod stage;
+=======
+pub mod target;
+>>>>>>> origin/main
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
 

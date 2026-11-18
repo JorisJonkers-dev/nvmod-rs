@@ -1623,3 +1623,71 @@ fn profile_create_cancelled_before_the_write_changes_nothing() {
     assert!(matches!(outcome, Outcome::Cancelled));
     assert!(!s.root().join("profiles/Cancelled").exists());
 }
+
+#[test]
+fn target_set_switches_the_instance_to_nv_rs() {
+    let s = Scratch::new();
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    let done = nvmod_api::target::set(
+        &nvmod_api::target::SetRequest {
+            instance: s.root(),
+            target: nvmod_api::target::Target::NvRs,
+        },
+        &mut progress,
+        &CancelToken::new(),
+    )
+    .expect("sets")
+    .done()
+    .expect("not cancelled");
+    assert_eq!(done.target, nvmod_api::target::Target::NvRs);
+    assert_eq!(done.instance, s.root());
+    assert!(
+        events
+            .iter()
+            .any(|e| e.step == "set-target" && e.label == "target.set.setting"),
+        "{events:?}"
+    );
+    let text = fs::read_to_string(s.root().join("nvmod-instance.json")).unwrap();
+    assert!(text.contains("\"target\": \"nv-rs\""), "{text}");
+}
+
+#[test]
+fn target_set_refuses_a_folder_that_is_not_an_instance() {
+    let dir = TempDir::new("api-target-not-instance");
+    let error = nvmod_api::target::set(
+        &nvmod_api::target::SetRequest {
+            instance: dir.path().to_path_buf(),
+            target: nvmod_api::target::Target::NvRs,
+        },
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "target.set");
+    assert!(error.summary.contains("not an nvmod Instance"), "{error}");
+    assert!(!dir.path().join("nvmod-instance.json").exists());
+}
+
+#[test]
+fn target_set_cancelled_before_the_write_changes_nothing() {
+    let s = Scratch::new();
+    let before = fs::read(s.root().join("nvmod-instance.json")).unwrap();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let outcome = nvmod_api::target::set(
+        &nvmod_api::target::SetRequest {
+            instance: s.root(),
+            target: nvmod_api::target::Target::NvRs,
+        },
+        &mut NoProgress,
+        &cancel,
+    )
+    .expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        fs::read(s.root().join("nvmod-instance.json")).unwrap(),
+        before
+    );
+}
