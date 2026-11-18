@@ -15,7 +15,6 @@ lzma-rust2 = "0.25"
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
-nvmod-runner = { workspace = true }
 nvmod-stage = { workspace = true }
 roxmltree = "0.21.2"
 ruzstd = "0.9.1"

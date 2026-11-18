@@ -8,7 +8,7 @@ use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--extract-tool <path>] [--max-extract-bytes <n>] [--json]";
+const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
 fn open(args: &Args, name: &str, err: &mut dyn Write) -> Result<NvmodInstance, u8> {
@@ -117,7 +117,6 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             "profile",
             "name",
             "answers",
-            "extract-tool",
             "max-extract-bytes",
         ],
     );
@@ -147,7 +146,6 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         name: args.option("name").map(str::to_owned),
         dry_run: args.flag("dry-run"),
         answers: args.option("answers").map(PathBuf::from),
-        extract_tool: args.option("extract-tool").map(PathBuf::from),
         max_extract_bytes,
     };
     match nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new()) {

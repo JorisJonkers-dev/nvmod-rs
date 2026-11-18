@@ -1212,7 +1212,6 @@ fn install_dry_run_writes_nothing() {
         name: None,
         dry_run: true,
         answers: None,
-        extract_tool: None,
         max_extract_bytes: None,
     };
     let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
@@ -1241,7 +1240,6 @@ fn install_for_real_then_rollback_removes_it() {
         name: None,
         dry_run: false,
         answers: None,
-        extract_tool: None,
         max_extract_bytes: None,
     };
     let _ = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
@@ -1275,7 +1273,6 @@ fn install_cancelled_before_changes_nothing() {
         name: None,
         dry_run: false,
         answers: None,
-        extract_tool: None,
         max_extract_bytes: None,
     };
     let outcome =
@@ -1303,7 +1300,6 @@ fn an_install_that_needs_fomod_answers_returns_the_questions() {
         name: None,
         dry_run: false,
         answers: None,
-        extract_tool: None,
         max_extract_bytes: None,
     };
     let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
@@ -1342,7 +1338,6 @@ fn an_install_over_the_extraction_limit_is_refused() {
         name: None,
         dry_run: false,
         answers: None,
-        extract_tool: None,
         max_extract_bytes: Some(50),
     };
     let outcome = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new());

@@ -30,9 +30,6 @@ pub struct InstallRequest {
     /// A JSON file with answers to the FOMOD's questions.
     #[serde(default)]
     pub answers: Option<PathBuf>,
-    /// Extract with this tool instead of the built-in readers.
-    #[serde(default)]
-    pub extract_tool: Option<PathBuf>,
     /// The most bytes the extraction may write; `None` for the default limit.
     #[serde(default)]
     pub max_extract_bytes: Option<u64>,
@@ -91,7 +88,6 @@ pub fn install(
         name: request.name.as_deref(),
         dry_run: request.dry_run,
         answers: request.answers.as_deref(),
-        extract_tool: request.extract_tool.as_deref(),
         limits,
     };
     match nvmod_modinstall::install(&mod_request) {

@@ -47,7 +47,6 @@ const PATH_OPTIONS: &[&str] = &[
     "import-mo2",
     "mod",
     "answers",
-    "extract-tool",
     "fallout3",
     "package",
     "installer",
@@ -66,7 +65,6 @@ const OPTIONS: &[&str] = &[
     "import-mo2",
     "mod",
     "answers",
-    "extract-tool",
     "fallout3",
     "package",
     "installer",
@@ -233,7 +231,7 @@ fn plan_finish(args: &Args) -> Vec<Step> {
             &format!("mod:{file}"),
             &format!("install the Mod {file}"),
             &["install", archive, "--instance", &instance],
-            pass(args, &["profile", "answers", "extract-tool"]),
+            pass(args, &["profile", "answers"]),
         ));
     }
     let mut more = pass(args, &["profile"]);
