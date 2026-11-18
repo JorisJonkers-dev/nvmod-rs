@@ -1,0 +1,73 @@
+{
+  "args": [
+    "verify",
+    "--instance",
+    "<TMP>/fnv",
+    "--proton",
+    "<TMP>/bin/proton",
+    "--json"
+  ],
+  "command": "verify",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": {
+    "doctor": {
+      "base": "<TMP>/base",
+      "exe": {
+        "file_version": "1.4.0.525",
+        "large_address_aware": false
+      },
+      "findings": [
+        {
+          "code": "extender.version-unknown",
+          "message": "the catalogue does not record which version of xNVSE it expects: unknown",
+          "severity": "info",
+          "subject": "nvse_1_4.dll"
+        }
+      ],
+      "schema_version": 1,
+      "storefront": "steam",
+      "summary": {
+        "errors": 0,
+        "info": 1,
+        "warnings": 0
+      },
+      "target": "vanilla"
+    },
+    "launch_plan": {
+      "entries": [
+        {
+          "args": [
+            "run",
+            "<TMP>/base/FalloutNV.exe"
+          ],
+          "env": {
+            "STEAM_COMPAT_DATA_PATH": "<TMP>/fnv/compatdata"
+          },
+          "platform": "linux",
+          "program": "<TMP>/bin/proton",
+          "working_dir": "<TMP>/base"
+        },
+        {
+          "args": [],
+          "env": {},
+          "platform": "windows",
+          "program": "<TMP>/base/FalloutNV.exe",
+          "working_dir": "<TMP>/base"
+        }
+      ],
+      "extender": false,
+      "note": "vanilla: the base copy has no nvse_loader.exe, so the game starts without xNVSE and no NVSE plugin loads",
+      "nv_rs": "native nv-rs: `nvmod run nv-rs` (or `nvmod run game` on an nv-rs Instance) starts the installed nv-viewer from a run folder of the staged Data; this Proton plan is its fallback (`--via-proton`)",
+      "path": "vanilla+xnvse"
+    },
+    "nv_rs": {
+      "installed": false,
+      "message": "nv-rs is not installed",
+      "verified": true
+    },
+    "schema_version": 1,
+    "verified": true
+  }
+}

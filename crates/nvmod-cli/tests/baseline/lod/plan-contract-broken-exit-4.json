@@ -1,0 +1,20 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright",
+    "--json"
+  ],
+  "command": "lod",
+  "exit_code": 4,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: the tool failed: lodwright-rs gave a malformed response: lodwright-plan: the document does not match schema 1: \"worlds\" is a required property (at ``)"
+  ],
+  "stdout": []
+}

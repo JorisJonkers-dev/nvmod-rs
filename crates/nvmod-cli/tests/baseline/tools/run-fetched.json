@@ -1,0 +1,20 @@
+{
+  "args": [
+    "tools",
+    "run",
+    "lodwright-rs",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--",
+    "plan"
+  ],
+  "command": "tools",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": {
+    "worlds": []
+  }
+}

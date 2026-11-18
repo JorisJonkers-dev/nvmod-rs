@@ -1,0 +1,12 @@
+{
+  "args": [
+    "contracts"
+  ],
+  "command": "contracts",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod: unknown command `contracts`; try --help"
+  ],
+  "stdout": []
+}

@@ -1,0 +1,19 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright"
+  ],
+  "command": "lod",
+  "exit_code": 4,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: the tool failed: lodwright-rs failed: exit code 1. cannot read the plugin"
+  ],
+  "stdout": []
+}

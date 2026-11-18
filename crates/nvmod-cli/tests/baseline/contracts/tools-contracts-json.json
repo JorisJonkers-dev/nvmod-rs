@@ -1,0 +1,53 @@
+{
+  "args": [
+    "tools",
+    "contracts",
+    "--json"
+  ],
+  "command": "contracts",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-plan",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "loot-sort",
+      "current": 1,
+      "tool": "loot-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "nv-rs-capabilities",
+      "current": 1,
+      "tool": "nv-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "nv-rs-release-manifest",
+      "current": 1,
+      "tool": "nv-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "ttw-installer-result",
+      "current": 1,
+      "tool": "ttw-installer"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "args": [
+    "run",
+    "game",
+    "--instance",
+    "<TMP>/fnv",
+    "--proton",
+    "<TMP>/bin/proton",
+    "--dry-run",
+    "--json"
+  ],
+  "command": "run",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": {
+    "command": {
+      "args": [
+        "run",
+        "<TMP>/base/FalloutNV.exe"
+      ],
+      "env": {
+        "NVMOD_DATA_DIR": "<TMP>/fnv/staging/Default/data",
+        "NVMOD_INSTANCE": "<TMP>/fnv",
+        "NVMOD_PROFILE": "Default",
+        "STEAM_COMPAT_DATA_PATH": "<TMP>/fnv/compatdata",
+        "SteamAppId": "22380",
+        "SteamGameId": "22380"
+      },
+      "log": null,
+      "program": "<TMP>/bin/proton",
+      "working_dir": "<TMP>/base"
+    },
+    "data_dir": "<TMP>/fnv/staging/Default/data",
+    "entry": "game",
+    "kind": "game",
+    "native": null,
+    "notes": [
+      "vanilla: the base copy has no nvse_loader.exe, so the game starts without xNVSE and no NVSE plugin loads",
+      "the game reads the base copy's Data folder; the staged Data folder is <TMP>/fnv/staging/Default/data (NVMOD_DATA_DIR), and binding it as the game's Data waits for the overlay backend behind the Deploy design",
+      "profile: not applied to a prefix (<TMP>/fnv/compatdata is not a Wine or Proton prefix (no drive_c/users, also not under pfx))"
+    ],
+    "staging": {
+      "action": "current"
+    },
+    "via_proton": true
+  }
+}

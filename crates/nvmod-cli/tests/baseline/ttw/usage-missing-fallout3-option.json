@@ -1,0 +1,19 @@
+{
+  "args": [
+    "ttw",
+    "--instance",
+    "<TMP>/fnv",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml"
+  ],
+  "command": "ttw",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "usage: nvmod ttw --instance <dir> --fallout3 <dir> [--package <file>] [--installer <path>] [--profile <name>] [--json]",
+    "       tool options: [--lock <file>] [--store <dir>] [--timeout-secs <n>]"
+  ],
+  "stdout": []
+}

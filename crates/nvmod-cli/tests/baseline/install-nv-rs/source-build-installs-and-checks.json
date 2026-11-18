@@ -1,0 +1,20 @@
+{
+  "args": [
+    "install-nv-rs",
+    "--instance",
+    "<TMP>/fnv",
+    "--source",
+    "<TMP>/src",
+    "--cargo",
+    "<TMP>/bin/cargo"
+  ],
+  "command": "install-nv-rs",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod install-nv-rs: nv-rs built from source: <TMP>/fnv/nv-rs/bin/nv-viewer",
+    "installation check passed: <TMP>/fnv/nv-rs/bin/nv-viewer <TMP>/base/Data --check",
+    "fake check passed <TMP>/base/Data --check"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "args": [
+    "tools",
+    "fetch",
+    "lodwright-rs",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--gh",
+    "<TMP>/bin/gh"
+  ],
+  "command": "tools",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod tools: lodwright-rs 1.0.0 is at <TMP>/store/<SHA256-1>/lodwright-rs",
+    "  SHA-256 matches tools.lock.toml",
+    "  attestation names o/lodwright-rs workflow .github/workflows/release.yml"
+  ]
+}

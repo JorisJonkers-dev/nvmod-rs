@@ -1,0 +1,24 @@
+{
+  "args": [
+    "verify",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "verify",
+  "exit_code": 3,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod doctor: base copy <TMP>/base (Steam)",
+    "executable: FalloutNV.exe 1.4.0.525 (4GB/large address aware: no)",
+    "findings: 1 error(s), 0 warning(s), 1 info",
+    "  [error] Patch.esp: its master Missing.esm is not in the Load order (loadorder.missing-master)",
+    "  [info] nvse_1_4.dll: the catalogue does not record which version of xNVSE it expects: unknown (extender.version-unknown)",
+    "nv-rs: nv-rs is not installed",
+    "launch plan (vanilla+xnvse): vanilla: the base copy has no nvse_loader.exe, so the game starts without xNVSE and no NVSE plugin loads",
+    "  linux: STEAM_COMPAT_DATA_PATH=<TMP>/fnv/compatdata proton run <TMP>/base/FalloutNV.exe",
+    "  windows: <TMP>/base/FalloutNV.exe",
+    "  nv-rs: native nv-rs: `nvmod run nv-rs` (or `nvmod run game` on an nv-rs Instance) starts the installed nv-viewer from a run folder of the staged Data; this Proton plan is its fallback (`--via-proton`)",
+    "nvmod verify: verification failed"
+  ]
+}

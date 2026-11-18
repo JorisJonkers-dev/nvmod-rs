@@ -1,0 +1,160 @@
+{
+  "args": [
+    "setup",
+    "--base",
+    "<TMP>/base",
+    "--instance",
+    "<TMP>/fnv",
+    "--masterlist",
+    "<TMP>/work/masterlist.yaml",
+    "--release",
+    "--release-url",
+    "file://<TMP>/work/release",
+    "--gh",
+    "<TMP>/work/gh",
+    "--retry-delay-ms",
+    "0",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--mod",
+    "<TMP>/work/Core.zip",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 4,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod setup: step `nv-rs` failed; rolled back: the Instance was removed and nothing is left behind"
+  ],
+  "stdout": [
+    {
+      "dry_run": false,
+      "event": "plan",
+      "instance": "<TMP>/fnv",
+      "resume": false,
+      "seq": 1,
+      "steps": [
+        {
+          "description": "make the Instance skeleton for the base copy",
+          "skip": null,
+          "step": "init"
+        },
+        {
+          "description": "make the first profile",
+          "skip": null,
+          "step": "profile"
+        },
+        {
+          "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+          "skip": null,
+          "step": "nv-rs"
+        },
+        {
+          "description": "make nv-rs the target of the Instance",
+          "skip": null,
+          "step": "target"
+        },
+        {
+          "description": "install Tale of Two Wastelands through the pinned installer",
+          "skip": null,
+          "step": "ttw"
+        },
+        {
+          "description": "install the Mod Core.zip",
+          "skip": null,
+          "step": "mod:Core.zip"
+        },
+        {
+          "description": "build the Staging tree",
+          "skip": null,
+          "step": "stage"
+        },
+        {
+          "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+          "skip": null,
+          "step": "sort"
+        },
+        {
+          "description": "run the Doctor on the finished Instance and print the launch plan",
+          "skip": null,
+          "step": "verify"
+        }
+      ]
+    },
+    {
+      "description": "make the Instance skeleton for the base copy",
+      "event": "step",
+      "index": 1,
+      "seq": 2,
+      "status": "started",
+      "step": "init",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "make the Instance skeleton for the base copy",
+      "detail": "nvmod init: made an Instance at <TMP>/fnv for the Steam base copy <TMP>/base",
+      "event": "step",
+      "index": 1,
+      "seq": 3,
+      "status": "done",
+      "step": "init",
+      "total": 9
+    },
+    {
+      "description": "make the first profile",
+      "event": "step",
+      "index": 2,
+      "seq": 4,
+      "status": "started",
+      "step": "profile",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "make the first profile",
+      "detail": "nvmod profile: made the profile `Default`",
+      "event": "step",
+      "index": 2,
+      "seq": 5,
+      "status": "done",
+      "step": "profile",
+      "total": 9
+    },
+    {
+      "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+      "event": "step",
+      "index": 3,
+      "seq": 6,
+      "status": "started",
+      "step": "nv-rs",
+      "total": 9
+    },
+    {
+      "code": 4,
+      "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+      "detail": "nvmod install-nv-rs: failed and was rolled back: the installation check <TMP>/fnv/nv-rs/bin/nv-viewer <TMP>/base/Data --check failed (exit status: 1):\nfake-check-refused <TMP>/base/Data --check",
+      "event": "step",
+      "index": 3,
+      "seq": 7,
+      "status": "failed",
+      "step": "nv-rs",
+      "total": 9
+    },
+    {
+      "event": "finished",
+      "exit_code": 4,
+      "failed_step": "nv-rs",
+      "interrupted": false,
+      "outcome": "rolled-back",
+      "resumable": false,
+      "rolled_back": true,
+      "seq": 8,
+      "status": "failed"
+    }
+  ]
+}

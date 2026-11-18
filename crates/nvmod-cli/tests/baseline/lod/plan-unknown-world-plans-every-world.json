@@ -1,0 +1,31 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright",
+    "--world",
+    "Nowhere"
+  ],
+  "command": "lod",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod lod plan: 2 worldspace(s), planned by lodwright-rs 0.1.0; nothing was written",
+    "Testland (00000A00): 3 cell(s), cells -5..1 x 0..3, max seam error 216.0",
+    "  level 4: 2 block(s), 2149 vertices, 4098 triangles, max error 0.0",
+    "  level 8: 1 block(s), 2145 vertices, 4096 triangles, max error 0.0",
+    "  level 16: 1 block(s), 2145 vertices, 4096 triangles, max error 0.0",
+    "  level 32: 1 block(s), 2145 vertices, 4096 triangles, max error 0.0",
+    "Island (02000B00): 1 cell(s), cells 2..2 x 2..2, max seam error 0.0",
+    "  level 4: 1 block(s), 4 vertices, 2 triangles, max error 0.0",
+    "  level 8: 1 block(s), 4 vertices, 2 triangles, max error 0.0",
+    "  level 16: 1 block(s), 4 vertices, 2 triangles, max error 0.0",
+    "  level 32: 1 block(s), 4 vertices, 2 triangles, max error 0.0"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "args": [
+    "install-nv-rs",
+    "--instance",
+    "<TMP>/plain",
+    "--cargo",
+    "<TMP>/bin/cargo",
+    "--source",
+    "<TMP>/src"
+  ],
+  "command": "install-nv-rs",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod install-nv-rs: refused: not an nvmod Instance: <TMP>/plain/nvmod-instance.json: No such file or directory (os error 2)"
+  ],
+  "stdout": []
+}

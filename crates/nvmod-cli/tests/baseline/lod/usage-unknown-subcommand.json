@@ -1,0 +1,16 @@
+{
+  "args": [
+    "lod",
+    "fly",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "lod",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "usage: nvmod lod plan|generate --instance <dir> [--profile <name>] [--world <name>] [--blocks] [--json]",
+    "       tool options: [--lodwright <path>] [--lock <file>] [--store <dir>] [--timeout-secs <n>]"
+  ],
+  "stdout": []
+}

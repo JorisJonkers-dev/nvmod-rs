@@ -1,0 +1,132 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright",
+    "--world",
+    "Testland",
+    "--blocks",
+    "--json"
+  ],
+  "command": "lod",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": {
+    "plan": {
+      "schema_version": 1,
+      "worlds": [
+        {
+          "bounds": {
+            "max_x": 1,
+            "max_y": 3,
+            "min_x": -5,
+            "min_y": 0
+          },
+          "cells": 3,
+          "form_id": "00000A00",
+          "levels": [
+            {
+              "blocks": 2,
+              "level": 4,
+              "max_error": 0.0,
+              "triangles": 4098,
+              "vertices": 2149
+            },
+            {
+              "blocks": 1,
+              "level": 8,
+              "max_error": 0.0,
+              "triangles": 4096,
+              "vertices": 2145
+            },
+            {
+              "blocks": 1,
+              "level": 16,
+              "max_error": 0.0,
+              "triangles": 4096,
+              "vertices": 2145
+            },
+            {
+              "blocks": 1,
+              "level": 32,
+              "max_error": 0.0,
+              "triangles": 4096,
+              "vertices": 2145
+            }
+          ],
+          "max_seam_error": 216.0,
+          "name": "Testland",
+          "settings_path": "lodsettings/Testland.lod"
+        },
+        {
+          "bounds": {
+            "max_x": 2,
+            "max_y": 2,
+            "min_x": 2,
+            "min_y": 2
+          },
+          "cells": 1,
+          "form_id": "02000B00",
+          "levels": [
+            {
+              "blocks": 1,
+              "level": 4,
+              "max_error": 0.0,
+              "triangles": 2,
+              "vertices": 4
+            },
+            {
+              "blocks": 1,
+              "level": 8,
+              "max_error": 0.0,
+              "triangles": 2,
+              "vertices": 4
+            },
+            {
+              "blocks": 1,
+              "level": 16,
+              "max_error": 0.0,
+              "triangles": 2,
+              "vertices": 4
+            },
+            {
+              "blocks": 1,
+              "level": 32,
+              "max_error": 0.0,
+              "triangles": 2,
+              "vertices": 4
+            }
+          ],
+          "max_seam_error": 0.0,
+          "name": "Island",
+          "settings_path": "lodsettings/Island.lod"
+        }
+      ]
+    },
+    "profile": "Default",
+    "request": {
+      "command": "plan",
+      "data": "<TMP>/fnv/staging/Default/data",
+      "plugins": [
+        "FalloutNV.esm"
+      ],
+      "schema_version": 1,
+      "settings": {
+        "blocks": true,
+        "world": "Testland"
+      }
+    },
+    "schema_version": 1,
+    "status": "planned",
+    "tool": {
+      "name": "lodwright-rs",
+      "version": "0.1.0"
+    }
+  }
+}

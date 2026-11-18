@@ -1,0 +1,17 @@
+{
+  "args": [
+    "tools",
+    "contracts"
+  ],
+  "command": "contracts",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "lodwright-plan (lodwright-rs) current v1 accepts v1",
+    "loot-sort (loot-rs) current v1 accepts v1",
+    "nv-rs-capabilities (nv-rs) current v1 accepts v1",
+    "nv-rs-release-manifest (nv-rs) current v1 accepts v1",
+    "ttw-installer-result (ttw-installer) current v1 accepts v1"
+  ]
+}

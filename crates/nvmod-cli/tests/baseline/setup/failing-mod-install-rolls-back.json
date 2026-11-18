@@ -1,0 +1,220 @@
+{
+  "args": [
+    "setup",
+    "--base",
+    "<TMP>/base",
+    "--instance",
+    "<TMP>/fnv",
+    "--masterlist",
+    "<TMP>/work/masterlist.yaml",
+    "--release",
+    "--release-url",
+    "file://<TMP>/work/release",
+    "--gh",
+    "<TMP>/work/gh",
+    "--retry-delay-ms",
+    "0",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--mod",
+    "<TMP>/work/Broken.zip",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod setup: step `mod:Broken.zip` failed; rolled back: the Instance was removed and nothing is left behind"
+  ],
+  "stdout": [
+    {
+      "dry_run": false,
+      "event": "plan",
+      "instance": "<TMP>/fnv",
+      "resume": false,
+      "seq": 1,
+      "steps": [
+        {
+          "description": "make the Instance skeleton for the base copy",
+          "skip": null,
+          "step": "init"
+        },
+        {
+          "description": "make the first profile",
+          "skip": null,
+          "step": "profile"
+        },
+        {
+          "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+          "skip": null,
+          "step": "nv-rs"
+        },
+        {
+          "description": "make nv-rs the target of the Instance",
+          "skip": null,
+          "step": "target"
+        },
+        {
+          "description": "install Tale of Two Wastelands through the pinned installer",
+          "skip": null,
+          "step": "ttw"
+        },
+        {
+          "description": "install the Mod Broken.zip",
+          "skip": null,
+          "step": "mod:Broken.zip"
+        },
+        {
+          "description": "build the Staging tree",
+          "skip": null,
+          "step": "stage"
+        },
+        {
+          "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+          "skip": null,
+          "step": "sort"
+        },
+        {
+          "description": "run the Doctor on the finished Instance and print the launch plan",
+          "skip": null,
+          "step": "verify"
+        }
+      ]
+    },
+    {
+      "description": "make the Instance skeleton for the base copy",
+      "event": "step",
+      "index": 1,
+      "seq": 2,
+      "status": "started",
+      "step": "init",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "make the Instance skeleton for the base copy",
+      "detail": "nvmod init: made an Instance at <TMP>/fnv for the Steam base copy <TMP>/base",
+      "event": "step",
+      "index": 1,
+      "seq": 3,
+      "status": "done",
+      "step": "init",
+      "total": 9
+    },
+    {
+      "description": "make the first profile",
+      "event": "step",
+      "index": 2,
+      "seq": 4,
+      "status": "started",
+      "step": "profile",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "make the first profile",
+      "detail": "nvmod profile: made the profile `Default`",
+      "event": "step",
+      "index": 2,
+      "seq": 5,
+      "status": "done",
+      "step": "profile",
+      "total": 9
+    },
+    {
+      "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+      "event": "step",
+      "index": 3,
+      "seq": 6,
+      "status": "started",
+      "step": "nv-rs",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+      "detail": "nvmod install-nv-rs: nv-rs fetched from the release and verified: <TMP>/fnv/nv-rs/bin/nv-viewer\ninstallation check passed: <TMP>/fnv/nv-rs/bin/nv-viewer <TMP>/base/Data --check\nfake nv-rs from a release <TMP>/base/Data --check",
+      "event": "step",
+      "index": 3,
+      "seq": 7,
+      "status": "done",
+      "step": "nv-rs",
+      "total": 9
+    },
+    {
+      "description": "make nv-rs the target of the Instance",
+      "event": "step",
+      "index": 4,
+      "seq": 8,
+      "status": "started",
+      "step": "target",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "make nv-rs the target of the Instance",
+      "detail": "nvmod target: the Instance now runs on nv-rs",
+      "event": "step",
+      "index": 4,
+      "seq": 9,
+      "status": "done",
+      "step": "target",
+      "total": 9
+    },
+    {
+      "description": "install Tale of Two Wastelands through the pinned installer",
+      "event": "step",
+      "index": 5,
+      "seq": 10,
+      "status": "started",
+      "step": "ttw",
+      "total": 9
+    },
+    {
+      "code": 0,
+      "description": "install Tale of Two Wastelands through the pinned installer",
+      "detail": "nvmod ttw: installed `Tale of Two Wastelands` into profile `Default` (2 files, ttw-installer 0.2.0)\n  activates plugin TaleOfTwoWastelands.esm",
+      "event": "step",
+      "index": 5,
+      "seq": 11,
+      "status": "done",
+      "step": "ttw",
+      "total": 9
+    },
+    {
+      "description": "install the Mod Broken.zip",
+      "event": "step",
+      "index": 6,
+      "seq": 12,
+      "status": "started",
+      "step": "mod:Broken.zip",
+      "total": 9
+    },
+    {
+      "code": 2,
+      "description": "install the Mod Broken.zip",
+      "detail": "nvmod install: refused: <TMP>/work/Broken.zip is not a zip or tar archive and none of 7zz, 7z, 7za, bsdtar is in PATH (or name a tool with --extract-tool)",
+      "event": "step",
+      "index": 6,
+      "seq": 13,
+      "status": "failed",
+      "step": "mod:Broken.zip",
+      "total": 9
+    },
+    {
+      "event": "finished",
+      "exit_code": 2,
+      "failed_step": "mod:Broken.zip",
+      "interrupted": false,
+      "outcome": "rolled-back",
+      "resumable": false,
+      "rolled_back": true,
+      "seq": 14,
+      "status": "failed"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "args": [
+    "verify",
+    "--nope"
+  ],
+  "command": "verify",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod verify: unknown option --nope",
+    "usage: nvmod verify --instance <dir> [--profile <name>] [--masterlist <file>] [--catalog <file>] [--proton <program>] [--fail-on <severity>] [--json]"
+  ],
+  "stdout": []
+}

@@ -1,0 +1,16 @@
+{
+  "args": [
+    "run",
+    "Nope",
+    "--instance",
+    "<TMP>/fnv",
+    "--dry-run"
+  ],
+  "command": "run",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod run: refused: no entry titled `Nope`; the entries are: game, nv-rs"
+  ],
+  "stdout": []
+}

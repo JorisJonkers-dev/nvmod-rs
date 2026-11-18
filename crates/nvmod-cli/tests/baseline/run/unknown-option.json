@@ -1,0 +1,17 @@
+{
+  "args": [
+    "run",
+    "game",
+    "--instance",
+    "<TMP>/fnv",
+    "--nope"
+  ],
+  "command": "run",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod run: unknown option --nope",
+    "usage: nvmod run <title|path|game|nv-rs> --instance <dir> [--profile <name>] [--proton <program>] [--via-proton] [--viewer <path>] [--dry-run] [--wait] [--restage] [--no-stage] [--no-profile] [--json] [-- <args>...]"
+  ],
+  "stdout": []
+}
