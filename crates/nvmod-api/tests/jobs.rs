@@ -5,6 +5,7 @@
 use nvmod_api::backup::{
     CreateRequest, ListRequest as BackupListRequest, PruneRequest, RestoreRequest,
 };
+use nvmod_api::import_mo2::{ImportOutput, ImportRequest};
 use nvmod_api::install::{InstallOutput, InstallRequest, Report, RollbackRequest};
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
@@ -1520,4 +1521,110 @@ fn profile_create_cancelled_before_the_write_changes_nothing() {
     let outcome = nvmod_api::profile::create(&request, &mut NoProgress, &cancel).expect("no error");
     assert!(matches!(outcome, Outcome::Cancelled));
     assert!(!s.root().join("profiles/Cancelled").exists());
+}
+
+#[test]
+fn import_mo2_imports_a_profile() {
+    let mo2 = TempDir::new("api-import-mo2");
+    let base = TempDir::new("api-import-base");
+    BaseBuilder::steam().write(base.path());
+    let out = TempDir::new("api-import-out");
+    write_file(
+        mo2.path(),
+        "ModOrganizer.ini",
+        b"[General]\r\nselected_profile=Default\r\n",
+    );
+    write_file(mo2.path(), "mods/Example/Example.esp", b"esp");
+    write_file(mo2.path(), "profiles/Default/modlist.txt", b"+Example\r\n");
+    write_file(
+        mo2.path(),
+        "profiles/Default/plugins.txt",
+        b"FalloutNV.esm\r\n",
+    );
+    write_file(
+        mo2.path(),
+        "profiles/Default/loadorder.txt",
+        b"FalloutNV.esm\r\n",
+    );
+    let request = ImportRequest {
+        mo2: mo2.path().to_path_buf(),
+        instance: out.path().join("fnv"),
+        base: base.path().to_path_buf(),
+        profile: Some("Default".into()),
+        copy_only: false,
+    };
+    let output = nvmod_api::import_mo2::import(&request, &mut NoProgress, &CancelToken::new())
+        .expect("imports")
+        .done()
+        .expect("not cancelled");
+    match output {
+        ImportOutput::Imported(report) => {
+            assert_eq!(report.profile, "Default");
+            assert_eq!(report.mods, 1);
+        }
+        ImportOutput::Disagreements(_) => panic!("unexpected disagreements"),
+    }
+    assert!(request.instance.is_dir());
+}
+
+#[test]
+fn import_mo2_refuses_a_bad_base() {
+    let mo2 = TempDir::new("api-import-mo2-refuse");
+    let base = TempDir::new("api-import-base-refuse");
+    let out = TempDir::new("api-import-out-refuse");
+    write_file(
+        mo2.path(),
+        "ModOrganizer.ini",
+        b"[General]\r\nselected_profile=Default\r\n",
+    );
+    write_file(mo2.path(), "mods/Example/Example.esp", b"esp");
+    write_file(mo2.path(), "profiles/Default/modlist.txt", b"+Example\r\n");
+    write_file(
+        mo2.path(),
+        "profiles/Default/plugins.txt",
+        b"FalloutNV.esm\r\n",
+    );
+    write_file(
+        mo2.path(),
+        "profiles/Default/loadorder.txt",
+        b"FalloutNV.esm\r\n",
+    );
+    let request = ImportRequest {
+        mo2: mo2.path().to_path_buf(),
+        instance: out.path().join("fnv"),
+        base: base.path().to_path_buf(),
+        profile: Some("Default".into()),
+        copy_only: false,
+    };
+    let error = nvmod_api::import_mo2::import(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "import_mo2.import");
+}
+
+#[test]
+fn import_mo2_cancelled_before_it_starts_writes_nothing() {
+    let mo2 = TempDir::new("api-import-mo2-cancel");
+    let base = TempDir::new("api-import-base-cancel");
+    BaseBuilder::steam().write(base.path());
+    let out = TempDir::new("api-import-out-cancel");
+    let instance = out.path().join("fnv");
+    write_file(
+        mo2.path(),
+        "ModOrganizer.ini",
+        b"[General]\r\nselected_profile=Default\r\n",
+    );
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = ImportRequest {
+        mo2: mo2.path().to_path_buf(),
+        instance: instance.clone(),
+        base: base.path().to_path_buf(),
+        profile: Some("Default".into()),
+        copy_only: false,
+    };
+    let outcome =
+        nvmod_api::import_mo2::import(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert!(!instance.exists());
 }
