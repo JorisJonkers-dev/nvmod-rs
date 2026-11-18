@@ -17,11 +17,10 @@ Each archive holds `nvmod`, `LICENSE`, `THIRD-PARTY-NOTICES.txt` (the linked cra
 `README.txt`. Tools are never bundled. All assets carry one GitHub artifact attestation made by `release-assets.yml`.
 `known_good_set` is `null` until the lock names a set id.
 
-## Package proxy
+## Crates
 
-The `build` and `sbom` jobs download crates, so each runs the estate's `setup-package-proxy` step with the org secret
-`PACKAGES_PROXY_TOKEN` (the same pinned action as `fuzz.yml`). The secret is passed to those steps only; the job that
-checksums, attests and uploads never sees it.
+The `build` and `sbom` jobs fetch crates from crates.io directly. The 7-day cooldown in `.cargo/config.toml` and
+Renovate's `minimumReleaseAge` for crates are the protection; no package proxy or org secret is involved.
 
 ## Publishing
 
