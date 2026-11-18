@@ -38,6 +38,7 @@
 //! | [`backup::prune`] | [`backup::PruneRequest`] | [`backup::PruneOutput`] |
 //! | [`backup::restore`] | [`backup::RestoreRequest`] | [`backup::RestoreOutput`] |
 //! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
+//! | [`import_mo2::import`] | [`import_mo2::ImportRequest`] | [`import_mo2::ImportOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
@@ -49,6 +50,7 @@
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
 pub mod backup;
+pub mod import_mo2;
 pub mod init;
 pub mod install;
 pub mod job;

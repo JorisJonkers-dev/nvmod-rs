@@ -694,6 +694,7 @@ dependencies = [
  "loot-rs",
  "nvmod-backup",
  "nvmod-core",
+ "nvmod-import",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
