@@ -102,7 +102,7 @@ pub fn safe_relative(name: &str) -> Result<PathBuf, String> {
 /// Extract `archive` into the existing folder `dest`.
 ///
 /// # Errors
-/// A reason, when the archive is refused, cannot be read, or the tool fails.
+/// A reason, when the archive is refused, cannot be read, or is not a format nvmod reads.
 pub fn extract(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
     let mut magic = [0_u8; 512];
     let n = fs::File::open(archive)
@@ -114,12 +114,12 @@ pub fn extract(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String
         Format::SevenZ => extract_7z(archive, dest, limits),
         Format::CompressedTar(codec) => extract_compressed_tar(archive, dest, limits, codec),
         Format::Tar => extract_tar(archive, dest, limits),
-        Format::Unsupported => extract_external(archive),
+        Format::Unsupported => refuse_unsupported(archive),
     }
 }
 
 /// A format without an in-process reader (rar and the rest) is refused; nothing is written.
-fn extract_external(archive: &Path) -> Result<(), String> {
+fn refuse_unsupported(archive: &Path) -> Result<(), String> {
     Err(format!(
         "{} is not an archive nvmod can read. It reads zip, 7z, tar, tar.gz, tar.xz, tar.bz2 and tar.zst; rar and other formats are not supported. Unpack it yourself and install the folder (`nvmod install <folder>`), or use a zip, 7z or tar release of the mod.",
         archive.display()

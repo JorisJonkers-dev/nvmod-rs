@@ -296,7 +296,7 @@ impl Runner {
     }
 
     /// Run `call` and return what the program left whatever its exit code was; `ok_exit_codes` is not consulted.
-    /// For callers that read a failing program's output themselves (a build log, an extractor's complaint).
+    /// For callers that read a failing program's output themselves (a build log, a verifier's complaint).
     ///
     /// # Errors
     /// As [`Runner::run`], except that no exit code is a failure; a program ended by a signal still is.

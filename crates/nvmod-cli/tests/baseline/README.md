@@ -79,8 +79,8 @@ Nothing else is normalised. The arguments are not normalised: a digest given on 
 `PATH` is the scratch `bin` folder and nothing else. The fixtures put only the programs a case needs into that folder,
 as symbolic links to the test's own copies: `cat`, `cp` and `mkdir` for the fixture scripts; `curl` for the cases that
 fetch or trust a tool; `tar` and `gzip` for the cases that name an nv-rs release. Nothing else is linked, so no host
-program that nvmod looks for by name is visible to a case. In particular the archive tools that nvmod tries for a mod
-archive (`7zz`, `7z`, `7za`, `bsdtar`) are never on the PATH, and the refusal of a non-archive is the same on every Unix.
+program that nvmod looks for by name is visible to a case, so the transcripts do not depend on the tools installed on the
+machine, and the refusal of a non-archive is the same on every Unix.
 A test run that has no `cat`, `cp`, `mkdir`, `curl`, `tar` or `gzip` on its own PATH fails with the name of the missing
 program.
 
