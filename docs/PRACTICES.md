@@ -39,7 +39,7 @@ machine): `capped 6G cargo test --workspace`. Without a linker, as on NixOS:
 
 Every `nvmod` command except `--help` and `--version` writes `logs/<run_id>.ndjson` (ADR-0012 of nv-linux). The
 library crates only emit `tracing` events (spans carry `run_id`, `op`, `step` and `tool`); the `nvmod` binary
-installs the subscriber through `nvmod_cli::run_logged`, which a GUI binary calls in the same way (and installs
+installs the subscriber through `nvmod_cli::run_logged`, which any binary that links the CLI crate can call in the same way (and installs
 `tracing-log`'s `LogTracer` first, so `log` records reach the same log). Nothing is sent anywhere.
 
 - **Where:** `$NVMOD_STATE_DIR/logs`, else `$XDG_STATE_HOME/nvmod/logs` or `~/.local/state/nvmod/logs`, on Windows
