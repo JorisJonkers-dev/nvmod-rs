@@ -3,10 +3,11 @@
 //! read.
 
 use crate::{OK, REFUSED, USAGE, args::Args};
-use nvmod_conflicts::ConflictError;
+use nvmod_api::{CancelToken, NoProgress, Outcome, conflicts as job};
+use nvmod_conflicts::{ConflictError, Report};
 use nvmod_instance::NvmodInstance;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const CONFLICTS_USAGE: &str = "usage: nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]";
 const TREE_USAGE: &str =
@@ -39,31 +40,33 @@ pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn 
             return USAGE;
         }
     };
-    let (instance, profile) = match open("conflicts", &args, err) {
-        Ok(v) => v,
-        Err(code) => return code,
+    let request = job::ReportRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        mod_name: args.option("mod").map(str::to_owned),
+        archives: args.flag("archives"),
     };
-    let made = if args.flag("archives") {
-        nvmod_conflicts::conflicts_with_archives(&instance, &profile)
-    } else {
-        nvmod_conflicts::conflicts(&instance, &profile)
-    };
-    let report = made.and_then(|r| match args.option("mod") {
-        Some(name) => r.only(name),
-        None => Ok(r),
-    });
-    let report = match report {
-        Ok(r) => r,
-        Err(ConflictError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod conflicts: refused: {why}");
-            return REFUSED;
+    match job::report(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(done)) => print_report(&done.report, args.flag("json"), out),
+        Ok(Outcome::Cancelled) => {
+            let _ = writeln!(err, "nvmod conflicts: cancelled");
+            REFUSED
         }
-    };
-    if args.flag("json") {
+        Err(e) => {
+            let _ = writeln!(err, "nvmod conflicts: refused: {e}");
+            REFUSED
+        }
+    }
+}
+
+/// Print the report as JSON, or as the text the command prints: one line per Mod that overwrites, is overwritten,
+/// is mixed or is redundant, one per contested path, and the archive axes when they were asked for.
+fn print_report(report: &Report, json: bool, out: &mut dyn Write) -> u8 {
+    if json {
         let _ = writeln!(
             out,
             "{}",
-            serde_json::to_string_pretty(&report).unwrap_or_default()
+            serde_json::to_string_pretty(report).unwrap_or_default()
         );
         return OK;
     }

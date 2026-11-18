@@ -141,7 +141,7 @@ impl ErrorKind {
 pub struct JobError {
     /// The class.
     pub kind: ErrorKind,
-    /// The job: `mods.list`, `mods.change`, `loadorder.sort`, `saves.list` or `run.plan`.
+    /// The job, as `<area>.<action>`, for example `mods.list`, `run.plan`, `doctor.check` or `conflicts.report`.
     pub job: &'static str,
     /// What went wrong, in plain words.
     pub summary: String,
