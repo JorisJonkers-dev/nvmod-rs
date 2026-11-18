@@ -26,7 +26,7 @@ pedantic = { level = "warn", priority = -1 }
 nvmod-ui-model = { path = "../crates/nvmod-ui-model" }
 nvmod-ui-service = { path = "../crates/nvmod-ui-service" }
 nvmod-gui-shell = { path = "crates/nvmod-gui-shell" }
-serde_json = "=1.0.154"
+serde_json = "1.0.154"
 
 # GPUI comes from the weekly gpui-pre snapshots of Zed (one maintainer). Every gpui-pre* crate must be at the same
 # exact version, bumped together monthly in one commit (README.md of this folder; scripts/check-gui-pins.sh).
