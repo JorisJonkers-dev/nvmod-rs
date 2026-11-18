@@ -33,7 +33,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/repository-hygiene-guard.yml@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/repository-hygiene-guard.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
     with:
       package-proxy-guard: enforce
     secrets:
@@ -42,11 +42,11 @@ jobs:
   pr-title:
     name: PR title
     if: ${{ github.event_name == 'pull_request' }}
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/pr-title-check.yml@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/pr-title-check.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
 
   quarantine:
     name: Quarantine
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
 
   # nvmod's crates ship inside the Toolbox on Linux, Windows and macOS (Toolbox ADR-0006), so they build and test
   # natively on all three. Linux runs in Pipeline Complete itself; this job runs Windows and macOS, and Pipeline
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
         with:
           token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
