@@ -3,30 +3,14 @@
 //! read.
 
 use crate::{OK, REFUSED, USAGE, args::Args};
-use nvmod_api::{CancelToken, NoProgress, Outcome, conflicts as job};
-use nvmod_conflicts::{ConflictError, Report};
-use nvmod_instance::NvmodInstance;
+use nvmod_api::{CancelToken, NoProgress, Outcome, conflicts as job, tree as tree_job};
+use nvmod_conflicts::{Report, Tree};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const CONFLICTS_USAGE: &str = "usage: nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]";
 const TREE_USAGE: &str =
     "usage: nvmod tree --instance <dir> [--profile <name>] [--path <prefix>] [--json]";
-
-/// Open the Instance read only and resolve the profile, or print why not.
-fn open(command: &str, args: &Args, err: &mut dyn Write) -> Result<(NvmodInstance, String), u8> {
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let refused = |why: &str, err: &mut dyn Write| {
-        let _ = writeln!(err, "nvmod {command}: refused: {why}");
-        REFUSED
-    };
-    let instance = NvmodInstance::open_read_only(root)
-        .map_err(|e| refused(&crate::install_mod::describe_open_error(root, &e), err))?;
-    let profile = instance
-        .resolve_profile(args.option("profile"))
-        .map_err(|e| refused(&e.to_string(), err))?;
-    Ok((instance, profile))
-}
 
 pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(args, &["json", "archives"], &["instance", "profile", "mod"]) {
@@ -168,22 +152,31 @@ pub(crate) fn run_tree(args: &[String], out: &mut dyn Write, err: &mut dyn Write
             return USAGE;
         }
     };
-    let (instance, profile) = match open("tree", &args, err) {
-        Ok(v) => v,
-        Err(code) => return code,
+    let request = tree_job::TreeRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        path: args.option("path").map(str::to_owned),
     };
-    let tree = match nvmod_conflicts::tree(&instance, &profile) {
-        Ok(t) => t.under(args.option("path").unwrap_or_default()),
-        Err(ConflictError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod tree: refused: {why}");
-            return REFUSED;
+    match tree_job::show(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(done)) => print_tree(&done.tree, args.flag("json"), out),
+        Ok(Outcome::Cancelled) => {
+            let _ = writeln!(err, "nvmod tree: cancelled");
+            REFUSED
         }
-    };
-    if args.flag("json") {
+        Err(e) => {
+            let _ = writeln!(err, "nvmod tree: refused: {e}");
+            REFUSED
+        }
+    }
+}
+
+/// Print the tree as JSON, or as the text the command prints: one line per path, with the layer that provides it.
+fn print_tree(tree: &Tree, json: bool, out: &mut dyn Write) -> u8 {
+    if json {
         let _ = writeln!(
             out,
             "{}",
-            serde_json::to_string_pretty(&tree).unwrap_or_default()
+            serde_json::to_string_pretty(tree).unwrap_or_default()
         );
     } else {
         for e in &tree.entries {

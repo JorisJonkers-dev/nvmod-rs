@@ -375,3 +375,25 @@ fn a_mod_the_profile_does_not_enable_is_refused_on_stderr_with_exit_two() {
         assert_eq!(err, refusal, "{args:?}");
     }
 }
+
+#[test]
+fn tree_refusals_go_to_stderr_with_exit_two() {
+    let s = Scratch::new();
+    let root = s.root();
+    let r = root.to_str().unwrap();
+    let (code, out, err) = nvmod(&["tree", "--instance", r, "--profile", "Nope", "--json"]);
+    assert_eq!(code, 2);
+    assert!(out.is_empty(), "{out}");
+    assert_eq!(
+        err,
+        "nvmod tree: refused: the Instance has no profile `Nope`\n"
+    );
+    let not_an_instance = s.inst.path().join("not-an-instance");
+    let (code, out, err) = nvmod(&["tree", "--instance", not_an_instance.to_str().unwrap()]);
+    assert_eq!(code, 2);
+    assert!(out.is_empty(), "{out}");
+    assert!(
+        err.starts_with("nvmod tree: refused: ") && err.contains("is not an nvmod Instance"),
+        "{err}"
+    );
+}
