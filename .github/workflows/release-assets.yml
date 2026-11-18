@@ -241,7 +241,7 @@ jobs:
           retention-days: 7
 
   # The archives of the release as OCI packages on ghcr.io, as the Toolbox's packages ADR decides:
-  # ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:<version>-<target>. Only for a published release, never for a dry run.
+  # ghcr.io/jorisjonkers-dev/nvmod-rs:<version>-<target>. Only for a published release, never for a dry run.
   # Both archives are checked before anything is pushed. Each pushed digest is attested in the registry; the job then
   # pulls every digest anonymously and compares its SHA-256, so a package that is not public fails the release.
   # The repository variable NVMOD_FIRST_PACKAGE_PUSH=true skips only that pull, for the first push of a new package
@@ -300,7 +300,7 @@ jobs:
           echo "$GH_TOKEN" | oras login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           push_one() {
             local target="$1" archive="$2"
-            local ref="ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:${VERSION}-x86_64-${target}"
+            local ref="ghcr.io/jorisjonkers-dev/nvmod-rs:${VERSION}-x86_64-${target}"
             (cd "$OUT" && oras push "$ref" "$(basename "$archive")" \
               --annotation "org.opencontainers.image.source=https://github.com/${REPO}" \
               --annotation "org.opencontainers.image.revision=${GITHUB_SHA}" \
@@ -318,13 +318,13 @@ jobs:
       - name: Attest the Linux package
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod
+          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs
           subject-digest: ${{ steps.push.outputs.digest_linux }}
           push-to-registry: true
       - name: Attest the Windows package
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod
+          subject-name: ghcr.io/jorisjonkers-dev/nvmod-rs
           subject-digest: ${{ steps.push.outputs.digest_windows }}
           push-to-registry: true
       # The attestations above are pushed with the login of the push step; the pull below is anonymous.
@@ -342,7 +342,7 @@ jobs:
             sha="$(cat "$OUT/${target}.sha256")"
             rm -rf "$OUT/pull-${target}"
             mkdir -p "$OUT/pull-${target}"
-            oras pull "ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod@${digest}" -o "$OUT/pull-${target}"
+            oras pull "ghcr.io/jorisjonkers-dev/nvmod-rs@${digest}" -o "$OUT/pull-${target}"
             pulled="$(sha256sum "$OUT/pull-${target}/$(basename "$archive")" | awk '{print $1}')"
             echo "$target: pulled $pulled (expected $sha)"
             test "$pulled" = "$sha"
@@ -360,7 +360,7 @@ jobs:
             echo "| Name | Tag | Digest | Archive SHA-256 |"
             echo "| --- | --- | --- | --- |"
             for target in linux windows; do
-              echo "| ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod | ${VERSION}-x86_64-${target} | $(cat "$OUT/${target}.digest") | $(cat "$OUT/${target}.sha256") |"
+              echo "| ghcr.io/jorisjonkers-dev/nvmod-rs | ${VERSION}-x86_64-${target} | $(cat "$OUT/${target}.digest") | $(cat "$OUT/${target}.sha256") |"
             done
           } >"$summary"
           cat "$summary" >>"$GITHUB_STEP_SUMMARY"

@@ -32,7 +32,7 @@ release-please release: the tag must be `vX.Y.Z`, reachable from `main`, on a `c
 ## Packages
 
 A published release also pushes the two archives as OCI packages on ghcr.io:
-`ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:<version>-x86_64-linux` and `...:<version>-x86_64-windows`. Both archives are
+`ghcr.io/jorisjonkers-dev/nvmod-rs:<version>-x86_64-linux` and `...:<version>-x86_64-windows`. Both archives are
 checked before anything is pushed, each pushed digest gets a build provenance attestation stored in the registry, and
 the job then pulls every digest anonymously and compares its SHA-256, so a package that is not public fails the
 release. The package names, digests and SHA-256 sums are added to the release notes. For the first push of a new
@@ -41,7 +41,7 @@ the anonymous pull), make the package public, then remove the variable. A pull r
 `Packages dry run`, which builds the Linux archive and prints what would be pushed.
 
 ```sh
-gh attestation verify oci://ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:<version>-x86_64-linux --repo JorisJonkers-dev/nvmod-rs
+gh attestation verify oci://ghcr.io/jorisjonkers-dev/nvmod-rs:<version>-x86_64-linux --repo JorisJonkers-dev/nvmod-rs
 ```
 
 ## Verify

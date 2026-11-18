@@ -46,5 +46,5 @@ jobs:
         run: |
           set -euo pipefail
           archive="packages/nvmod-$VERSION-x86_64-linux.tar.zst"
-          echo "Would push: ghcr.io/jorisjonkers-dev/nvmod-rs-nvmod:${VERSION}-x86_64-linux"
+          echo "Would push: ghcr.io/jorisjonkers-dev/nvmod-rs:${VERSION}-x86_64-linux"
           echo "Archive SHA-256: $(sha256sum "$archive" | awk '{print $1}')"
