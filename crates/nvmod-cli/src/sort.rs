@@ -5,7 +5,7 @@
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
 use nvmod_instance::NvmodInstance;
-use nvmod_loadorder::{Applied, Error, Proposal};
+use nvmod_loadorder::{Applied, Proposal};
 use std::io::Write;
 use std::path::Path;
 
@@ -225,47 +225,37 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
 /// tree are written (and the lists, if their bytes differ), so nv-rs, which orders by file time, loads the order.
 fn keep_order(
     args: &Args,
-    instance: &NvmodInstance,
+    root: &Path,
     profile: &str,
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> u8 {
-    let result = nvmod_loadorder::staging_data(instance, profile).and_then(|data| {
-        let order = nvmod_loadorder::read_slots(&instance.profile_dir(profile))?;
-        nvmod_loadorder::write_order(
-            instance,
-            profile,
-            Some(&data),
-            &order,
-            None,
-            nvmod_modinstall::journal::KIND_SORT,
-        )
-        .map(|applied| (order.len(), applied))
-    });
-    let (count, applied) = match result {
-        Ok(done) => done,
-        Err(Error::Refused(why)) => {
-            let _ = writeln!(err, "nvmod sort: refused: {why}");
-            return REFUSED;
-        }
-        Err(Error::Failed(why)) => {
-            let _ = writeln!(err, "nvmod sort: {why}");
-            return ROLLED_BACK;
-        }
+    let request = nvmod_api::sort_apply::KeepOrderRequest {
+        instance: root.to_path_buf(),
+        profile: Some(profile.to_owned()),
+    };
+    let done = match nvmod_api::sort_apply::keep_order(
+        &request,
+        &mut nvmod_api::NoProgress,
+        &nvmod_api::CancelToken::new(),
+    ) {
+        Ok(nvmod_api::Outcome::Done(done)) => done,
+        Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
+        Err(e) => return crate::job_failure("sort", &e, err),
     };
     if args.flag("json") {
         let _ = writeln!(
             out,
             "{}",
             serde_json::to_string_pretty(&serde_json::json!({
-                "profile": profile,
+                "profile": done.profile,
                 "kept_order": true,
-                "plugins": count,
+                "plugins": done.plugins,
                 "applied": {
-                    "lists_written": applied.lists_written,
-                    "stamped": applied.stamped,
-                    "detached": applied.detached,
-                    "journal": applied.journal,
+                    "lists_written": done.applied.lists_written,
+                    "stamped": done.applied.stamped,
+                    "detached": done.applied.detached,
+                    "journal": done.applied.journal,
                 },
             }))
             .unwrap_or_default()
@@ -273,8 +263,8 @@ fn keep_order(
     } else {
         let _ = writeln!(
             out,
-            "nvmod sort: profile `{profile}`, {count} plugin(s), the Load order is kept; {} plugin file time(s) set ({} link(s) replaced by copies)",
-            applied.stamped, applied.detached
+            "nvmod sort: profile `{}`, {} plugin(s), the Load order is kept; {} plugin file time(s) set ({} link(s) replaced by copies)",
+            done.profile, done.plugins, done.applied.stamped, done.applied.detached
         );
     }
     OK
@@ -333,7 +323,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         Err(e) => return refused(&e.to_string(), err),
     };
     if args.flag("keep-order") {
-        return keep_order(&args, &instance, &profile, out, err);
+        return keep_order(&args, root, &profile, out, err);
     }
     let masterlist_path = if args.flag("fetch-masterlist") {
         match fetch_masterlist(&args, &instance) {
