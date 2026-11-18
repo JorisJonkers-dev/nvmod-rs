@@ -3,7 +3,7 @@
 //! the only plugin.
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
-use nvmod_instance::{InstanceError, NvmodInstance};
+use nvmod_instance::InstanceError;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -62,8 +62,9 @@ pub fn create(
             instance: instance.root,
             profile: name.to_owned(),
         })),
-        Err(InstanceError::Refused(why)) => Err(JobError::new(ErrorKind::Refused, CREATE, why)),
-        Err(InstanceError::Invalid(why)) => Err(JobError::new(ErrorKind::Refused, CREATE, why)),
+        Err(InstanceError::Refused(why) | InstanceError::Invalid(why)) => {
+            Err(JobError::new(ErrorKind::Refused, CREATE, why))
+        }
         Err(InstanceError::Io(why)) => Err(JobError::new(ErrorKind::Failed, CREATE, why)),
     }
 }
