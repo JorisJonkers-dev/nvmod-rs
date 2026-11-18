@@ -47,6 +47,7 @@
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //! | [`verify::verify`] | [`verify::VerifyRequest`] | [`verify::VerifyOutput`] |
 //! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
+//! | [`ttw::install`] | [`ttw::InstallRequest`] | [`ttw::InstallOutput`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
@@ -65,6 +66,7 @@ pub mod saves;
 pub mod sort_apply;
 pub mod stage;
 pub mod target;
+pub mod ttw;
 pub mod verify;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
