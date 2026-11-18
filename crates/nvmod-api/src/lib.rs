@@ -58,11 +58,8 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
-<<<<<<< HEAD
 pub mod stage;
-=======
 pub mod target;
->>>>>>> origin/main
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
 
