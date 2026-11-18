@@ -1,0 +1,21 @@
+{
+  "args": [
+    "tools",
+    "fetch",
+    "lodwright-rs",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--gh",
+    "<TMP>/bin/gh"
+  ],
+  "command": "tools",
+  "exit_code": 3,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod tools: verification failed: checksum mismatch for lodwright-rs: tools.lock.toml says <SHA256-1>, the download is <SHA256-2>",
+    "nothing was installed"
+  ],
+  "stdout": []
+}

@@ -1,0 +1,21 @@
+{
+  "args": [
+    "tools",
+    "trust",
+    "lodwright-rs",
+    "1.0.0",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "tools",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod tools: refused: <TMP>/fnv is not an nvmod Instance (<TMP>/fnv/nvmod-instance.json: No such file or directory (os error 2))"
+  ],
+  "stdout": []
+}

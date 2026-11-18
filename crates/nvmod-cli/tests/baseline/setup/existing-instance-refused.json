@@ -1,0 +1,41 @@
+{
+  "args": [
+    "setup",
+    "--base",
+    "<TMP>/base",
+    "--instance",
+    "<TMP>/fnv",
+    "--masterlist",
+    "<TMP>/work/masterlist.yaml",
+    "--release",
+    "--release-url",
+    "file://<TMP>/work/release",
+    "--gh",
+    "<TMP>/work/gh",
+    "--retry-delay-ms",
+    "0",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--mod",
+    "<TMP>/work/Core.zip",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod setup: refused: <TMP>/fnv already exists and is not an empty folder; setup only starts from a path that holds nothing"
+  ],
+  "stdout": {
+    "event": "finished",
+    "exit_code": 2,
+    "reason": "<TMP>/fnv already exists and is not an empty folder; setup only starts from a path that holds nothing",
+    "rolled_back": false,
+    "seq": 1,
+    "status": "refused"
+  }
+}

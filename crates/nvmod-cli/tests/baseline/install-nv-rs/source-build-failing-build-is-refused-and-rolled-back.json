@@ -1,0 +1,18 @@
+{
+  "args": [
+    "install-nv-rs",
+    "--instance",
+    "<TMP>/fnv",
+    "--source",
+    "<TMP>/src",
+    "--cargo",
+    "<TMP>/bin/cargo"
+  ],
+  "command": "install-nv-rs",
+  "exit_code": 4,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod install-nv-rs: failed and was rolled back: <TMP>/bin/cargo build failed (exit status: 101)"
+  ],
+  "stdout": []
+}

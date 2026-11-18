@@ -1,0 +1,19 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright"
+  ],
+  "command": "lod",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: refused: profile `Default` has no Staging tree; run `nvmod stage --instance <TMP>/fnv --profile Default` first"
+  ],
+  "stdout": []
+}

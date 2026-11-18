@@ -1,0 +1,19 @@
+{
+  "args": [
+    "lod",
+    "generate",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright"
+  ],
+  "command": "lod",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: refused: lodwright-rs 0.1.0 reports that it cannot generate yet (it speaks no `lodwright-generate` contract): LOD generation waits for the writers and the real-data comparison (gate L2); use the xLODGen route outside nvmod until then"
+  ],
+  "stdout": []
+}

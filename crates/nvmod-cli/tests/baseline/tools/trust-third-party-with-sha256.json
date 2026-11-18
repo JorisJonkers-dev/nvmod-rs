@@ -1,0 +1,23 @@
+{
+  "args": [
+    "tools",
+    "trust",
+    "ttw-installer",
+    "0.2.0",
+    "--sha256",
+    "5e3002cf9facecdde5a67a083d22cf8f9214c7d6714dc76c2ebac081968807a5",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "tools",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod tools: recorded ttw-installer 0.2.0 with SHA-256 <SHA256-1> in <TMP>/fnv/tools.trust.toml"
+  ]
+}

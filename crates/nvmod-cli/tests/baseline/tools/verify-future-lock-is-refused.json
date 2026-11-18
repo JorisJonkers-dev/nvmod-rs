@@ -1,0 +1,17 @@
+{
+  "args": [
+    "tools",
+    "verify",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store"
+  ],
+  "command": "tools",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod tools: refused: tools.lock.toml is of schema 99, which is newer than this nvmod reads (schema 1)"
+  ],
+  "stdout": []
+}

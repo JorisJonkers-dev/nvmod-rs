@@ -1,0 +1,22 @@
+{
+  "args": [
+    "tools",
+    "trust",
+    "ttw-installer",
+    "0.2.0",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "tools",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "ttw-installer 0.2.0: the download has SHA-256 <SHA256-1>",
+    "nothing was recorded; check that value against the publisher, then run again with --sha256 <SHA256-1>"
+  ]
+}

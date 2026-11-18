@@ -1,0 +1,23 @@
+{
+  "args": [
+    "ttw",
+    "--instance",
+    "<TMP>/fnv",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--package",
+    "<TMP>/work/TTW.mpi"
+  ],
+  "command": "ttw",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    "nvmod ttw: installed `Tale of Two Wastelands` into profile `Default` (2 files, ttw-installer 0.2.0)",
+    "  activates plugin TaleOfTwoWastelands.esm"
+  ]
+}

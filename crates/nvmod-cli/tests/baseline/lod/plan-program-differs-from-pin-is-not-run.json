@@ -1,0 +1,19 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--lodwright",
+    "<TMP>/work/lodwright"
+  ],
+  "command": "lod",
+  "exit_code": 3,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: verification failed: lodwright-rs could not be verified: <TMP>/work/lodwright has SHA-256 <SHA256-1>, the pinned one is <SHA256-2>; it was not run; nothing was run"
+  ],
+  "stdout": []
+}

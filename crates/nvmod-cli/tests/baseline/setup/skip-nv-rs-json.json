@@ -1,0 +1,220 @@
+{
+  "args": [
+    "setup",
+    "--base",
+    "<TMP>/base",
+    "--instance",
+    "<TMP>/fnv",
+    "--masterlist",
+    "<TMP>/work/masterlist.yaml",
+    "--skip-nv-rs",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--mod",
+    "<TMP>/work/Core.zip",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    {
+      "dry_run": false,
+      "event": "plan",
+      "instance": "<TMP>/fnv",
+      "resume": false,
+      "seq": 1,
+      "steps": [
+        {
+          "description": "make the Instance skeleton for the base copy",
+          "skip": null,
+          "step": "init"
+        },
+        {
+          "description": "make the first profile",
+          "skip": null,
+          "step": "profile"
+        },
+        {
+          "description": "install Tale of Two Wastelands through the pinned installer",
+          "skip": null,
+          "step": "ttw"
+        },
+        {
+          "description": "install the Mod Core.zip",
+          "skip": null,
+          "step": "mod:Core.zip"
+        },
+        {
+          "description": "build the Staging tree",
+          "skip": null,
+          "step": "stage"
+        },
+        {
+          "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+          "skip": null,
+          "step": "sort"
+        },
+        {
+          "description": "run the Doctor on the finished Instance and print the launch plan",
+          "skip": null,
+          "step": "verify"
+        }
+      ]
+    },
+    {
+      "description": "make the Instance skeleton for the base copy",
+      "event": "step",
+      "index": 1,
+      "seq": 2,
+      "status": "started",
+      "step": "init",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "make the Instance skeleton for the base copy",
+      "detail": "nvmod init: made an Instance at <TMP>/fnv for the Steam base copy <TMP>/base",
+      "event": "step",
+      "index": 1,
+      "seq": 3,
+      "status": "done",
+      "step": "init",
+      "total": 7
+    },
+    {
+      "description": "make the first profile",
+      "event": "step",
+      "index": 2,
+      "seq": 4,
+      "status": "started",
+      "step": "profile",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "make the first profile",
+      "detail": "nvmod profile: made the profile `Default`",
+      "event": "step",
+      "index": 2,
+      "seq": 5,
+      "status": "done",
+      "step": "profile",
+      "total": 7
+    },
+    {
+      "description": "install Tale of Two Wastelands through the pinned installer",
+      "event": "step",
+      "index": 3,
+      "seq": 6,
+      "status": "started",
+      "step": "ttw",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "install Tale of Two Wastelands through the pinned installer",
+      "detail": "nvmod ttw: installed `Tale of Two Wastelands` into profile `Default` (2 files, ttw-installer 0.2.0)\n  activates plugin TaleOfTwoWastelands.esm",
+      "event": "step",
+      "index": 3,
+      "seq": 7,
+      "status": "done",
+      "step": "ttw",
+      "total": 7
+    },
+    {
+      "description": "install the Mod Core.zip",
+      "event": "step",
+      "index": 4,
+      "seq": 8,
+      "status": "started",
+      "step": "mod:Core.zip",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "install the Mod Core.zip",
+      "detail": "nvmod install: installed `Core` into profile `Default` (2 files)\n  activates plugin Core.esp",
+      "event": "step",
+      "index": 4,
+      "seq": 9,
+      "status": "done",
+      "step": "mod:Core.zip",
+      "total": 7
+    },
+    {
+      "description": "build the Staging tree",
+      "event": "step",
+      "index": 5,
+      "seq": 10,
+      "status": "started",
+      "step": "stage",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "build the Staging tree",
+      "detail": "nvmod stage: profile `Default`: 5 files in <TMP>/fnv/staging/Default/data (5 hard link(s), 0 copied, 0 replaced by a later Mod)",
+      "event": "step",
+      "index": 5,
+      "seq": 11,
+      "status": "done",
+      "step": "stage",
+      "total": 7
+    },
+    {
+      "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+      "event": "step",
+      "index": 6,
+      "seq": 12,
+      "status": "started",
+      "step": "sort",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+      "detail": "nvmod sort: profile `Default`, 3 plugin(s), the Load order is already sorted\n0 of 3 position(s) would change\n   1 * FalloutNV.esm\n   2 * TaleOfTwoWastelands.esm\n   3 * Core.esp\nmessage [say]: Masterlist for tests\napplied: plugins.txt and loadorder.txt unchanged; 3 plugin file time(s) set (3 link(s) replaced by copies); undo with `nvmod rollback`",
+      "event": "step",
+      "index": 6,
+      "seq": 13,
+      "status": "done",
+      "step": "sort",
+      "total": 7
+    },
+    {
+      "description": "run the Doctor on the finished Instance and print the launch plan",
+      "event": "step",
+      "index": 7,
+      "seq": 14,
+      "status": "started",
+      "step": "verify",
+      "total": 7
+    },
+    {
+      "code": 0,
+      "description": "run the Doctor on the finished Instance and print the launch plan",
+      "detail": "nvmod doctor: base copy <TMP>/base (Steam)\nexecutable: FalloutNV.exe 1.4.0.525 (4GB/large address aware: no)\nfindings: 0 error(s), 0 warning(s), 1 info\n  [info] nvse_1_4.dll: the catalogue does not record which version of xNVSE it expects: unknown (extender.version-unknown)\nnv-rs: nv-rs is not installed\nlaunch plan (vanilla+xnvse): vanilla: the base copy has no nvse_loader.exe, so the game starts without xNVSE and no NVSE plugin loads\n  linux: STEAM_COMPAT_DATA_PATH=<TMP>/fnv/compatdata proton run <TMP>/base/FalloutNV.exe\n  windows: <TMP>/base/FalloutNV.exe\n  nv-rs: native nv-rs: `nvmod run nv-rs` (or `nvmod run game` on an nv-rs Instance) starts the installed nv-viewer from a run folder of the staged Data; this Proton plan is its fallback (`--via-proton`)\nnvmod verify: verified",
+      "event": "step",
+      "index": 7,
+      "seq": 15,
+      "status": "done",
+      "step": "verify",
+      "total": 7
+    },
+    {
+      "event": "finished",
+      "exit_code": 0,
+      "instance": "<TMP>/fnv",
+      "resumable": false,
+      "rolled_back": false,
+      "seq": 16,
+      "status": "ok"
+    }
+  ]
+}

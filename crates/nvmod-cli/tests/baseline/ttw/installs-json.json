@@ -1,0 +1,46 @@
+{
+  "args": [
+    "ttw",
+    "--instance",
+    "<TMP>/fnv",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--package",
+    "<TMP>/work/TTW.mpi",
+    "--json"
+  ],
+  "command": "ttw",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": {
+    "files": 2,
+    "journal": "<JOURNAL>",
+    "mod": "Tale of Two Wastelands",
+    "plugins": [
+      "TaleOfTwoWastelands.esm"
+    ],
+    "profile": "Default",
+    "result": {
+      "contract": "ttw-installer-result",
+      "exit_code": 0,
+      "fallout3_verified": true,
+      "files_written": 2,
+      "installer": {
+        "name": "fake",
+        "version": "9.9"
+      },
+      "messages": [
+        "all checks passed"
+      ],
+      "outcome": "success",
+      "output_dir": "<TMP>/fnv/.ttw-scratch/out",
+      "schema_version": 1
+    },
+    "status": "installed"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "args": [
+    "tools",
+    "frobnicate"
+  ],
+  "command": "tools",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod tools: unknown command `frobnicate`",
+    "usage: nvmod tools list|verify [--json] | contracts [--json] | fetch <tool> | trust <tool> <version> --instance <dir> [--sha256 <hex>] | run <tool> -- <args...>",
+    "       common options: [--lock <file>] [--store <dir>] [--instance <dir>] [--gh <path>] [--curl <path>] [--retry-delay-ms <n>]"
+  ],
+  "stdout": []
+}

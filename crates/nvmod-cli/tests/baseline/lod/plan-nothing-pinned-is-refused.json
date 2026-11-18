@@ -1,0 +1,15 @@
+{
+  "args": [
+    "lod",
+    "plan",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "lod",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod lod: refused: the lock file pins no tool called `lodwright-rs`: no lodwright-rs release carries a binary with a checksum yet, so nothing can be run (docs/DECISIONS.md)"
+  ],
+  "stdout": []
+}

@@ -1,0 +1,21 @@
+{
+  "args": [
+    "ttw",
+    "--instance",
+    "<TMP>/fnv",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml"
+  ],
+  "command": "ttw",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod ttw: refused: the base game does not verify, so the TTW installer was not started:",
+    "  FalloutNV.exe: not found in the base copy (base.exe-missing)"
+  ],
+  "stdout": []
+}

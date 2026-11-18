@@ -1,0 +1,21 @@
+{
+  "args": [
+    "install-nv-rs",
+    "--instance",
+    "<TMP>/fnv",
+    "--cargo",
+    "<TMP>/bin/no-cargo",
+    "--release-url",
+    "file://<TMP>/release",
+    "--gh",
+    "<TMP>/bin/gh"
+  ],
+  "command": "install-nv-rs",
+  "exit_code": 3,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod install-nv-rs: verification failed: SHA256SUMS does not list <ASSET>; nothing installed",
+    "nothing was installed"
+  ],
+  "stdout": []
+}

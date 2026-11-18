@@ -1,0 +1,35 @@
+{
+  "args": [
+    "tools",
+    "verify",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--json"
+  ],
+  "command": "tools",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    {
+      "detail": "",
+      "name": "lodwright-rs",
+      "state": "not fetched",
+      "version": "1.0.0"
+    },
+    {
+      "detail": "(tag v0.1.0)",
+      "name": "loot-rs",
+      "state": "linked",
+      "version": "0.1.0"
+    },
+    {
+      "detail": "(no pinned checksum; run `nvmod tools trust`)",
+      "name": "ttw-installer",
+      "state": "needs-trust",
+      "version": "0.2.0"
+    }
+  ]
+}

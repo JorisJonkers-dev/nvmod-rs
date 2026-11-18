@@ -1,0 +1,20 @@
+{
+  "args": [
+    "ttw",
+    "--instance",
+    "<TMP>/fnv",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml"
+  ],
+  "command": "ttw",
+  "exit_code": 4,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod ttw: step failed, nothing was changed: ttw-installer failed: exit code 3. fake-failure-text"
+  ],
+  "stdout": []
+}

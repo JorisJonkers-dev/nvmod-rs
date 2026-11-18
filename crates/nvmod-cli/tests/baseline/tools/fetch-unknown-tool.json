@@ -1,0 +1,20 @@
+{
+  "args": [
+    "tools",
+    "fetch",
+    "nope",
+    "--lock",
+    "<TMP>/tools.lock.toml",
+    "--store",
+    "<TMP>/store",
+    "--gh",
+    "<TMP>/bin/gh"
+  ],
+  "command": "tools",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod tools: refused: the lock file pins no tool called `nope`"
+  ],
+  "stdout": []
+}

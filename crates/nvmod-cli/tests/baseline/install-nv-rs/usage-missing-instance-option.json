@@ -1,0 +1,12 @@
+{
+  "args": [
+    "install-nv-rs"
+  ],
+  "command": "install-nv-rs",
+  "exit_code": 5,
+  "release": "0.8.1",
+  "stderr": [
+    "usage: nvmod install-nv-rs --instance <dir> [--source <dir>] [--release]"
+  ],
+  "stdout": []
+}

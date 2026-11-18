@@ -1,0 +1,176 @@
+{
+  "args": [
+    "setup",
+    "--base",
+    "<TMP>/base",
+    "--instance",
+    "<TMP>/fnv",
+    "--masterlist",
+    "<TMP>/work/masterlist.yaml",
+    "--release",
+    "--release-url",
+    "file://<TMP>/work/release",
+    "--gh",
+    "<TMP>/work/gh",
+    "--retry-delay-ms",
+    "0",
+    "--fallout3",
+    "<TMP>/fo3",
+    "--installer",
+    "<TMP>/work/ttw-installer",
+    "--lock",
+    "<TMP>/work/tools.lock.toml",
+    "--mod",
+    "<TMP>/work/Core.zip",
+    "--dry-run",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 0,
+  "release": "0.8.1",
+  "stderr": [],
+  "stdout": [
+    {
+      "dry_run": true,
+      "event": "plan",
+      "instance": "<TMP>/fnv",
+      "resume": false,
+      "seq": 1,
+      "steps": [
+        {
+          "description": "make the Instance skeleton for the base copy",
+          "skip": null,
+          "step": "init"
+        },
+        {
+          "description": "make the first profile",
+          "skip": null,
+          "step": "profile"
+        },
+        {
+          "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+          "skip": null,
+          "step": "nv-rs"
+        },
+        {
+          "description": "make nv-rs the target of the Instance",
+          "skip": null,
+          "step": "target"
+        },
+        {
+          "description": "install Tale of Two Wastelands through the pinned installer",
+          "skip": null,
+          "step": "ttw"
+        },
+        {
+          "description": "install the Mod Core.zip",
+          "skip": null,
+          "step": "mod:Core.zip"
+        },
+        {
+          "description": "build the Staging tree",
+          "skip": null,
+          "step": "stage"
+        },
+        {
+          "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+          "skip": null,
+          "step": "sort"
+        },
+        {
+          "description": "run the Doctor on the finished Instance and print the launch plan",
+          "skip": null,
+          "step": "verify"
+        }
+      ]
+    },
+    {
+      "description": "make the Instance skeleton for the base copy",
+      "event": "step",
+      "index": 1,
+      "seq": 2,
+      "status": "planned",
+      "step": "init",
+      "total": 9
+    },
+    {
+      "description": "make the first profile",
+      "event": "step",
+      "index": 2,
+      "seq": 3,
+      "status": "planned",
+      "step": "profile",
+      "total": 9
+    },
+    {
+      "description": "build or fetch nv-rs and run `nv-viewer <data folder> --check`",
+      "event": "step",
+      "index": 3,
+      "seq": 4,
+      "status": "planned",
+      "step": "nv-rs",
+      "total": 9
+    },
+    {
+      "description": "make nv-rs the target of the Instance",
+      "event": "step",
+      "index": 4,
+      "seq": 5,
+      "status": "planned",
+      "step": "target",
+      "total": 9
+    },
+    {
+      "description": "install Tale of Two Wastelands through the pinned installer",
+      "event": "step",
+      "index": 5,
+      "seq": 6,
+      "status": "planned",
+      "step": "ttw",
+      "total": 9
+    },
+    {
+      "description": "install the Mod Core.zip",
+      "event": "step",
+      "index": 6,
+      "seq": 7,
+      "status": "planned",
+      "step": "mod:Core.zip",
+      "total": 9
+    },
+    {
+      "description": "build the Staging tree",
+      "event": "step",
+      "index": 7,
+      "seq": 8,
+      "status": "planned",
+      "step": "stage",
+      "total": 9
+    },
+    {
+      "description": "compute the Load order with loot-rs, write it and stamp the plugin file times",
+      "event": "step",
+      "index": 8,
+      "seq": 9,
+      "status": "planned",
+      "step": "sort",
+      "total": 9
+    },
+    {
+      "description": "run the Doctor on the finished Instance and print the launch plan",
+      "event": "step",
+      "index": 9,
+      "seq": 10,
+      "status": "planned",
+      "step": "verify",
+      "total": 9
+    },
+    {
+      "event": "finished",
+      "exit_code": 0,
+      "rolled_back": false,
+      "seq": 11,
+      "status": "dry-run"
+    }
+  ]
+}

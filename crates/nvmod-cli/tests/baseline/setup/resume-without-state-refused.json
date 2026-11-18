@@ -1,0 +1,23 @@
+{
+  "args": [
+    "setup",
+    "--resume",
+    "--instance",
+    "<TMP>/fnv",
+    "--json"
+  ],
+  "command": "setup",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod setup: refused: <TMP>/fnv holds no unfinished setup (there is no .nvmod/setup.json)"
+  ],
+  "stdout": {
+    "event": "finished",
+    "exit_code": 2,
+    "reason": "<TMP>/fnv holds no unfinished setup (there is no .nvmod/setup.json)",
+    "rolled_back": false,
+    "seq": 1,
+    "status": "refused"
+  }
+}

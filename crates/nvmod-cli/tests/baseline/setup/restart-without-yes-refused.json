@@ -1,0 +1,15 @@
+{
+  "args": [
+    "setup",
+    "--restart",
+    "--instance",
+    "<TMP>/fnv"
+  ],
+  "command": "setup",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod setup: refused: <TMP>/fnv holds no unfinished setup (there is no .nvmod/setup.json)"
+  ],
+  "stdout": []
+}

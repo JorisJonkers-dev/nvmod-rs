@@ -1,0 +1,17 @@
+{
+  "args": [
+    "verify",
+    "--instance",
+    "<TMP>/fnv",
+    "--profile",
+    "Nope",
+    "--json"
+  ],
+  "command": "verify",
+  "exit_code": 2,
+  "release": "0.8.1",
+  "stderr": [
+    "nvmod verify: refused: the Instance has no profile `Nope`"
+  ],
+  "stdout": []
+}
