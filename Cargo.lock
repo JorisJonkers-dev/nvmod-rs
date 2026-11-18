@@ -693,6 +693,7 @@ version = "0.7.0"
 dependencies = [
  "loot-rs",
  "nvmod-backup",
+ "nvmod-core",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
