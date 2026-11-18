@@ -693,6 +693,9 @@ version = "0.7.0"
 dependencies = [
  "loot-rs",
  "nvmod-backup",
+ "nvmod-catalog",
+ "nvmod-core",
+ "nvmod-doctor",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
@@ -702,6 +705,7 @@ dependencies = [
  "nvmod-saves",
  "nvmod-stage",
  "nvmod-testkit",
+ "nvmod-tools",
  "serde",
  "serde_json",
 ]

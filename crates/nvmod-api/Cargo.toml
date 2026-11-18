@@ -10,6 +10,9 @@ description = "The library API of nvmod: typed requests and results for mods, th
 
 [dependencies]
 nvmod-backup = { workspace = true }
+nvmod-catalog = { workspace = true }
+nvmod-core = { workspace = true }
+nvmod-doctor = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-modinstall = { workspace = true }
@@ -17,13 +20,14 @@ nvmod-plugins = { workspace = true }
 nvmod-profile = { workspace = true }
 nvmod-run = { workspace = true }
 nvmod-saves = { workspace = true }
+nvmod-tools = { workspace = true }
 loot-rs = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 nvmod-stage = { workspace = true }
 nvmod-testkit = { workspace = true }
-serde_json = { workspace = true }
 
 [lints]
 workspace = true

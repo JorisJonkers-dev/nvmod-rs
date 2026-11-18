@@ -14,10 +14,11 @@ use nvmod_api::plugins::{
 };
 use nvmod_api::profile::CreateRequest as ProfileCreateRequest;
 use nvmod_api::run::PlanRequest;
+use nvmod_api::verify::{Severity, VerifyRequest};
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{
-    BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, write_file,
+    BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, snapshot, write_file,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -87,6 +88,34 @@ impl Scratch {
 
     fn root(&self) -> PathBuf {
         self.inst.path().join("fnv")
+    }
+
+    /// An Instance with no Mods at all: the Doctor has nothing to fail on.
+    fn bare() -> Self {
+        let base = TempDir::new("api-base");
+        BaseBuilder::steam().write(base.path());
+        write_file(base.path(), "nvse_1_4.dll", &PeBuilder::dll().build());
+        write_file(
+            base.path(),
+            "Data/FalloutNV.esm",
+            &PluginBuilder::master().build(),
+        );
+        let inst = TempDir::new("api-inst");
+        let root = inst.path().join("fnv");
+        let instance = NvmodInstance::create(&root, base.path()).expect("create the Instance");
+        if !instance.profile_dir("Default").is_dir() {
+            instance
+                .create_profile("Default")
+                .expect("create the profile");
+        }
+        nvmod_stage::stage(
+            &instance,
+            "Default",
+            nvmod_stage::Options { copy_only: false },
+        )
+        .expect("stage");
+        fs::write(inst.path().join("masterlist.yaml"), MASTERLIST).expect("masterlist");
+        Self { _base: base, inst }
     }
 
     fn sort_request(&self, apply: bool) -> SortRequest {
@@ -1520,4 +1549,100 @@ fn profile_create_cancelled_before_the_write_changes_nothing() {
     let outcome = nvmod_api::profile::create(&request, &mut NoProgress, &cancel).expect("no error");
     assert!(matches!(outcome, Outcome::Cancelled));
     assert!(!s.root().join("profiles/Cancelled").exists());
+}
+
+#[test]
+fn verify_confirms_a_clean_instance_and_plans_the_launch() {
+    let s = Scratch::bare();
+    let request = VerifyRequest {
+        instance: s.root(),
+        profile: None,
+        masterlist: Some(s.inst.path().join("masterlist.yaml")),
+        catalog: None,
+        proton: None,
+        fail_on: Severity::Error,
+    };
+    let done = nvmod_api::verify::verify(&request, &mut NoProgress, &CancelToken::new())
+        .expect("verifies")
+        .done()
+        .expect("not cancelled");
+    assert!(done.verified, "{:?}", done.doctor.findings);
+    assert!(!done.nv_rs.installed);
+    assert!(done.nv_rs.verified);
+    assert_eq!(done.launch_plan.path, "vanilla+xnvse");
+    assert_eq!(done.launch_plan.entries.len(), 2);
+}
+
+#[test]
+fn verify_of_a_folder_that_is_not_an_instance_is_refused() {
+    let dir = TempDir::new("api-verify-none");
+    let request = VerifyRequest {
+        instance: dir.path().to_path_buf(),
+        profile: None,
+        masterlist: None,
+        catalog: None,
+        proton: None,
+        fail_on: Severity::Error,
+    };
+    let error = nvmod_api::verify::verify(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "verify.verify");
+}
+
+#[test]
+fn verify_with_a_catalogue_that_cannot_be_read_is_refused() {
+    let s = Scratch::bare();
+    let request = VerifyRequest {
+        instance: s.root(),
+        profile: None,
+        masterlist: None,
+        catalog: Some(s.inst.path().join("missing.toml")),
+        proton: None,
+        fail_on: Severity::Error,
+    };
+    let error = nvmod_api::verify::verify(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert!(error.summary.contains("missing.toml"), "{error}");
+}
+
+#[test]
+fn verify_cancelled_before_it_starts_changes_nothing() {
+    let s = Scratch::new();
+    let before = snapshot(s.inst.path());
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = VerifyRequest {
+        instance: s.root(),
+        profile: None,
+        masterlist: Some(s.inst.path().join("masterlist.yaml")),
+        catalog: None,
+        proton: None,
+        fail_on: Severity::Error,
+    };
+    let outcome = nvmod_api::verify::verify(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(snapshot(s.inst.path()), before);
+}
+
+#[test]
+fn a_verify_request_round_trips_through_json_with_the_default_severity() {
+    let request = VerifyRequest {
+        instance: PathBuf::from("/x"),
+        profile: Some("Default".into()),
+        masterlist: Some(PathBuf::from("/x/masterlist.yaml")),
+        catalog: None,
+        proton: Some("proton".into()),
+        fail_on: Severity::Warning,
+    };
+    let text = serde_json::to_string(&request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<VerifyRequest>(&text).unwrap(),
+        request
+    );
+    let bare: VerifyRequest = serde_json::from_str(r#"{"instance": "/x"}"#).unwrap();
+    assert_eq!(bare.fail_on, Severity::Error);
+    assert_eq!(bare.profile, None);
+    assert_eq!(bare.catalog, None);
 }

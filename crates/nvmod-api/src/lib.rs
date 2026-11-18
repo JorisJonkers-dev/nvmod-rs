@@ -42,6 +42,7 @@
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
+//! | [`verify::verify`] | [`verify::VerifyRequest`] | [`verify::VerifyOutput`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
@@ -56,6 +57,7 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
+pub mod verify;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
 
