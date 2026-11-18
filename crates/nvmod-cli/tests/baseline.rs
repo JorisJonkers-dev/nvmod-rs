@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#![cfg(unix)]
 //! Replays the recorded baseline of the commands that rauls-trusty-toolbox ADR-0019 moves out of nvmod (`tools
 //! contracts`, `verify`, `tools`, `run`, `install-nv-rs`, `lod`, `ttw`, `setup`). Each transcript in
 //! `tests/baseline/<command>/<case>.json` holds the arguments, the exit code, standard output (parsed as JSON when it
@@ -10,6 +9,7 @@
 //! `NVMOD_BLESS=1 cargo test -p nvmod-cli --test baseline` rewrites every transcript from the current build (the repo's
 //! bless convention). Without it, the test fails with a line diff for each transcript that differs, and for every
 //! transcript file that is missing or has no case.
+#![cfg(unix)]
 
 use nvmod_testkit::{
     BaseBuilder, FAKE_ASSET, FakeNvRs, FakeRelease, FakeServer, PeBuilder, PluginBuilder, Reply,
@@ -2116,11 +2116,43 @@ fn cases() -> Vec<Case> {
     ]
 }
 
+/// Links into the scratch `bin` folder the programs a case may start by name, taken from the test's own `PATH`: the
+/// fixture scripts need `cat`, `cp` and `mkdir`; a fetch or a trust downloads with `curl`, and the nv-rs release is unpacked by `tar`
+/// (`curl` only for the cases that fetch or trust, `tar` and its `gzip` only for the cases that name a release). Nothing else is linked, so no host program that nvmod looks for by name is on the PATH of a case:
+/// not the archive tools `7zz`, `7z`, `7za` and `bsdtar`, and not the rest of `/usr/bin` and `/bin`, whose contents
+/// differ between Linux and macOS.
+fn link_tools(bin: &Path, args: &[&str]) {
+    let mut wanted = vec!["cat", "cp", "mkdir"];
+    // `trust` downloads a tool to hash it, as `fetch` does.
+    if args.contains(&"fetch") || args.contains(&"trust") {
+        wanted.push("curl");
+    }
+    if args
+        .iter()
+        .any(|a| *a == "--release" || *a == "--release-url")
+    {
+        // `tar -z` runs `gzip` on GNU systems; bsdtar does not.
+        wanted.extend(["tar", "gzip", "curl"]);
+    }
+    let host = std::env::var_os("PATH").unwrap_or_default();
+    for name in wanted {
+        let source = std::env::split_paths(&host)
+            .map(|dir| dir.join(name))
+            .find(|p| p.is_file())
+            .unwrap_or_else(|| panic!("the test needs `{name}` on its PATH"));
+        let link = bin.join(name);
+        if link.symlink_metadata().is_err() {
+            std::os::unix::fs::symlink(&source, &link)
+                .expect("link a program into the scratch bin");
+        }
+    }
+}
+
 /// Kills the process group `pid` leads: the program and everything it started. Errors are ignored, since the group may
 /// already be gone.
 fn kill_group(pid: u32) {
     let _ = Command::new("kill")
-        .args(["-KILL", "--", &format!("-{pid}")])
+        .args(["-s", "KILL", "--", &format!("-{pid}")])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
@@ -2168,11 +2200,14 @@ fn text_of(buf: &Mutex<Vec<u8>>) -> String {
 fn nvmod_in(root: &Path, args: &[&str]) -> (i32, String, String) {
     let root_str = root.display().to_string();
     let expanded: Vec<String> = args.iter().map(|a| a.replace(TMP, &root_str)).collect();
+    let bin = root.join("bin");
+    fs::create_dir_all(&bin).expect("scratch bin folder");
+    link_tools(&bin, args);
     let mut child = Command::new(env!("CARGO_BIN_EXE_nvmod"))
         .args(&expanded)
         .current_dir(root)
         .env_clear()
-        .env("PATH", format!("{root_str}/bin:/usr/bin:/bin"))
+        .env("PATH", &bin)
         .env("HOME", root.join("home"))
         .env("NVMOD_STATE_DIR", root.join("state"))
         .stdin(Stdio::null())

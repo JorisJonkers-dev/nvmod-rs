@@ -59,13 +59,20 @@ Nothing else is normalised. The arguments are not normalised: a digest given on 
 
 ### The environment of a run
 
-`nvmod` runs with `env_clear()` and only three variables set: `PATH` (the scratch `bin` folder, then `/usr/bin` and
-`/bin`), `HOME` (a folder in the scratch root) and `NVMOD_STATE_DIR` (a folder in the scratch root). The current directory
-is the scratch root.
+`nvmod` runs with `env_clear()` and only three variables set: `PATH`, `HOME` (a folder in the scratch root) and
+`NVMOD_STATE_DIR` (a folder in the scratch root). The current directory is the scratch root.
+
+`PATH` is the scratch `bin` folder and nothing else. The fixtures put only the programs a case needs into that folder,
+as symbolic links to the test's own copies: `cat`, `cp` and `mkdir` for the fixture scripts; `curl` for the cases that
+fetch or trust a tool; `tar` and `gzip` for the cases that name an nv-rs release. Nothing else is linked, so no host
+program that nvmod looks for by name is visible to a case. In particular the archive tools that nvmod tries for a mod
+archive (`7zz`, `7z`, `7za`, `bsdtar`) are never on the PATH, and the refusal of a non-archive is the same on every Unix.
+A test run that has no `cat`, `cp`, `mkdir`, `curl`, `tar` or `gzip` on its own PATH fails with the name of the missing
+program.
 
 The one case that runs another program of the build is a source build of nv-rs (`install-nv-rs --source`). Its `--cargo` is a wrapper script in the scratch `bin` folder, which sets its own
 environment and nothing else: `PATH` (the toolchain folder that built the tests, the folder of `cc` found on the test's
-`PATH` since a linker is needed, `/usr/bin`, `/bin`), `CARGO_HOME` and `CARGO_TARGET_DIR` under the scratch root,
+`PATH` since a linker is needed, `/usr/bin`, `/bin`; the wrapper is the only process that sees these), `CARGO_HOME` and `CARGO_TARGET_DIR` under the scratch root,
 `RUSTC` (the toolchain's `rustc`), and `CARGO_NET_OFFLINE=true`. The scratch root is removed when the case ends, so the
 build output does not outlive it. The wrapper's values are fixtures: they are not in any transcript.
 
@@ -77,10 +84,20 @@ output captured so far.
 
 ## Platforms
 
-The fixtures run on the host that runs the tests (macOS and Linux CI both run them; `#![cfg(unix)]`). Host-dependent
-values are normalised (rules 2 and 3), and the lock files the fixtures write use the host platform, so a transcript
-recorded on one OS replays on another. The shell scripts are `#!/bin/sh` and use only `echo`, `cat`, `cp`, `mkdir`,
-`exec`, `exit`, `for`, `[` and `unset`-free assignments. The `tools` transcripts do not print the platform.
+The fixtures run on the host that runs the tests (macOS and Linux CI both run them; the module is `#![cfg(unix)]`, so
+Windows compiles the crate doc only). Host-dependent values are normalised (rules 2 and 3), and the lock files the
+fixtures write use the host platform, so a transcript recorded on one OS replays on another. The shell scripts are
+`#!/bin/sh` and use only the builtins `echo`, `exit`, `exec`, `for` and `[`, and the linked `cat`, `cp` and `mkdir`;
+no script uses an escape sequence in `echo`. No transcript prints the platform, the host PATH, or a host file name.
+
+Checked for host-tool dependencies (macOS against Linux): `sed`, `file`, `sha256sum`/`shasum`, `mktemp` and `ls` are not
+used by the harness or its scripts; the digests are computed in-process by nvmod and normalised; the scratch root is
+normalised both as given and canonicalised (`/private/var` on macOS); the release archive is written by `tar -czf ... -C`,
+which GNU tar and bsdtar both accept, and its bytes (and so its digest) are normalised; fixture file names are
+distinct when case is ignored, so a case-insensitive file system does not merge them; I found no transcript that
+lists directory entries, so directory order (which differs between file systems) does not reach a transcript as far as
+the cases go; a macOS diff of that kind would show up as a changed line and is a bug to fix in the output. The process group is killed with
+`kill -s KILL -- -<pid>`, which BSD and GNU kill both accept.
 
 ## Re-recording
 
