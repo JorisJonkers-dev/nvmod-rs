@@ -27,6 +27,7 @@
 //! | [`plugins::list`] | [`plugins::ListRequest`] | [`plugins::ListReport`] |
 //! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
+//! | [`sort_apply::keep_order`] | [`sort_apply::KeepOrderRequest`] | [`sort_apply::KeepOrderOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
 //! | [`saves::check`] | [`saves::CheckRequest`] | [`saves::CheckOutput`] |
 //! | [`saves::checksum`] | [`saves::ChecksumRequest`] | [`saves::ChecksumOutput`] |
@@ -61,6 +62,7 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
+pub mod sort_apply;
 pub mod stage;
 pub mod target;
 pub mod verify;

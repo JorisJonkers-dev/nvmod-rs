@@ -15,6 +15,7 @@ use nvmod_api::plugins::{
 };
 use nvmod_api::profile::CreateRequest as ProfileCreateRequest;
 use nvmod_api::run::PlanRequest;
+use nvmod_api::sort_apply::{KeepOrderRequest, keep_order};
 use nvmod_api::stage::StageRequest;
 use nvmod_api::verify::{Severity, VerifyRequest};
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
@@ -126,6 +127,13 @@ impl Scratch {
             profile: None,
             masterlist: self.inst.path().join("masterlist.yaml"),
             apply,
+        }
+    }
+
+    fn keep_order_request(&self) -> KeepOrderRequest {
+        KeepOrderRequest {
+            instance: self.root(),
+            profile: None,
         }
     }
 }
@@ -344,6 +352,84 @@ fn a_missing_masterlist_is_a_refusal_with_copyable_text() {
 }
 
 #[test]
+fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
+    let s = Scratch::new();
+    let before = (
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+    );
+    let request = s.keep_order_request();
+    let done = keep_order(&request, &mut NoProgress, &CancelToken::new())
+        .expect("keeps the order")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(done.profile, "Default");
+    assert_eq!(done.plugins, 3);
+    assert!(!done.applied.lists_written, "{done:?}");
+    assert_eq!(done.applied.stamped, 3);
+    assert_eq!(done.applied.detached, 3);
+    assert!(done.applied.journal.is_some());
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before.0
+    );
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+        before.1
+    );
+    let mut times = Vec::new();
+    for name in ["FalloutNV.esm", "Patch.esp", "Base.esp"] {
+        let path = s
+            .root()
+            .join("staging/Default/data")
+            .join(name.to_lowercase());
+        times.push(fs::metadata(path).unwrap().modified().unwrap());
+    }
+    assert!(times.windows(2).all(|w| w[0] < w[1]), "{times:?}");
+}
+
+#[test]
+fn a_keep_order_without_a_staging_tree_is_refused() {
+    let s = Scratch::new();
+    fs::remove_dir_all(s.root().join("staging")).unwrap();
+    let before = fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap();
+    let request = s.keep_order_request();
+    let error = keep_order(&request, &mut NoProgress, &CancelToken::new()).expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "sort.keep_order");
+    assert!(error.summary.contains("nvmod stage"), "{error}");
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn a_keep_order_cancelled_before_the_write_changes_nothing() {
+    let s = Scratch::new();
+    let before = (
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+    );
+    let staged = s.root().join("staging/Default/data/base.esp");
+    let time = fs::metadata(&staged).unwrap().modified().unwrap();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = s.keep_order_request();
+    let outcome = keep_order(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
+        before.0
+    );
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
+        before.1
+    );
+    assert_eq!(fs::metadata(&staged).unwrap().modified().unwrap(), time);
+}
+
+#[test]
 fn saves_list_reads_the_profile_saves() {
     let s = Scratch::new();
     fs::write(
@@ -440,6 +526,15 @@ fn every_request_round_trips_through_json() {
     assert_eq!(
         serde_json::from_str::<SortRequest>(&text).unwrap(),
         sort_request
+    );
+    let keep_order_request = KeepOrderRequest {
+        instance: PathBuf::from("/x"),
+        profile: Some("Default".into()),
+    };
+    let text = serde_json::to_string(&keep_order_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<KeepOrderRequest>(&text).unwrap(),
+        keep_order_request
     );
     let saves_request = nvmod_api::saves::ListRequest {
         instance: PathBuf::from("/x"),
