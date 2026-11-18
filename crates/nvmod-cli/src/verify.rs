@@ -9,52 +9,44 @@
 //! a problem at or above `--fail-on`, or nv-rs differs from its record), 5 usage.
 
 use crate::{OK, REFUSED, USAGE, VERIFICATION, args::Args};
-use nvmod_catalog::Catalog;
+use nvmod_api::verify::{VerifyOutput, VerifyRequest};
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_core::Severity;
-use nvmod_instance::{NvmodInstance, launch_plan};
-use nvmod_tools::sha256_hex;
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 const USAGE_LINE: &str = "usage: nvmod verify --instance <dir> [--profile <name>] [--masterlist <file>] [--catalog <file>] [--proton <program>] [--fail-on <severity>] [--json]";
 
-/// The state of the installed nv-rs against its install record.
-struct NvRs {
-    installed: bool,
-    verified: bool,
-    message: String,
-}
-
-fn check_nv_rs(root: &Path) -> NvRs {
-    let record = root.join("nv-rs/install.json");
-    let Ok(text) = std::fs::read_to_string(&record) else {
-        return NvRs {
-            installed: false,
-            verified: true,
-            message: "nv-rs is not installed".to_owned(),
-        };
-    };
-    let recorded = serde_json::from_str::<serde_json::Value>(&text)
-        .ok()
-        .and_then(|v| v["sha256"].as_str().map(str::to_owned));
-    let bin = root
-        .join("nv-rs/bin")
-        .join(format!("nv-viewer{}", std::env::consts::EXE_SUFFIX));
-    let actual = std::fs::read(&bin).ok().map(|b| sha256_hex(&b));
-    let (verified, message) = match (recorded, actual) {
-        (Some(r), Some(a)) if r == a => (true, "nv-rs matches its install record".to_owned()),
-        (Some(_), Some(_)) => (
-            false,
-            "nv-rs differs from the checksum recorded when it was installed".to_owned(),
-        ),
-        (None, _) => (false, "the nv-rs install record has no checksum".to_owned()),
-        (_, None) => (false, "the nv-rs program is missing".to_owned()),
-    };
-    NvRs {
-        installed: true,
-        verified,
-        message,
+/// Print the verification: the Doctor's report, the state of nv-rs and the launch plan, as text or as one JSON
+/// document.
+fn print_verification(out: &mut dyn Write, done: &VerifyOutput, json: bool) {
+    if json {
+        let doc = serde_json::json!({
+            "schema_version": 1,
+            "verified": done.verified,
+            "doctor": done.doctor,
+            "nv_rs": done.nv_rs,
+            "launch_plan": done.launch_plan,
+        });
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&doc).unwrap_or_default()
+        );
+        return;
     }
+    let _ = out.write_all(done.doctor.to_text().as_bytes());
+    let _ = writeln!(out, "nv-rs: {}", done.nv_rs.message);
+    let _ = out.write_all(done.launch_plan.to_text().as_bytes());
+    let _ = writeln!(
+        out,
+        "nvmod verify: {}",
+        if done.verified {
+            "verified"
+        } else {
+            "verification failed"
+        }
+    );
 }
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
@@ -90,64 +82,20 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let refused = |why: &str, err: &mut dyn Write| {
-        let _ = writeln!(err, "nvmod verify: refused: {why}");
-        REFUSED
+    let request = VerifyRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        masterlist: args.option("masterlist").map(PathBuf::from),
+        catalog: args.option("catalog").map(PathBuf::from),
+        proton: args.option("proton").map(str::to_owned),
+        fail_on,
     };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    let instance = match NvmodInstance::open_read_only(root) {
-        Ok(i) => i,
-        Err(e) => return refused(&crate::install_mod::describe_open_error(root, &e), err),
-    };
-    let catalog = match args.option("catalog") {
-        None => Catalog::builtin(),
-        Some(file) => match std::fs::read_to_string(file)
-            .map_err(|e| format!("{file}: {e}"))
-            .and_then(|t| Catalog::parse(&t).map_err(|e| e.to_string()))
-        {
-            Ok(c) => c,
-            Err(why) => return refused(&why, err),
-        },
-    };
-    let report = match nvmod_doctor::check_instance(
-        &instance,
-        args.option("profile"),
-        args.option("masterlist").map(Path::new),
-        &catalog,
-    ) {
-        Ok(r) => r,
-        Err(why) => return refused(&why, err),
-    };
-    let nv_rs = check_nv_rs(&instance.root);
-    let plan = launch_plan(&instance, args.option("proton"));
-    let doctor_ok = report.worst().is_none_or(|w| w < fail_on);
-    let verified = doctor_ok && nv_rs.verified;
-    if args.flag("json") {
-        let doc = serde_json::json!({
-            "schema_version": 1,
-            "verified": verified,
-            "doctor": report,
-            "nv_rs": { "installed": nv_rs.installed, "verified": nv_rs.verified, "message": nv_rs.message },
-            "launch_plan": plan,
-        });
-        let _ = writeln!(
-            out,
-            "{}",
-            serde_json::to_string_pretty(&doc).unwrap_or_default()
-        );
-    } else {
-        let _ = out.write_all(report.to_text().as_bytes());
-        let _ = writeln!(out, "nv-rs: {}", nv_rs.message);
-        let _ = out.write_all(plan.to_text().as_bytes());
-        let _ = writeln!(
-            out,
-            "nvmod verify: {}",
-            if verified {
-                "verified"
-            } else {
-                "verification failed"
-            }
-        );
+    match nvmod_api::verify::verify(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(done)) => {
+            print_verification(out, &done, args.flag("json"));
+            if done.verified { OK } else { VERIFICATION }
+        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("verify", &e, err),
     }
-    if verified { OK } else { VERIFICATION }
 }
