@@ -17,13 +17,13 @@ schema_version = 1
 # loot-rs is linked, not fetched: its version is the tag Cargo.toml depends on (a test keeps the two equal).
 [[tool]]
 name = "loot-rs"
-version = "0.5.0"
+version = "0.6.0"
 kind = "linked"
 contracts = { loot-sort = 1 }
 
 [tool.source]
 git = "https://github.com/JorisJonkers-dev/loot-rs"
-tag = "v0.5.0"
+tag = "v0.6.0"
 
 # The LOOT masterlist of Fallout: New Vegas, a data file that `nvmod sort --fetch-masterlist` fetches (checked
 # 2026-11-14). The URL names a commit of branch v0.29 of github.com/loot/falloutnv (CC0-1.0), not the branch, so the
