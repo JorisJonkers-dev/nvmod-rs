@@ -222,6 +222,42 @@ macro_rules! format_tests {
             }
 
             #[test]
+            fn running_total_over_the_limit_is_refused() {
+                let data = [7_u8; 600];
+                let items = [
+                    file("1.bin", &data),
+                    file("2.bin", &data),
+                    file("3.bin", &data),
+                ];
+                let dir = TempDir::new(stringify!($module));
+                let archive = dir.path().join("archive");
+                make(&archive, &items);
+                fs::create_dir(dir.path().join("out")).unwrap();
+                let limits = Limits {
+                    max_bytes: 1000,
+                    ..Limits::default()
+                };
+                let result = extract(&archive, &dir.path().join("out"), None, limits);
+                assert_refused(&result, "bytes once extracted");
+            }
+
+            #[test]
+            fn windows_reserved_and_stream_names_are_refused() {
+                let cases = [
+                    ("CON.txt", "reserved Windows name"),
+                    ("dir/nul", "reserved Windows name"),
+                    ("a.txt:stream", "holds a `:`"),
+                    ("COM1", "reserved Windows name"),
+                ];
+                for (name, needle) in cases {
+                    let items = [file(name, b"x")];
+                    let (dir, result) = extract_made(stringify!($module), |p| make(p, &items));
+                    assert_refused(&result, needle);
+                    assert!(is_empty_dir(&dir.path().join("out")));
+                }
+            }
+
+            #[test]
             fn decompression_bomb_is_refused() {
                 let zeros = vec![0_u8; 1 << 20];
                 let items = [file("zeros.bin", &zeros)];
@@ -262,3 +298,53 @@ format_tests!(tar_gz, make_tar_gz, b"\x1f\x8b");
 format_tests!(tar_xz, make_tar_xz, b"\xfd7zXZ\x00");
 format_tests!(tar_bz2, make_tar_bz2, b"BZh9");
 format_tests!(tar_zst, make_tar_zst, b"\x28\xb5\x2f\xfd");
+
+/// A gzip tar whose first entry is a GNU long name of 3 MiB: the name is metadata the tar crate reads whole.
+#[test]
+fn oversized_gnu_long_name_is_refused_as_metadata() {
+    let mut header = tar::Header::new_gnu();
+    header.as_old_mut().name[..13].copy_from_slice(b"././@LongLink");
+    header.set_entry_type(tar::EntryType::new(b'L'));
+    header.set_size(3 * 1024 * 1024);
+    header.set_cksum();
+    let mut bytes = header.as_bytes().to_vec();
+    bytes.extend(std::iter::repeat_n(b'a', 3 * 1024 * 1024));
+    let (_dir, result) = extract_made("long-name", |p| fs::write(p, gzip(&bytes)).unwrap());
+    assert_refused(&result, "metadata");
+}
+
+/// A file followed by a path through it is an error, not a panic.
+#[test]
+fn file_then_path_through_it_is_an_error() {
+    let items = [file("a", b"x"), file("a/b", b"y")];
+    let (_dir, result) = extract_made("file-then-folder", |p| make_tar_gz(p, &items));
+    assert!(result.is_err(), "expected an error, got {result:?}");
+}
+
+/// Two separately compressed members, concatenated (as pigz or pbzip2 write them), must extract every file.
+fn concatenated_members_extract_all(label: &str, compress: fn(&[u8]) -> Vec<u8>) {
+    let tar = tar_bytes(&[
+        file("1.bin", &[1_u8; 600]),
+        file("2.bin", &[2_u8; 600]),
+        file("3.bin", &[3_u8; 600]),
+    ]);
+    let (head, tail) = tar.split_at(1024);
+    let mut bytes = compress(head);
+    bytes.extend(compress(tail));
+    let (dir, result) = extract_made(label, |p| fs::write(p, &bytes).unwrap());
+    result.unwrap();
+    let out = dir.path().join("out");
+    for (name, byte) in [("1.bin", 1_u8), ("2.bin", 2), ("3.bin", 3)] {
+        assert_eq!(fs::read(out.join(name)).unwrap(), vec![byte; 600], "{name}");
+    }
+}
+
+#[test]
+fn concatenated_gzip_members_extract_all_files() {
+    concatenated_members_extract_all("gz-members", gzip);
+}
+
+#[test]
+fn concatenated_bzip2_members_extract_all_files() {
+    concatenated_members_extract_all("bz2-members", bzip2);
+}

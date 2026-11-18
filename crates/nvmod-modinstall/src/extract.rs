@@ -8,9 +8,11 @@
 //! refuses the whole archive. Everything is checked while reading, before it is written.
 
 use nvmod_runner::{Call, Runner};
+use std::cell::Cell;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 /// How much an archive may hold.
@@ -39,10 +41,21 @@ const TOOL_OUTPUT_CAP: usize = 16 * 1024 * 1024;
 
 const TOOLS: [&str; 4] = ["7zz", "7z", "7za", "bsdtar"];
 
-/// Decoder dictionary memory allowed for a 7z archive, in KiB (1 GiB).
-const SEVENZ_MEMORY_LIMIT_KB: usize = 1024 * 1024;
-/// Decoder dictionary memory allowed for an xz stream, in KiB (1 GiB).
-const XZ_MEMORY_LIMIT_KB: u32 = 1024 * 1024;
+/// Decoder dictionary memory allowed for a 7z archive, in KiB (512 MiB).
+const SEVENZ_MEMORY_LIMIT_KB: usize = 512 * 1024;
+/// Decoder dictionary memory allowed for an xz stream, in KiB (512 MiB).
+const XZ_MEMORY_LIMIT_KB: u32 = 512 * 1024;
+
+/// Tar bytes that are not file bodies (headers, padding, long names, pax records) may exceed the budget by this much.
+const METADATA_SLACK: u64 = 1024 * 1024;
+/// Per entry, the tar bytes beyond its body: a 512-byte header and at most 511 bytes of padding.
+const METADATA_PER_ENTRY: u64 = 1536;
+
+/// Windows device names that cannot be a file name, whatever their extension.
+const RESERVED_WINDOWS_NAMES: [&str; 22] = [
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+];
 
 /// A compression wrapped around a tar stream.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,7 +69,8 @@ enum Codec {
 /// A relative path made of normal components only, with `\` read as a separator (Windows archivers write it).
 ///
 /// # Errors
-/// The path is empty, absolute, names a drive, climbs with `..` or holds a control character.
+/// The path is empty, absolute, names a drive, holds a `:` (an alternate data stream on Windows), uses a Windows
+/// device name such as `CON` or `COM1` as a component stem, climbs with `..` or holds a control character.
 pub fn safe_relative(name: &str) -> Result<PathBuf, String> {
     if name.chars().any(char::is_control) {
         return Err(format!(
@@ -68,12 +82,24 @@ pub fn safe_relative(name: &str) -> Result<PathBuf, String> {
     if unified.starts_with('/') || unified.as_bytes().get(1) == Some(&b':') {
         return Err(format!("path `{name}` is absolute"));
     }
+    if unified.contains(':') {
+        return Err(format!("path `{name}` holds a `:`"));
+    }
     let mut out = PathBuf::new();
     for part in unified.split('/') {
         match part {
             "" | "." => {}
             ".." => return Err(format!("path `{name}` escapes the Mod folder")),
-            other => out.push(other),
+            other => {
+                let stem = other.split('.').next().unwrap_or(other);
+                if RESERVED_WINDOWS_NAMES
+                    .iter()
+                    .any(|reserved| stem.eq_ignore_ascii_case(reserved))
+                {
+                    return Err(format!("path `{name}` uses a reserved Windows name"));
+                }
+                out.push(other);
+            }
         }
     }
     if out.as_os_str().is_empty() {
@@ -166,11 +192,31 @@ struct Budget {
     limits: Limits,
     bytes: u64,
     entries: usize,
+    /// Shared copy of `bytes`, read by [`GuardedReader`]; `None` when no tar stream is being walked.
+    mirror: Option<Rc<Cell<u64>>>,
+    /// Shared copy of `entries`, read by [`GuardedReader`].
+    entries_mirror: Option<Rc<Cell<usize>>>,
+    /// Set while a file body is being copied, so its bytes are not counted as metadata.
+    in_body: Option<Rc<Cell<bool>>>,
 }
 
 impl Budget {
+    fn new(limits: Limits) -> Budget {
+        Budget {
+            limits,
+            bytes: 0,
+            entries: 0,
+            mirror: None,
+            entries_mirror: None,
+            in_body: None,
+        }
+    }
+
     fn entry(&mut self) -> Result<(), String> {
         self.entries += 1;
+        if let Some(mirror) = &self.entries_mirror {
+            mirror.set(self.entries);
+        }
         if self.entries > self.limits.max_entries {
             return Err(format!(
                 "the archive has more than {} entries",
@@ -192,12 +238,22 @@ impl Budget {
         }
         let mut out = fs::File::create(to).map_err(io)?;
         let allowed = self.remaining();
-        let copied = io::copy(&mut from.take(allowed.saturating_add(1)), &mut out).map_err(io)?;
+        if let Some(flag) = &self.in_body {
+            flag.set(true);
+        }
+        let copied = io::copy(&mut from.take(allowed.saturating_add(1)), &mut out);
+        if let Some(flag) = &self.in_body {
+            flag.set(false);
+        }
+        let copied = copied.map_err(io)?;
         out.flush().map_err(io)?;
         if copied > allowed {
             return Err(too_big(self.limits.max_bytes));
         }
         self.bytes += copied;
+        if let Some(mirror) = &self.mirror {
+            mirror.set(self.bytes);
+        }
         Ok(())
     }
 }
@@ -224,11 +280,7 @@ fn extract_zip(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String
     if declared > limits.max_bytes {
         return Err(too_big(limits.max_bytes));
     }
-    let mut budget = Budget {
-        limits,
-        bytes: 0,
-        entries: 0,
-    };
+    let mut budget = Budget::new(limits);
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(|e| format!("entry {i}: {e}"))?;
         budget.entry()?;
@@ -273,18 +325,57 @@ fn extract_compressed_tar(
     let unreadable =
         |e: &dyn std::fmt::Display| format!("{}: not a readable archive: {e}", archive.display());
     let reader: Box<dyn Read> = match codec {
-        Codec::Gzip => Box::new(flate2::read::GzDecoder::new(input)),
+        Codec::Gzip => Box::new(flate2::read::MultiGzDecoder::new(input)),
         Codec::Xz => Box::new(lzma_rust2::XzReader::new_mem_limit(
             input,
             true,
             XZ_MEMORY_LIMIT_KB,
         )),
-        Codec::Bzip2 => Box::new(bzip2::read::BzDecoder::new(input)),
+        Codec::Bzip2 => Box::new(bzip2::read::MultiBzDecoder::new(input)),
         Codec::Zstd => {
             Box::new(ruzstd::decoding::StreamingDecoder::new(input).map_err(|e| unreadable(&e))?)
         }
     };
     extract_tar_reader(reader, archive, dest, limits)
+}
+
+/// The stream a tar walk reads through. It counts every byte the tar crate pulls from the decoder: once the bytes
+/// that are not file bodies (headers, padding, GNU long names, pax records, skipped bodies) pass a bound that grows
+/// only with the entries seen, the archive is refused. The whole stream is also capped at the byte limit plus that bound.
+struct GuardedReader<R: Read> {
+    inner: R,
+    read: u64,
+    max_bytes: u64,
+    written: Rc<Cell<u64>>,
+    entries: Rc<Cell<usize>>,
+    in_body: Rc<Cell<bool>>,
+}
+
+/// How many non-body bytes an archive with `entries` entries may hold.
+fn metadata_allowance(entries: usize) -> u64 {
+    let per_entry = u64::try_from(entries).unwrap_or(u64::MAX);
+    METADATA_SLACK.saturating_add(METADATA_PER_ENTRY.saturating_mul(per_entry))
+}
+
+impl<R: Read> Read for GuardedReader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let n = self.inner.read(buf)?;
+        self.read = self
+            .read
+            .saturating_add(u64::try_from(n).unwrap_or(u64::MAX));
+        let allowance = metadata_allowance(self.entries.get());
+        if self.read > self.max_bytes.saturating_add(allowance) {
+            return Err(io::Error::other(
+                "the archive stream is larger than expected",
+            ));
+        }
+        if !self.in_body.get() && self.read.saturating_sub(self.written.get()) > allowance {
+            return Err(io::Error::other(
+                "the archive metadata is larger than expected",
+            ));
+        }
+        Ok(n)
+    }
 }
 
 /// Walk the entries of a tar stream into `dest`. `archive` names the source in error messages only.
@@ -295,11 +386,25 @@ fn extract_tar_reader<R: Read>(
     limits: Limits,
 ) -> Result<(), String> {
     let unreadable = |e: io::Error| format!("{}: not a readable archive: {e}", archive.display());
-    let mut tar = tar::Archive::new(reader);
+    // The tar crate reads long names, pax records and skipped bodies through the stream, so the guard sees all of
+    // it: whatever is not a file body (counted by `Budget`) is metadata, and is capped.
+    let written = Rc::new(Cell::new(0_u64));
+    let entries = Rc::new(Cell::new(0_usize));
+    let in_body = Rc::new(Cell::new(false));
+    let guarded = GuardedReader {
+        inner: reader,
+        read: 0,
+        max_bytes: limits.max_bytes,
+        written: Rc::clone(&written),
+        entries: Rc::clone(&entries),
+        in_body: Rc::clone(&in_body),
+    };
+    let mut tar = tar::Archive::new(guarded);
     let mut budget = Budget {
-        limits,
-        bytes: 0,
-        entries: 0,
+        mirror: Some(written),
+        entries_mirror: Some(entries),
+        in_body: Some(in_body),
+        ..Budget::new(limits)
     };
     for entry in tar.entries().map_err(unreadable)? {
         let mut entry = entry.map_err(unreadable)?;
@@ -352,11 +457,7 @@ fn extract_7z(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String>
     if declared > limits.max_bytes {
         return Err(too_big(limits.max_bytes));
     }
-    let mut budget = Budget {
-        limits,
-        bytes: 0,
-        entries: 0,
-    };
+    let mut budget = Budget::new(limits);
     // The callback stops the walk with a placeholder error; the refusal it found is returned instead.
     let mut refused: Option<String> = None;
     let walked = reader.for_each_entries(|entry, stream| {
@@ -475,11 +576,7 @@ fn run_tool_with(
             output.stderr.trim()
         ));
     }
-    let mut budget = Budget {
-        limits,
-        bytes: 0,
-        entries: 0,
-    };
+    let mut budget = Budget::new(limits);
     check_tree(dest, &mut budget)
 }
 
