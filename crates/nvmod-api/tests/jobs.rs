@@ -1481,7 +1481,12 @@ fn stage_builds_the_tree_of_a_profile() {
     assert_eq!(staged.report.manifest.profile, "Default");
     assert_eq!(staged.report.manifest.files, 3);
     assert_eq!(staged.report.manifest.overridden, 0);
-    assert!(staged.report.tree.ends_with("staging/Default/data"));
+    assert!(
+        staged
+            .report
+            .tree
+            .ends_with(std::path::Path::new("staging").join("Default").join("data"))
+    );
     assert_eq!(
         fs::read(s.root().join("staging/Default/data/patch.esp")).unwrap(),
         fs::read(s.root().join("mods/Patch/Patch.esp")).unwrap()
