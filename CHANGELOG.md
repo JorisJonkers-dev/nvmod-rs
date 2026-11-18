@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.8.1...v0.9.0) (2026-11-18)
+
+
+### Features
+
+* **api:** add the conflicts job ([#179](https://github.com/JorisJonkers-dev/nvmod-rs/issues/179)) ([25f2650](https://github.com/JorisJonkers-dev/nvmod-rs/commit/25f26501b478bdeebc8d820a6490a258e326e622))
+* **api:** add the doctor job ([#175](https://github.com/JorisJonkers-dev/nvmod-rs/issues/175)) ([e343e5e](https://github.com/JorisJonkers-dev/nvmod-rs/commit/e343e5ef94895068a6a9f613eb1110312a5f26d5))
+* **api:** add the tree job ([#181](https://github.com/JorisJonkers-dev/nvmod-rs/issues/181)) ([b3c4e4e](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b3c4e4e3b52b628b720a6624e0073d52d40439ed))
+
 ## [0.8.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.8.0...v0.8.1) (2026-11-18)
 
 
