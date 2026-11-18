@@ -56,7 +56,7 @@ fn op_of(args: &[String]) -> String {
     let first = args.first().map_or("nvmod", String::as_str);
     let sub = args.get(1).filter(|w| !w.starts_with('-'));
     match (first, sub) {
-        ("mods" | "tools" | "lod" | "profile", Some(s)) => format!("{first} {s}"),
+        ("mods" | "tools" | "profile", Some(s)) => format!("{first} {s}"),
         _ => first.to_owned(),
     }
 }

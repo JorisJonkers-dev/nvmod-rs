@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Replays the recorded baseline of the commands that rauls-trusty-toolbox ADR-0019 moves out of nvmod (`tools
 //! contracts`, `verify`, `tools`, `run`, `install-nv-rs`, `lod`, `ttw`, `setup`). Each transcript in
-//! `tests/baseline/<command>/<case>.json` holds the arguments, the exit code, standard output (parsed as JSON when it
+//! `tests/baseline/<command>/<case>.json` (those of removed commands are in `tests/baseline/removed/`, not replayed) holds the arguments, the exit code, standard output (parsed as JSON when it
 //! is JSON) and standard error, as the built `nvmod` printed them on synthetic fixtures. The normalisation rules are in
 //! `tests/baseline/README.md`; they are applied to every run, recorded or replayed, so a transcript is only ever compared
 //! with normalised output.
@@ -344,73 +344,6 @@ fn with_unlisted_asset_release(root: &Path) -> Vec<FakeServer> {
 fn instance_and_plain_folder(root: &Path) -> Vec<FakeServer> {
     instance(root);
     fs::create_dir_all(root.join("plain")).expect("plain folder");
-    Vec::new()
-}
-
-/// The plan that lodwright-rs v0.1.0 prints for its synthetic worldspaces, copied from its tests.
-const LOD_PLAN: &str = include_str!("golden/lodwright-plan.json");
-
-/// `instance` (staged), with a fake lodwright at `<TMP>/work/lodwright` whose body is `body`, the plan it prints in
-/// `<TMP>/work/plan.json`, and a lock that pins the program as it is written.
-fn lod_with(root: &Path, plan: &str, body: &str) -> Vec<FakeServer> {
-    instance(root);
-    let work = root.join("work");
-    fs::create_dir_all(&work).expect("work folder");
-    fs::write(work.join("plan.json"), plan).expect("plan");
-    let program = write_script(
-        &work,
-        "lodwright",
-        &body.replace(TMP, &root.display().to_string()),
-    );
-    pin_lodwright(root, &fs::read(program).expect("program"));
-    Vec::new()
-}
-
-/// A lock in `<TMP>/work` that pins lodwright-rs 0.1.0 to `bytes`.
-fn pin_lodwright(root: &Path, bytes: &[u8]) {
-    let text = format!(
-        "schema_version = 1\n\n[[tool]]\nname = \"lodwright-rs\"\nversion = \"0.1.0\"\ncontracts = {{ lodwright-plan = 1 }}\n\n\
-         [tool.attestation]\nrepository = \"o/lodwright-rs\"\n\n[tool.assets.{}]\nurl = \"http://127.0.0.1:9/lodwright\"\nsha256 = \"{}\"\n",
-        platform(),
-        sha256_hex(bytes)
-    );
-    fs::write(root.join("work/tools.lock.toml"), text).expect("lock");
-}
-
-/// The pinned fake lodwright prints the golden plan.
-fn lod_plan(root: &Path) -> Vec<FakeServer> {
-    lod_with(root, LOD_PLAN, "cat <TMP>/work/plan.json\n")
-}
-
-/// The pinned fake lodwright fails with a message on standard error.
-fn lod_tool_fails(root: &Path) -> Vec<FakeServer> {
-    lod_with(
-        root,
-        LOD_PLAN,
-        "echo 'cannot read the plugin' >&2\nexit 1\n",
-    )
-}
-
-/// The pinned fake lodwright prints a document that is not a plan.
-fn lod_plan_breaks_contract(root: &Path) -> Vec<FakeServer> {
-    lod_with(root, "{\"not\":\"a plan\"}", "cat <TMP>/work/plan.json\n")
-}
-
-/// The lock pins one program and the program run is another one: nothing runs.
-fn lod_program_differs_from_pin(root: &Path) -> Vec<FakeServer> {
-    lod_with(root, LOD_PLAN, "echo pinned\n");
-    write_script(&root.join("work"), "lodwright", "echo changed\n");
-    Vec::new()
-}
-
-/// A profile that was never staged: `init` and `profile create` only.
-fn unstaged_instance(root: &Path) -> Vec<FakeServer> {
-    steam_base(root);
-    run_setup_step(
-        &["init", "--base", "<TMP>/base", "--instance", "<TMP>/fnv"],
-        root,
-    );
-    run_setup_step(&["profile", "create", "--instance", "<TMP>/fnv"], root);
     Vec::new()
 }
 
@@ -1372,173 +1305,6 @@ fn cases() -> Vec<Case> {
                 "--nope",
             ],
             setup: ttw_good,
-        },
-        Case {
-            command: "lod",
-            name: "plan-json",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-                "--json",
-            ],
-            setup: lod_plan,
-        },
-        Case {
-            command: "lod",
-            name: "plan-text",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-            ],
-            setup: lod_plan,
-        },
-        Case {
-            command: "lod",
-            name: "plan-world-and-blocks-json",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-                "--world",
-                "Testland",
-                "--blocks",
-                "--json",
-            ],
-            setup: lod_plan,
-        },
-        Case {
-            command: "lod",
-            name: "plan-unknown-world-plans-every-world",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-                "--world",
-                "Nowhere",
-            ],
-            setup: lod_plan,
-        },
-        Case {
-            command: "lod",
-            name: "plan-tool-fails-exit-4",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-            ],
-            setup: lod_tool_fails,
-        },
-        Case {
-            command: "lod",
-            name: "plan-contract-broken-exit-4",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-                "--json",
-            ],
-            setup: lod_plan_breaks_contract,
-        },
-        Case {
-            command: "lod",
-            name: "plan-program-differs-from-pin-is-not-run",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-            ],
-            setup: lod_program_differs_from_pin,
-        },
-        Case {
-            command: "lod",
-            name: "plan-unstaged-is-refused",
-            args: &[
-                "lod",
-                "plan",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-            ],
-            setup: unstaged_instance,
-        },
-        Case {
-            command: "lod",
-            name: "plan-nothing-pinned-is-refused",
-            args: &["lod", "plan", "--instance", "<TMP>/fnv"],
-            setup: instance,
-        },
-        Case {
-            command: "lod",
-            name: "generate-is-refused-with-reason",
-            args: &[
-                "lod",
-                "generate",
-                "--instance",
-                "<TMP>/fnv",
-                "--lock",
-                "<TMP>/work/tools.lock.toml",
-                "--lodwright",
-                "<TMP>/work/lodwright",
-            ],
-            setup: lod_plan,
-        },
-        Case {
-            command: "lod",
-            name: "usage-no-subcommand",
-            args: &["lod"],
-            setup: nothing,
-        },
-        Case {
-            command: "lod",
-            name: "usage-no-instance",
-            args: &["lod", "plan"],
-            setup: nothing,
-        },
-        Case {
-            command: "lod",
-            name: "usage-unknown-subcommand",
-            args: &["lod", "fly", "--instance", "<TMP>/fnv"],
-            setup: nothing,
         },
         Case {
             command: "install-nv-rs",
@@ -2620,6 +2386,9 @@ fn all_transcript_files(dir: &Path, found: &mut BTreeSet<PathBuf>) {
     for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
         let path = entry.path();
         if path.is_dir() {
+            if path == baseline_dir().join("removed") {
+                continue;
+            }
             all_transcript_files(&path, found);
         } else if path.extension().is_some_and(|e| e == "json") {
             found.insert(path);
@@ -2691,6 +2460,59 @@ fn every_transcript_replays_against_the_build() {
         failures.len(),
         failures.join("\n")
     );
+}
+
+/// Commands that are no longer in nvmod keep their transcripts under `baseline/removed/<command>/`. The replay does
+/// not run them (nothing to run), raul replays them against its own build; this test only checks that they stay
+/// whole: each parses, names its folder as `command`, and holds the fields the replay format needs.
+#[test]
+fn removed_lod_transcripts_still_parse_and_are_unchanged() {
+    let mut found = BTreeSet::new();
+    // The replay's stray-file walk skips `removed/` itself; this walk starts below it.
+    all_transcript_files(&baseline_dir().join("removed/lod"), &mut found);
+    let mut count = 0;
+    for path in &found {
+        let text = fs::read_to_string(path).unwrap();
+        let doc: Value = serde_json::from_str(&text)
+            .unwrap_or_else(|e| panic!("{} is not JSON: {e}", path.display()));
+        let command = path
+            .parent()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert_eq!(doc["command"], command, "{}", path.display());
+        assert_eq!(doc["args"][0], command, "{}", path.display());
+        assert!(doc["exit_code"].is_i64(), "{}", path.display());
+        assert!(
+            doc.get("stdout").is_some() && doc.get("stderr").is_some(),
+            "{}",
+            path.display()
+        );
+        assert_eq!(doc["release"], "0.8.1", "{}", path.display());
+        let name = path.file_name().unwrap().to_str().unwrap();
+        let sums = fs::read_to_string(path.with_file_name("SHA256SUMS")).expect("SHA256SUMS");
+        let want = sums
+            .lines()
+            .find_map(|l| l.strip_suffix(name).and_then(|h| h.strip_suffix("  ")))
+            .unwrap_or_else(|| panic!("{name} is not listed in SHA256SUMS"));
+        assert_eq!(sha256_hex(text.as_bytes()), want, "{name} changed");
+        count += 1;
+    }
+    assert_eq!(count, 13, "the 13 recorded `lod` transcripts");
+}
+
+/// The removed command is an unknown command, exit 5 (usage), like any other word nvmod does not know.
+#[test]
+fn lod_is_an_unknown_command() {
+    let out = Command::new(env!("CARGO_BIN_EXE_nvmod"))
+        .args(["lod", "plan"])
+        .env_clear()
+        .output()
+        .expect("run nvmod");
+    assert_eq!(out.status.code(), Some(5));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("unknown command `lod`"));
 }
 
 #[test]
