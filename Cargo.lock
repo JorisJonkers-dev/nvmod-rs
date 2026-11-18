@@ -696,6 +696,7 @@ dependencies = [
  "nvmod-catalog",
  "nvmod-core",
  "nvmod-doctor",
+ "nvmod-formats",
  "nvmod-import",
  "nvmod-install",
  "nvmod-instance",

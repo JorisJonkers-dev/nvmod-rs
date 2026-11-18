@@ -146,3 +146,18 @@ fn a_newer_schema_is_refused_with_exit_2_and_a_reason_and_left_alone() {
     }
     assert_eq!(std::fs::read(s.file()).unwrap(), newer);
 }
+
+#[test]
+fn a_newer_schema_doctor_json_refusal_goes_to_stderr_with_empty_stdout() {
+    let s = Scratch::new();
+    let newer = br#"{"schema_version":3,"base":"/x","storefront":"steam","target":"vanilla"}"#;
+    std::fs::write(s.file(), newer).unwrap();
+    let (code, out, err) = nvmod(&["doctor", "--instance", path_str(&s.root()), "--json"]);
+    assert_eq!(code, 2, "{err}");
+    assert_eq!(out, "", "the refusal is not on stdout: {out}");
+    assert!(
+        err.contains("schema 3") && err.contains("newer"),
+        "the refusal is on stderr: {err}"
+    );
+    assert_eq!(std::fs::read(s.file()).unwrap(), newer);
+}
