@@ -93,3 +93,6 @@ __pycache__/
 *.7z
 *.rar
 *.zip
+
+# Run logs a test run can leave in the crate folder.
+/crates/nvmod-cli/nvmod/
