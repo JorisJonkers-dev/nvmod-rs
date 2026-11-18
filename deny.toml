@@ -32,7 +32,12 @@ allow = [
     "CC0-1.0",
 ]
 confidence-threshold = 0.8
-exceptions = []
+# libbz2-rs-sys is the pure-Rust port of bzip2 (no C), under the bzip2-1.0.6 licence: a short permissive BSD-style
+# licence that asks for the notice to be kept and no more. It is only reached through the `bzip2` crate, which
+# reads 7z BZip2 blocks and tar.bz2 archives in process (nvmod-modinstall).
+exceptions = [
+    { allow = ["bzip2-1.0.6"], crate = "libbz2-rs-sys" },
+]
 
 # The workspace crates are publish = false; their own licence is checked by the SPDX guard instead.
 [licenses.private]

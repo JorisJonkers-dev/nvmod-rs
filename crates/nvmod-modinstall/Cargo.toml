@@ -9,19 +9,25 @@ publish.workspace = true
 description = "Installs a Mod from an archive into an nvmod Instance: extraction, FOMOD inference, profile files, journal and rollback."
 
 [dependencies]
+bzip2 = "0.6.1"
+flate2 = { version = "1.1.11", default-features = false, features = ["rust_backend"] }
+lzma-rust2 = "0.25"
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-runner = { workspace = true }
 nvmod-stage = { workspace = true }
 roxmltree = "0.21.2"
+ruzstd = "0.9.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
+sevenz-rust2 = { version = "0.25.0", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
 tar = { version = "0.4.46", default-features = false }
 zip = { version = "9.4.1", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
+sevenz-rust2 = { version = "0.25.0", default-features = false, features = ["compress"] }
 
 [lints]
 workspace = true
