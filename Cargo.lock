@@ -689,7 +689,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "loot-rs",
  "nvmod-backup",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-backup"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-instance",
@@ -727,7 +727,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-bsa"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-testkit",
  "proptest",
@@ -736,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-catalog"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "proptest",
  "serde",
@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-cli"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "ctrlc",
  "jsonschema",
@@ -779,7 +779,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-conflicts"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-bsa",
  "nvmod-core",
@@ -793,7 +793,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "proptest",
  "schemars",
@@ -803,7 +803,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-doctor"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-catalog",
  "nvmod-conflicts",
@@ -821,7 +821,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-fixtures"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-testkit",
  "nvmod-tools",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-formats"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "flate2",
  "nvmod-core",
@@ -840,7 +840,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-import"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -851,7 +851,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-install"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-instance",
@@ -864,7 +864,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-instance"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-testkit",
@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-loadorder"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "loot-rs",
  "nvmod-core",
@@ -888,7 +888,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-modinstall"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -905,7 +905,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-pe"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-testkit",
  "proptest",
@@ -915,7 +915,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-plugins"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-conflicts",
  "nvmod-core",
@@ -931,7 +931,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-profile"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-backup",
  "nvmod-core",
@@ -946,7 +946,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-run"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nix",
  "nvmod-core",
@@ -961,7 +961,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-runlog"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-testkit",
  "serde",
@@ -972,7 +972,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-runner"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-runlog",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-saves"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-backup",
  "nvmod-core",
@@ -998,7 +998,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-stage"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -1010,14 +1010,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-testkit"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "winapi-util",
 ]
 
 [[package]]
 name = "nvmod-tools"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "jsonschema",
  "loot-rs",
@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-ui-model"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1039,7 +1039,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-ui-service"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nvmod-cli",
  "nvmod-testkit",
