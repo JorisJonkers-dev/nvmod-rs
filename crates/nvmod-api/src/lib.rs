@@ -16,7 +16,7 @@
 //! * [`JobError`] has a stable [`ErrorKind`], a plain summary and [`JobError::copy_text`]. It never holds a command
 //!   line.
 //! * Nothing here prints or ends the process. The `nvmod` subcommands `mods list|enable|disable|reorder`, `sort`,
-//!   `saves list`, `doctor`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
+//!   `saves list`, `doctor`, `conflicts`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
 //!
 //! The jobs:
 //!
@@ -50,11 +50,13 @@
 //! | [`verify::verify`] | [`verify::VerifyRequest`] | [`verify::VerifyOutput`] |
 //! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
 //! | [`ttw::install`] | [`ttw::InstallRequest`] | [`ttw::InstallOutput`] |
+//! | [`conflicts::report`] | [`conflicts::ReportRequest`] | [`conflicts::ReportOutput`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
 pub mod backup;
+pub mod conflicts;
 pub mod doctor;
 pub mod import_mo2;
 pub mod init;

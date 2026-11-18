@@ -326,3 +326,52 @@ fn exit_codes_and_no_writes() {
     assert_eq!(nvmod(&["tree", "--instance", r]).0, 0);
     assert_eq!(snapshot(&root), before);
 }
+
+#[test]
+fn refusals_go_to_stderr_with_exit_two_even_with_json() {
+    let s = Scratch::new();
+    let root = s.root();
+    let r = root.to_str().unwrap();
+    let (code, out, err) = nvmod(&["conflicts", "--instance", r, "--json"]);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.starts_with('{'), "{out}");
+    assert!(err.is_empty(), "{err}");
+    let not_an_instance = s.inst.path().join("not-an-instance");
+    let (code, out, err) = nvmod(&[
+        "conflicts",
+        "--instance",
+        not_an_instance.to_str().unwrap(),
+        "--json",
+    ]);
+    assert_eq!(code, 2);
+    assert!(out.is_empty(), "{out}");
+    assert!(
+        err.starts_with("nvmod conflicts: refused: ") && err.contains("is not an nvmod Instance"),
+        "{err}"
+    );
+    std::fs::remove_file(root.join("profiles/Default/modlist.txt")).unwrap();
+    let (code, out, err) = nvmod(&["conflicts", "--instance", r, "--json"]);
+    assert_eq!(code, 2);
+    assert!(out.is_empty(), "{out}");
+    assert!(
+        err.starts_with("nvmod conflicts: refused: ") && err.contains("modlist.txt"),
+        "{err}"
+    );
+}
+
+#[test]
+fn a_mod_the_profile_does_not_enable_is_refused_on_stderr_with_exit_two() {
+    let s = Scratch::new();
+    let root = s.root();
+    let r = root.to_str().unwrap();
+    let refusal = "nvmod conflicts: refused: the profile `Default` has no enabled Mod `Zed`\n";
+    for args in [
+        &["conflicts", "--instance", r, "--mod", "Zed"][..],
+        &["conflicts", "--instance", r, "--mod", "Zed", "--json"][..],
+    ] {
+        let (code, out, err) = nvmod(args);
+        assert_eq!(code, 2, "{args:?}");
+        assert_eq!(out, "", "{args:?}");
+        assert_eq!(err, refusal, "{args:?}");
+    }
+}
