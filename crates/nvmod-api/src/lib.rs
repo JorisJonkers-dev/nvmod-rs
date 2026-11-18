@@ -16,7 +16,7 @@
 //! * [`JobError`] has a stable [`ErrorKind`], a plain summary and [`JobError::copy_text`]. It never holds a command
 //!   line.
 //! * Nothing here prints or ends the process. The `nvmod` subcommands `mods list|enable|disable|reorder`, `sort`,
-//!   `saves list`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
+//!   `saves list`, `doctor`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
 //!
 //! The jobs:
 //!
@@ -28,6 +28,7 @@
 //! | [`plugins::change`] | [`plugins::ChangeRequest`] | [`plugins::EditReport`] |
 //! | [`loadorder::sort`] | [`loadorder::SortRequest`] | [`loadorder::SortOutput`] |
 //! | [`sort_apply::keep_order`] | [`sort_apply::KeepOrderRequest`] | [`sort_apply::KeepOrderOutput`] |
+//! | [`doctor::check`] | [`doctor::CheckRequest`] | [`doctor::CheckOutput`] |
 //! | [`saves::list`] | [`saves::ListRequest`] | [`saves::ListOutput`] |
 //! | [`saves::check`] | [`saves::CheckRequest`] | [`saves::CheckOutput`] |
 //! | [`saves::checksum`] | [`saves::ChecksumRequest`] | [`saves::ChecksumOutput`] |
@@ -54,6 +55,7 @@
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
 
 pub mod backup;
+pub mod doctor;
 pub mod import_mo2;
 pub mod init;
 pub mod install;

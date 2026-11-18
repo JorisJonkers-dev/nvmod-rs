@@ -14,12 +14,12 @@ use std::path::{Path, PathBuf};
 const VERIFY: &str = "verify.verify";
 
 /// The severity a finding must reach to fail the verification when the request names none.
-fn default_fail_on() -> Severity {
+pub(crate) fn default_fail_on() -> Severity {
     Severity::Error
 }
 
 /// Read a severity written as `info`, `warning` or `error`.
-fn severity<'de, D>(deserializer: D) -> Result<Severity, D::Error>
+pub(crate) fn severity<'de, D>(deserializer: D) -> Result<Severity, D::Error>
 where
     D: serde::Deserializer<'de>,
 {

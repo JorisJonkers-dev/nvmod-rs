@@ -13,6 +13,7 @@ nvmod-backup = { workspace = true }
 nvmod-catalog = { workspace = true }
 nvmod-core = { workspace = true }
 nvmod-doctor = { workspace = true }
+nvmod-formats = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-install = { workspace = true }
 nvmod-instance = { workspace = true }

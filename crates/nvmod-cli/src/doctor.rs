@@ -3,38 +3,11 @@
 //! [--fail-on <severity>]`.
 
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
-use nvmod_catalog::Catalog;
+use nvmod_api::doctor::{CheckOutput, CheckRequest, Target, is_open_refusal};
+use nvmod_api::{CancelToken, ErrorKind, JobError, NoProgress, Outcome};
 use nvmod_core::Severity;
-use nvmod_formats::Mo2Instance;
-use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
-use std::path::Path;
-
-/// The Doctor is read only: an older Instance file is read as migrated, but not rewritten.
-fn open_and_check(
-    dir: &Path,
-    args: &Args,
-    fail_on: Severity,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> u8 {
-    let json = args.flag("json");
-    match NvmodInstance::open_read_only(dir) {
-        Ok(instance) => nvmod_instance_doctor(&instance, args, json, fail_on, out, err),
-        Err(InstanceError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod doctor: refused: {why}");
-            REFUSED
-        }
-        Err(why) => {
-            if json {
-                let _ = writeln!(out, "{}", serde_json::json!({ "error": why.to_string() }));
-            } else {
-                let _ = writeln!(err, "nvmod doctor: {why}");
-            }
-            FOUND
-        }
-    }
-}
+use std::path::PathBuf;
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
@@ -79,141 +52,71 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let json = args.flag("json");
-    let fail = |message: String, out: &mut dyn Write, err: &mut dyn Write| {
-        if json {
-            let _ = writeln!(out, "{}", serde_json::json!({ "error": message }));
-        } else {
-            let _ = writeln!(err, "nvmod doctor: {message}");
+    let target = match args.option("base") {
+        Some(base) => Target::Base {
+            folder: PathBuf::from(base),
+        },
+        None => Target::Instance {
+            folder: PathBuf::from(args.option("instance").unwrap_or_default()),
+            profile: args.option("profile").map(str::to_owned),
+            game: args.option("game").map(PathBuf::from),
+            masterlist: args.option("masterlist").map(PathBuf::from),
+            catalog: args.option("catalog").map(PathBuf::from),
+        },
+    };
+    let request = CheckRequest { target, fail_on };
+    match nvmod_api::doctor::check(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(done)) => print_report(&done, args.flag("json"), out),
+        Ok(Outcome::Cancelled) => {
+            let _ = writeln!(err, "nvmod doctor: cancelled");
+            REFUSED
         }
-        FOUND
-    };
-    if let Some(base) = args.option("base") {
-        return base_doctor(Path::new(base), json, fail_on, out, err);
+        Err(e) => print_failure(&e, args.flag("json"), out, err),
     }
-    let instance_dir = Path::new(args.option("instance").unwrap_or_default());
-    if NvmodInstance::is_instance(instance_dir) {
-        return open_and_check(instance_dir, &args, fail_on, out, err);
-    }
-    let instance = match Mo2Instance::open(instance_dir) {
-        Ok(instance) => instance,
-        Err(why) => return fail(why.to_string(), out, err),
-    };
-    let Some(name) = args
-        .option("profile")
-        .map(str::to_owned)
-        .or_else(|| instance.selected_profile.clone())
-    else {
-        return fail(
-            "the instance names no selected profile; pass --profile <name>".to_owned(),
-            out,
-            err,
-        );
-    };
-    let profile = match instance.load_profile(&name) {
-        Ok(profile) => profile,
-        Err(why) => return fail(why.to_string(), out, err),
-    };
-    let report = nvmod_doctor::run(
-        &instance,
-        &profile,
-        args.option("game").map(Path::new),
-        &Catalog::builtin(),
-    );
+}
+
+/// Print the report as JSON or as text, and exit 1 when it has a finding at or above `--fail-on`.
+fn print_report(done: &CheckOutput, json: bool, out: &mut dyn Write) -> u8 {
     if json {
         let _ = writeln!(
             out,
             "{}",
-            serde_json::to_string_pretty(&report).unwrap_or_default()
+            serde_json::to_string_pretty(&done.report).unwrap_or_default()
         );
     } else {
-        let _ = out.write_all(report.to_text().as_bytes());
+        let _ = out.write_all(done.report.to_text().as_bytes());
     }
-    if report.worst().is_some_and(|worst| worst >= fail_on) {
-        FOUND
-    } else {
-        OK
-    }
+    if done.found { FOUND } else { OK }
 }
 
-/// The Doctor on an nvmod Instance, with the catalogue of `--catalog` when one is given.
-fn nvmod_instance_doctor(
-    instance: &NvmodInstance,
-    args: &Args,
-    json: bool,
-    fail_on: Severity,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> u8 {
-    let catalog = match args.option("catalog") {
-        None => Catalog::builtin(),
-        Some(file) => match std::fs::read_to_string(file)
-            .map_err(|e| format!("{file}: {e}"))
-            .and_then(|text| Catalog::parse(&text).map_err(|e| e.to_string()))
-        {
-            Ok(catalog) => catalog,
-            Err(reason) => return finish(Err(reason), json, fail_on, out, err),
-        },
-    };
-    finish(
-        nvmod_doctor::check_instance(
-            instance,
-            args.option("profile"),
-            args.option("masterlist").map(Path::new),
-            &catalog,
-        ),
-        json,
-        fail_on,
-        out,
-        err,
-    )
-}
-
-/// The Doctor on a base copy; a refused storefront exits 2 with the reason.
-fn base_doctor(
-    base: &Path,
-    json: bool,
-    fail_on: Severity,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> u8 {
-    finish(nvmod_doctor::check_base(base), json, fail_on, out, err)
-}
-
-fn finish(
-    result: Result<nvmod_doctor::BaseReport, String>,
-    json: bool,
-    fail_on: Severity,
-    out: &mut dyn Write,
-    err: &mut dyn Write,
-) -> u8 {
-    let report = match result {
-        Ok(report) => report,
-        Err(reason) => {
+/// Print a refusal or a failure in the shape the command has always used: a refusal is `{"refused": true,
+/// "reason": ...}` with `--json` and a line on the error stream otherwise, except an Instance whose schema is newer,
+/// which is always a line on the error stream; a failure is `{"error": ...}` or a line, and exits 1.
+fn print_failure(e: &JobError, json: bool, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    match e.kind {
+        ErrorKind::Refused if is_open_refusal(e) => {
+            let _ = writeln!(err, "nvmod doctor: refused: {}", e.summary);
+            REFUSED
+        }
+        ErrorKind::Refused => {
             if json {
                 let _ = writeln!(
                     out,
                     "{}",
-                    serde_json::json!({ "refused": true, "reason": reason })
+                    serde_json::json!({ "refused": true, "reason": e.summary })
                 );
             } else {
-                let _ = writeln!(err, "nvmod doctor: refused: {reason}");
+                let _ = writeln!(err, "nvmod doctor: refused: {}", e.summary);
             }
-            return REFUSED;
+            REFUSED
         }
-    };
-    if json {
-        let _ = writeln!(
-            out,
-            "{}",
-            serde_json::to_string_pretty(&report).unwrap_or_default()
-        );
-    } else {
-        let _ = out.write_all(report.to_text().as_bytes());
-    }
-    if report.worst().is_some_and(|worst| worst >= fail_on) {
-        FOUND
-    } else {
-        OK
+        _ => {
+            if json {
+                let _ = writeln!(out, "{}", serde_json::json!({ "error": e.summary }));
+            } else {
+                let _ = writeln!(err, "nvmod doctor: {}", e.summary);
+            }
+            FOUND
+        }
     }
 }
