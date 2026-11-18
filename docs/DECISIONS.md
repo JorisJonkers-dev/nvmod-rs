@@ -253,3 +253,16 @@ them now live in rauls-trusty-toolbox.
 | --- | --- | --- | --- |
 | How raul calls nvmod | In process, through the crate `nvmod-api`: one job shape, `run(&Request, &mut dyn Progress, &CancelToken) -> Result<Outcome<Output>, JobError>`, for `mods::list`, `mods::change`, `loadorder::sort`, `saves::list` and `run::plan`. Requests are `serde` types; a cancelled job returns `Outcome::Cancelled`; `JobError` has a stable kind (`refused`, `corrupt`, `failed`, `internal`), the job, a plain summary and `copy_text()`. Nothing in it prints or exits. The `nvmod` subcommands `mods list|enable|disable|reorder`, `sort`, `saves list` and the plan of `run` call the same jobs and keep their output and exit codes | The Toolbox ADR-0016: Components are libraries raul links, not commands it starts | **Yes**: the other actions (install, setup, backup, plugins, the rest of saves) join the API one job at a time |
 | The API version | `nvmod_api::API_VERSION` is the nvmod release version, so each release's tag and notes carry it; while it is 0.x a minor release may change the API | One version per Component, as raul pins it in `Cargo.lock` | No |
+
+## 2026-11-18: raul orchestrates; nvmod manages mods (rauls-trusty-toolbox ADR-0019)
+
+Decided by the owner on 2026-11-18. The rows above stay as history; this section says what changed.
+
+| Topic | Decision | Reason |
+| --- | --- | --- |
+| Scope | nvmod manages mods only: Mods, install and FOMOD, Plugins and the Load order with its sort, saves, Profiles, staging, backups, import and the content Doctor, and the library jobs raul calls for them. raul orchestrates every flow and is the only UI | rauls-trusty-toolbox ADR-0019 |
+| Setup | No standalone setup: no `nvmod setup` command, no setup wizard, no code that runs the jobs one after another. The step jobs in `nvmod-api` (init, import-mo2, profile, target, install, stage, sort apply, verify) are building blocks; raul composes them (rauls-trusty-toolbox#272). `setup` is removed in #164; #152 and #153 are closed | One owner of the step list and of the resume state |
+| TTW | TTW is raul's, through ttwright linked in process. nvmod's TTW job, command and installer adapter are removed in #165 | Two TTW drivers and two installers disagreed |
+| Engine install and launch | raul's; the game runs from raul's own binary. `install-nv-rs` (including its job from #163) and the launch part of `nvmod-run` are removed in #168; the executables registry and the Instance lock stay | rauls-trusty-toolbox ADR-0016 as amended |
+| GUI and view model | `gui/`, `nvmod-ui-model` and `nvmod-ui-service` are frozen and deleted in #167. This replaces the GUI rows above | raul's GUI and view model are the only ones |
+| Processes | nvmod starts no process once TTW, LOD and the engine install are gone and archives are read in process (#95); `nvmod-runner` is then deleted (#169) | Only the game run is a separate process, started by raul |
