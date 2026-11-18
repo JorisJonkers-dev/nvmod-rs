@@ -41,8 +41,10 @@
 //! | [`import_mo2::import`] | [`import_mo2::ImportRequest`] | [`import_mo2::ImportOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
+//! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
+//! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
 //! carry. While it is 0.x a minor release may change the API and a patch release does not.
@@ -58,6 +60,8 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
+pub mod stage;
+pub mod target;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
 

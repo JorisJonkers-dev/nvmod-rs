@@ -578,8 +578,8 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "loot-rs"
-version = "0.6.0"
-source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.6.0#b708ad1e01f87e5da47ef0bb7226c83b64b8b554"
+version = "0.6.1"
+source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.6.1#e5390c521dcd60df1be4973a0f4ba0983309a04b"
 dependencies = [
  "regex",
  "yaml-rust2",
