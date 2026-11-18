@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.8.0...v0.8.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** use caret requirements so the Components link together ([#172](https://github.com/JorisJonkers-dev/nvmod-rs/issues/172)) ([44f2c7b](https://github.com/JorisJonkers-dev/nvmod-rs/commit/44f2c7b7fe97e57c39c95116757d0bda1daeb379))
+
 ## [0.8.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.7.0...v0.8.0) (2026-11-18)
 
 
