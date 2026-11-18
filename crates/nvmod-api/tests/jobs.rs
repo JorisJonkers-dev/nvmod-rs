@@ -25,6 +25,12 @@ use nvmod_testkit::{
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// The installer of the success test is a shell script, so that test runs on Unix only.
+#[cfg(unix)]
+use nvmod_testkit::write_script;
+#[cfg(unix)]
+use nvmod_tools::{platform, sha256_hex};
+
 const MASTERLIST: &str = r"
 globals:
   - {type: say, content: 'Masterlist for tests'}
@@ -1922,4 +1928,121 @@ fn target_set_cancelled_before_the_write_changes_nothing() {
         fs::read(s.root().join("nvmod-instance.json")).unwrap(),
         before
     );
+}
+
+/// A lock that pins the fake installer at its checksum, as `nvmod tools fetch` would leave it.
+#[cfg(unix)]
+fn ttw_lock(work: &TempDir, installer: &Path) -> PathBuf {
+    let hash = sha256_hex(&fs::read(installer).unwrap());
+    let lock = work.path().join("tools.lock.toml");
+    let text = format!(
+        "schema_version = 1\n\n[[tool]]\nname = \"ttw-installer\"\nversion = \"0.2.0\"\n\
+         kind = \"third-party\"\ncontracts = {{ ttw-installer-result = 1 }}\n\n\
+         [tool.assets.{}]\nurl = \"http://127.0.0.1:9/ttw\"\nsha256 = \"{hash}\"\n",
+        platform()
+    );
+    fs::write(&lock, text).unwrap();
+    lock
+}
+
+#[cfg(unix)]
+#[test]
+fn ttw_runs_the_pinned_installer_and_imports_its_output() {
+    let s = Scratch::new();
+    let work = TempDir::new("api-ttw");
+    let fo3 = TempDir::new("api-ttw-fo3");
+    write_file(fo3.path(), "Fallout3.exe", b"synthetic fallout 3");
+    let installer = write_script(
+        work.path(),
+        "ttw-installer",
+        r#"
+dest=""
+prev=""
+for a in "$@"; do [ "$prev" = --dest ] && dest="$a"; prev="$a"; done
+mkdir -p "$dest/Meshes"
+echo generated > "$dest/Meshes/ttw.nif"
+echo master > "$dest/TaleOfTwoWastelands.esm"
+"#,
+    );
+    let lock = ttw_lock(&work, &installer);
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    let request = nvmod_api::ttw::InstallRequest {
+        instance: s.root(),
+        profile: None,
+        fallout3: fo3.path().to_path_buf(),
+        package: None,
+        installer: Some(installer),
+        lock: Some(lock),
+        store: None,
+        timeout_secs: Some(60),
+    };
+    let done = nvmod_api::ttw::install(&request, &mut progress, &CancelToken::new())
+        .expect("installs")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(done.profile, "Default");
+    assert_eq!(done.report.r#mod, "Tale of Two Wastelands");
+    assert_eq!(done.installer, "ttw-installer");
+    assert_eq!(done.version, "0.2.0");
+    assert_eq!(done.result["outcome"], "success");
+    assert_eq!(done.result["files_written"], 2);
+    assert_eq!(done.report.plugins, ["TaleOfTwoWastelands.esm"]);
+    let nif = s.root().join("mods/Tale of Two Wastelands/Meshes/ttw.nif");
+    assert_eq!(fs::read(nif).unwrap(), b"generated\n");
+    assert!(
+        events
+            .iter()
+            .any(|e| e.step == "run-installer" && e.label == "ttw.install.running-installer"),
+        "{events:?}"
+    );
+    assert!(
+        !s.root().join(".ttw-scratch").exists(),
+        "the scratch folder is gone"
+    );
+}
+
+#[test]
+fn ttw_refuses_a_fallout_3_folder_that_is_not_a_folder() {
+    let s = Scratch::bare();
+    let before = snapshot(&s.root());
+    let request = nvmod_api::ttw::InstallRequest {
+        instance: s.root(),
+        profile: None,
+        fallout3: s.root().join("no-such-folder"),
+        package: None,
+        installer: None,
+        lock: None,
+        store: None,
+        timeout_secs: None,
+    };
+    let error = nvmod_api::ttw::install(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "ttw.install");
+    assert!(error.summary.contains("Fallout 3"), "{error}");
+    assert_eq!(snapshot(&s.root()), before, "nothing was written");
+}
+
+#[test]
+fn ttw_cancelled_before_the_write_changes_nothing() {
+    let s = Scratch::bare();
+    let before = snapshot(&s.root());
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = nvmod_api::ttw::InstallRequest {
+        instance: s.root(),
+        profile: None,
+        fallout3: s.root().join("fallout3"),
+        package: None,
+        installer: None,
+        lock: None,
+        store: None,
+        timeout_secs: None,
+    };
+    let outcome = nvmod_api::ttw::install(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert!(!s.root().join(".ttw-scratch").exists());
+    assert!(!s.root().join("mods/Tale of Two Wastelands").exists());
+    assert_eq!(snapshot(&s.root()), before);
 }
