@@ -1032,26 +1032,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvmod-ui-model"
-version = "0.9.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "nvmod-ui-service"
-version = "0.9.0"
-dependencies = [
- "nvmod-cli",
- "nvmod-testkit",
- "nvmod-tools",
- "nvmod-ui-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "objc2"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

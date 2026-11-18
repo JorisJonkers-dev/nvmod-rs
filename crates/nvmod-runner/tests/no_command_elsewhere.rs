@@ -8,10 +8,6 @@ use std::path::{Path, PathBuf};
 /// Source files outside the runner crate that may still start a process, with the reason.
 const EXCEPTIONS: &[(&str, &str)] = &[
     (
-        "nvmod-ui-service/src/exec.rs",
-        "starts nvmod itself with a process group, streamed lines and a graceful stop (a streaming runner is future work)",
-    ),
-    (
         "nvmod-testkit/src/nvrs.rs",
         "test support that builds fixture archives with tar and chmod",
     ),

@@ -81,7 +81,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Documentation-only changes and changes under gui/ (its own workflow, gui.yml, builds it) skip the Rust steps. Every other check, and the gate below, still runs.
+      # Documentation-only changes skip the Rust steps. Every other check, and the gate below, still runs.
       - name: Changed files
         id: changes
         env:
@@ -92,7 +92,7 @@ jobs:
           if [ -z "${BASE:-}" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$BASE" 2>/dev/null; then
             echo "code=true" >>"$GITHUB_OUTPUT"; echo "no base to compare with: building"; exit 0
           fi
-          if git diff --name-only "$BASE...$HEAD" | grep -qvE '^(docs/|gui/|LICENSE$|.*\.md$)'; then
+          if git diff --name-only "$BASE...$HEAD" | grep -qvE '^(docs/|LICENSE$|.*\.md$)'; then
             echo "code=true" >>"$GITHUB_OUTPUT"
           else
             echo "code=false" >>"$GITHUB_OUTPUT"; echo "only documentation changed: the Rust steps are skipped"
