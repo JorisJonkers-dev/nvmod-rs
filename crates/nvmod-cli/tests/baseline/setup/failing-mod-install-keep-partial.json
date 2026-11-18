@@ -198,7 +198,7 @@
     {
       "code": 2,
       "description": "install the Mod Broken.zip",
-      "detail": "nvmod install: refused: <TMP>/work/Broken.zip is not a zip or tar archive and none of 7zz, 7z, 7za, bsdtar is in PATH (or name a tool with --extract-tool)",
+      "detail": "nvmod install: refused: <TMP>/work/Broken.zip is not an archive nvmod can read. It reads zip, 7z, tar, tar.gz, tar.xz, tar.bz2 and tar.zst; rar and other formats are not supported. Unpack it yourself and install the folder (`nvmod install <folder>`), or use a zip, 7z or tar release of the mod.",
       "event": "step",
       "index": 6,
       "seq": 13,

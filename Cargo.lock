@@ -984,7 +984,6 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
- "nvmod-runner",
  "nvmod-stage",
  "nvmod-testkit",
  "roxmltree",

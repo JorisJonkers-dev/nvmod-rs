@@ -2,7 +2,7 @@
 //! `nvmod install` and `nvmod rollback`, run as a program against a scratch Instance made by `nvmod init`.
 //! Archives are built in code by the testkit; no mod data is used.
 
-use nvmod_testkit::{BaseBuilder, Standin, TarBuilder, TempDir, ZipBuilder, snapshot, write_file};
+use nvmod_testkit::{BaseBuilder, TarBuilder, TempDir, ZipBuilder, snapshot, write_file};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -291,30 +291,17 @@ fn a_tar_archive_installs_too() {
 }
 
 #[test]
-fn an_archive_without_a_built_in_reader_goes_through_the_extraction_tool() {
-    let s = Scratch::new();
-    let archive = s.archive("Packed.7z");
-    std::fs::write(&archive, b"7z\xBC\xAF not really").unwrap();
-    // A stand-in for 7z: `tool x -y -o<dir> <archive>` writes one file into <dir>.
-    let tool = Standin::new()
-        .extracts("Meshes/p.nif", "packed\n")
-        .write(s.work.path(), "fake7z");
-    let (code, _, err) = s.install(&archive, &["--extract-tool", tool.to_str().unwrap()]);
-    assert_eq!(code, 0, "{err}");
-    assert_eq!(
-        std::fs::read(s.root().join("mods/Packed/Meshes/p.nif")).unwrap(),
-        b"packed\n"
-    );
-}
-
-#[test]
-fn a_missing_extraction_tool_for_an_unknown_archive_is_a_refusal() {
+fn a_rar_archive_is_refused_with_advice_and_nothing_is_written() {
     let s = Scratch::new();
     let archive = s.archive("Odd.rar");
-    std::fs::write(&archive, b"Rar!").unwrap();
+    let mut bytes = b"Rar!\x1a\x07\x00".to_vec();
+    bytes.resize(64, 0);
+    std::fs::write(&archive, &bytes).unwrap();
     let before = s.state();
-    let (code, _, err) = s.install(&archive, &["--extract-tool", "/nonexistent/tool"]);
+    let (code, _, err) = s.install(&archive, &[]);
     assert_eq!(code, 2, "{err}");
+    assert!(err.contains("rar"), "{err}");
+    assert!(err.contains("Unpack it yourself"), "{err}");
     assert_eq!(s.state(), before);
 }
 

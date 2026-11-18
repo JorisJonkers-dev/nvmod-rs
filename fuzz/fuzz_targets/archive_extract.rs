@@ -4,8 +4,8 @@ use libfuzzer_sys::fuzz_target;
 use nvmod_modinstall::Limits;
 use nvmod_testkit::TempDir;
 
-/// Magic numbers of every format that is read in process. One is put in front of the input so the fuzzer always
-/// reaches a reader and never the external extraction tool.
+/// Magic numbers of every format that is read in process. One is put in front of the input so every input
+/// reaches a reader.
 const MAGICS: [&[u8]; 6] = [
     b"PK\x03\x04",
     b"7z\xbc\xaf\x27\x1c",
@@ -31,7 +31,7 @@ fuzz_target!(|data: &[u8]| {
         max_entries: 256,
     };
     // Any refusal is fine; a panic, a hang or a write outside `dest` is not.
-    let _ = nvmod_modinstall::extract::extract(&archive, &dest, None, limits);
+    let _ = nvmod_modinstall::extract::extract(&archive, &dest, limits);
     assert!(
         std::fs::read_dir(dir.path())
             .unwrap()

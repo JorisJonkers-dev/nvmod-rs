@@ -39,8 +39,6 @@ pub struct Request<'a> {
     pub dry_run: bool,
     /// A JSON file with answers to the FOMOD's questions.
     pub answers: Option<&'a Path>,
-    /// Extract with this tool instead of the built-in readers.
-    pub extract_tool: Option<&'a Path>,
     /// Size limits of the extraction.
     pub limits: Limits,
 }
@@ -393,13 +391,8 @@ fn plan_archive(
     } else {
         let extracted = scratch.0.join("x");
         fs::create_dir_all(&extracted).map_err(|e| InstallError::Refused(e.to_string()))?;
-        extract::extract(
-            request.archive,
-            &extracted,
-            request.extract_tool,
-            request.limits,
-        )
-        .map_err(InstallError::Refused)?;
+        extract::extract(request.archive, &extracted, request.limits)
+            .map_err(InstallError::Refused)?;
         content_root(&extracted)
     };
 

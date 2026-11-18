@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Extraction of an archive into a scratch folder. Zip, tar, compressed tar (gzip, xz, bzip2, zstd) and 7z are read
-//! in process; only formats without a reader (rar and the rest) go through an extraction tool found in `PATH`
-//! (`7zz`, `7z`, `7za`, `bsdtar`) or named by the caller.
+//! in process; any other format (rar, for one) is refused with a message that says to unpack it and install the
+//! folder. Nothing is run as a process.
 //!
 //! Nothing leaves the destination: a path that is absolute or climbs out with `..`, a symbolic link, a device or
 //! any other special entry, more entries than [`Limits::max_entries`] or more bytes than [`Limits::max_bytes`]
 //! refuses the whole archive. Everything is checked while reading, before it is written.
 
-use nvmod_runner::{Call, Runner};
 use std::cell::Cell;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
-use std::time::Duration;
 
 /// How much an archive may hold.
 #[derive(Debug, Clone, Copy)]
@@ -32,14 +30,6 @@ impl Default for Limits {
         }
     }
 }
-
-/// Tools tried in `PATH`, in order, for archives without a built-in reader.
-/// How long an extraction tool may run.
-const TOOL_TIMEOUT: Duration = Duration::from_hours(1);
-/// How much of a tool's chatter is kept (it writes files, not output).
-const TOOL_OUTPUT_CAP: usize = 16 * 1024 * 1024;
-
-const TOOLS: [&str; 4] = ["7zz", "7z", "7za", "bsdtar"];
 
 /// Decoder dictionary memory allowed for a 7z archive, in KiB (512 MiB).
 const SEVENZ_MEMORY_LIMIT_KB: usize = 512 * 1024;
@@ -112,16 +102,8 @@ pub fn safe_relative(name: &str) -> Result<PathBuf, String> {
 /// Extract `archive` into the existing folder `dest`.
 ///
 /// # Errors
-/// A reason, when the archive is refused, cannot be read, or the tool fails.
-pub fn extract(
-    archive: &Path,
-    dest: &Path,
-    tool: Option<&Path>,
-    limits: Limits,
-) -> Result<(), String> {
-    if let Some(tool) = tool {
-        return run_tool(tool, archive, dest, limits);
-    }
+/// A reason, when the archive is refused, cannot be read, or is not a format nvmod reads.
+pub fn extract(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
     let mut magic = [0_u8; 512];
     let n = fs::File::open(archive)
         .and_then(|mut f| f.read(&mut magic))
@@ -132,20 +114,16 @@ pub fn extract(
         Format::SevenZ => extract_7z(archive, dest, limits),
         Format::CompressedTar(codec) => extract_compressed_tar(archive, dest, limits, codec),
         Format::Tar => extract_tar(archive, dest, limits),
-        Format::External => extract_external(archive, dest, limits),
+        Format::Unsupported => refuse_unsupported(archive),
     }
 }
 
-/// The only path that starts a process: a format without an in-process reader (rar and the rest).
-fn extract_external(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
-    let tool = find_tool().ok_or_else(|| {
-        format!(
-            "{} is not a zip or tar archive and none of {} is in PATH (or name a tool with --extract-tool)",
-            archive.display(),
-            TOOLS.join(", ")
-        )
-    })?;
-    run_tool(&tool, archive, dest, limits)
+/// A format without an in-process reader (rar and the rest) is refused; nothing is written.
+fn refuse_unsupported(archive: &Path) -> Result<(), String> {
+    Err(format!(
+        "{} is not an archive nvmod can read. It reads zip, 7z, tar, tar.gz, tar.xz, tar.bz2 and tar.zst; rar and other formats are not supported. Unpack it yourself and install the folder (`nvmod install <folder>`), or use a zip, 7z or tar release of the mod.",
+        archive.display()
+    ))
 }
 
 /// How an archive is read, decided from its first bytes.
@@ -155,8 +133,8 @@ enum Format {
     SevenZ,
     Tar,
     CompressedTar(Codec),
-    /// No in-process reader: handed to an extraction tool.
-    External,
+    /// No in-process reader; refused.
+    Unsupported,
 }
 
 fn detect(magic: &[u8]) -> Format {
@@ -175,17 +153,8 @@ fn detect(magic: &[u8]) -> Format {
     } else if magic.len() == 512 && &magic[257..262] == b"ustar" {
         Format::Tar
     } else {
-        Format::External
+        Format::Unsupported
     }
-}
-
-fn find_tool() -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    TOOLS.iter().find_map(|name| {
-        std::env::split_paths(&path)
-            .map(|dir| dir.join(name))
-            .find(|candidate| candidate.is_file())
-    })
 }
 
 struct Budget {
@@ -529,82 +498,6 @@ fn sevenz_error(archive: &Path, e: &sevenz_rust2::Error) -> String {
     }
 }
 
-fn run_tool(tool: &Path, archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
-    // Archive member names are not ASCII: the tool must read and write them as UTF-8.
-    let runner = Runner {
-        timeout: TOOL_TIMEOUT,
-        max_output: TOOL_OUTPUT_CAP,
-        max_stderr: TOOL_OUTPUT_CAP,
-        ..Runner::default()
-    }
-    .with_env("LC_ALL", "C.UTF-8");
-    run_tool_with(&runner, tool, archive, dest, limits)
-}
-
-fn run_tool_with(
-    runner: &Runner,
-    tool: &Path,
-    archive: &Path,
-    dest: &Path,
-    limits: Limits,
-) -> Result<(), String> {
-    let name = tool
-        .file_name()
-        .map_or_default(|n| n.to_string_lossy().to_ascii_lowercase());
-    let args: Vec<String> = if name.contains("tar") {
-        vec![
-            "-xf".to_owned(),
-            archive.display().to_string(),
-            "-C".to_owned(),
-            dest.display().to_string(),
-        ]
-    } else {
-        vec![
-            "x".to_owned(),
-            "-y".to_owned(),
-            format!("-o{}", dest.display()),
-            archive.display().to_string(),
-        ]
-    };
-    let output = runner
-        .run_any(&Call::new("extractor", tool, &args))
-        .map_err(|e| format!("cannot run {}: {e}", tool.display()))?;
-    if output.exit_code != 0 {
-        return Err(format!(
-            "{} failed: {}",
-            tool.display(),
-            output.stderr.trim()
-        ));
-    }
-    let mut budget = Budget::new(limits);
-    check_tree(dest, &mut budget)
-}
-
-/// Refuse a tree an external tool made if it holds a link or special file, or is too large.
-fn check_tree(dir: &Path, budget: &mut Budget) -> Result<(), String> {
-    for entry in fs::read_dir(dir)
-        .map_err(|e| format!("{}: {e}", dir.display()))?
-        .flatten()
-    {
-        budget.entry()?;
-        let meta = fs::symlink_metadata(entry.path()).map_err(|e| e.to_string())?;
-        if meta.is_dir() {
-            check_tree(&entry.path(), budget)?;
-        } else if meta.is_file() {
-            budget.bytes = budget.bytes.saturating_add(meta.len());
-            if budget.bytes > budget.limits.max_bytes {
-                return Err(too_big(budget.limits.max_bytes));
-            }
-        } else {
-            return Err(format!(
-                "`{}` is a link or special file, which is refused",
-                entry.path().display()
-            ));
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod detect_tests {
     use super::*;
@@ -626,75 +519,8 @@ mod detect_tests {
         let mut tar = [0_u8; 512];
         tar[257..262].copy_from_slice(b"ustar");
         assert_eq!(detect(&tar), Format::Tar);
-        assert_eq!(detect(b"Rar!\x1a\x07\x01\x00"), Format::External);
-        assert_eq!(detect(b"not an archive"), Format::External);
-        assert_eq!(detect(b""), Format::External);
-    }
-}
-
-#[cfg(all(test, unix))]
-mod tests {
-    use super::*;
-    use nvmod_testkit::{TempDir, write_script};
-
-    /// Run a script standing in for `7zz` that is given `body`, through the same path the real tool takes.
-    fn run_script(body: &str, runner: &Runner) -> Result<(), String> {
-        let dir = TempDir::new("extract-runner");
-        let tool = write_script(dir.path(), "7zz", body);
-        let dest = dir.path().join("out");
-        fs::create_dir(&dest).unwrap();
-        run_tool_with(
-            runner,
-            &tool,
-            &dir.path().join("a.7z"),
-            &dest,
-            Limits::default(),
-        )
-    }
-
-    #[test]
-    fn the_extractor_is_stopped_when_it_runs_too_long() {
-        let runner = Runner {
-            timeout: Duration::from_millis(300),
-            ..Runner::default()
-        };
-        let why = run_script("exec sleep 30", &runner).unwrap_err();
-        assert!(why.contains("longer than"), "{why}");
-    }
-
-    #[test]
-    fn the_extractor_is_stopped_when_it_writes_past_the_cap() {
-        let runner = Runner {
-            max_output: 1000,
-            ..Runner::default()
-        };
-        let why = run_script("exec yes", &runner).unwrap_err();
-        assert!(why.contains("cap of 1000"), "{why}");
-    }
-
-    #[test]
-    fn the_extractor_sees_only_the_scrubbed_environment() {
-        let dir = TempDir::new("extract-env");
-        let seen = dir.path().join("seen");
-        let tool = write_script(dir.path(), "7zz", &format!("env > {}", seen.display()));
-        let dest = dir.path().join("out");
-        fs::create_dir(&dest).unwrap();
-        run_tool(&tool, &dir.path().join("a.7z"), &dest, Limits::default()).unwrap();
-        let text = fs::read_to_string(seen).unwrap();
-        let names: Vec<&str> = text.lines().filter_map(|l| l.split('=').next()).collect();
-        assert!(
-            names.contains(&"PATH") && names.contains(&"LC_ALL"),
-            "{text}"
-        );
-        assert!(
-            !names.contains(&"HOME") && !names.contains(&"USER"),
-            "{text}"
-        );
-    }
-
-    #[test]
-    fn a_failing_extractor_reports_its_complaint() {
-        let why = run_script("echo corrupt >&2; exit 2", &Runner::default()).unwrap_err();
-        assert!(why.contains("failed: corrupt"), "{why}");
+        assert_eq!(detect(b"Rar!\x1a\x07\x01\x00"), Format::Unsupported);
+        assert_eq!(detect(b"not an archive"), Format::Unsupported);
+        assert_eq!(detect(b""), Format::Unsupported);
     }
 }

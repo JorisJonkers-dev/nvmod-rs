@@ -1884,8 +1884,8 @@ fn cases() -> Vec<Case> {
 
 /// Links into the scratch `bin` folder the programs a case may start by name, taken from the test's own `PATH`: the
 /// fixture scripts need `cat`, `cp` and `mkdir`; a fetch or a trust downloads with `curl`, and the nv-rs release is unpacked by `tar`
-/// (`curl` only for the cases that fetch or trust, `tar` and its `gzip` only for the cases that name a release). Nothing else is linked, so no host program that nvmod looks for by name is on the PATH of a case:
-/// not the archive tools `7zz`, `7z`, `7za` and `bsdtar`, and not the rest of `/usr/bin` and `/bin`, whose contents
+/// (`curl` only for the cases that fetch or trust, `tar` and its `gzip` only for the cases that name a release). Nothing else is linked, so no host program that nvmod looks for by name is on the PATH of a case,
+/// and the transcripts do not depend on the tools installed on the machine: not the rest of `/usr/bin` and `/bin`, whose contents
 /// differ between Linux and macOS.
 fn link_tools(bin: &Path, args: &[&str]) {
     let mut wanted = vec!["cat", "cp", "mkdir"];

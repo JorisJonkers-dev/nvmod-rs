@@ -100,7 +100,7 @@ fn extract_made(label: &str, write: impl FnOnce(&Path)) -> (TempDir, Result<(), 
     let archive = dir.path().join("archive");
     write(&archive);
     fs::create_dir(dir.path().join("out")).unwrap();
-    let result = extract(&archive, &dir.path().join("out"), None, Limits::default());
+    let result = extract(&archive, &dir.path().join("out"), Limits::default());
     (dir, result)
 }
 
@@ -201,7 +201,7 @@ macro_rules! format_tests {
                     max_entries: 2,
                     ..Limits::default()
                 };
-                let result = extract(&archive, &dir.path().join("out"), None, limits);
+                let result = extract(&archive, &dir.path().join("out"), limits);
                 assert_refused(&result, "entries");
             }
 
@@ -217,7 +217,7 @@ macro_rules! format_tests {
                     max_bytes: 10,
                     ..Limits::default()
                 };
-                let result = extract(&archive, &dir.path().join("out"), None, limits);
+                let result = extract(&archive, &dir.path().join("out"), limits);
                 assert_refused(&result, "bytes once extracted");
             }
 
@@ -237,7 +237,7 @@ macro_rules! format_tests {
                     max_bytes: 1000,
                     ..Limits::default()
                 };
-                let result = extract(&archive, &dir.path().join("out"), None, limits);
+                let result = extract(&archive, &dir.path().join("out"), limits);
                 assert_refused(&result, "bytes once extracted");
             }
 
@@ -269,7 +269,7 @@ macro_rules! format_tests {
                     max_bytes: 1024,
                     ..Limits::default()
                 };
-                let result = extract(&archive, &dir.path().join("out"), None, limits);
+                let result = extract(&archive, &dir.path().join("out"), limits);
                 assert_refused(&result, "bytes once extracted");
                 assert!(!dir.path().join("out/zeros.bin").exists());
             }
