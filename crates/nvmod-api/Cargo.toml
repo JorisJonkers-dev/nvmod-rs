@@ -14,6 +14,7 @@ nvmod-catalog = { workspace = true }
 nvmod-core = { workspace = true }
 nvmod-doctor = { workspace = true }
 nvmod-import = { workspace = true }
+nvmod-install = { workspace = true }
 nvmod-instance = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-modinstall = { workspace = true }

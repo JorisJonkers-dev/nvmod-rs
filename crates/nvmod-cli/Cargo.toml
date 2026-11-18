@@ -30,7 +30,6 @@ nvmod-profile = { workspace = true }
 nvmod-saves = { workspace = true }
 nvmod-run = { workspace = true }
 nvmod-import = { workspace = true }
-nvmod-install = { workspace = true }
 nvmod-modinstall = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-api = { workspace = true }
@@ -45,6 +44,7 @@ ctrlc = { version = "=3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
+nvmod-install = { workspace = true }
 nvmod-plugins = { workspace = true }
 jsonschema = { version = "=0.30.0", default-features = false }
 

@@ -3,12 +3,12 @@
 //! installation check. The tools it runs (`cargo`, `gh`, `curl`) can each be named, so tests inject fakes.
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
-use nvmod_install::{
-    DEFAULT_ASSET, DEFAULT_RELEASE_URL, DEFAULT_REPO, InstallError, Method, Options, install,
+use nvmod_api::install_nvrs::{
+    DEFAULT_ASSET, DEFAULT_RELEASE_URL, DEFAULT_REPO, InstallOutput, InstallRequest, Method,
 };
+use nvmod_api::{CancelToken, ErrorKind, JobError, NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
-use std::time::Duration;
 
 const USAGE_LINE: &str = "usage: nvmod install-nv-rs --instance <dir> [--source <dir>] [--release]";
 const OPTIONS: &[&str] = &[
@@ -36,14 +36,14 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         }
     };
     let path = |name: &str| args.option(name).map(PathBuf::from);
-    let Ok(delay) = args
+    let Ok(retry_delay_ms) = args
         .option("retry-delay-ms")
         .map_or(Ok(1000), str::parse::<u64>)
     else {
         let _ = writeln!(err, "nvmod install-nv-rs: --retry-delay-ms needs a number");
         return USAGE;
     };
-    let opts = Options {
+    let request = InstallRequest {
         instance: path("instance").unwrap_or_default(),
         source: path("source"),
         release: args.flag("release"),
@@ -56,45 +56,60 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         repo: args.option("repo").unwrap_or(DEFAULT_REPO).to_owned(),
         gh: path("gh").unwrap_or_else(|| PathBuf::from("gh")),
         curl: path("curl").unwrap_or_else(|| PathBuf::from("curl")),
-        retry_delay: Duration::from_millis(delay),
+        retry_delay_ms,
     };
-    match install(&opts) {
-        Ok(done) => {
-            let how = match done.method {
-                Method::Source => "built from source",
-                Method::Release => "fetched from the release and verified",
-            };
-            let _ = writeln!(
-                out,
-                "nvmod install-nv-rs: nv-rs {how}: {}",
-                done.binary.display()
-            );
-            let _ = writeln!(
-                out,
-                "installation check passed: {}",
-                done.check.command.join(" ")
-            );
-            let shown = done.check.output.trim_end();
-            if !shown.is_empty() {
-                let _ = writeln!(out, "{shown}");
-            }
+    match nvmod_api::install_nvrs::install(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(done)) => {
+            print_done(out, &done);
             OK
         }
-        Err(InstallError::Refused(why)) => {
-            let _ = writeln!(err, "nvmod install-nv-rs: refused: {why}");
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => print_failure(&e, err),
+    }
+}
+
+/// Print what was installed and the check that passed, as this command always has.
+fn print_done(out: &mut dyn Write, done: &InstallOutput) {
+    let how = match done.method {
+        Method::Source => "built from source",
+        Method::Release => "fetched from the release and verified",
+    };
+    let _ = writeln!(
+        out,
+        "nvmod install-nv-rs: nv-rs {how}: {}",
+        done.binary.display()
+    );
+    let _ = writeln!(
+        out,
+        "installation check passed: {}",
+        done.check.command.join(" ")
+    );
+    let shown = done.check.output.trim_end();
+    if !shown.is_empty() {
+        let _ = writeln!(out, "{shown}");
+    }
+}
+
+/// Print a failed job the way this command always has, and return its exit code.
+fn print_failure(e: &JobError, err: &mut dyn Write) -> u8 {
+    match e.kind {
+        ErrorKind::Refused => {
+            let _ = writeln!(err, "nvmod install-nv-rs: refused: {}", e.summary);
             REFUSED
         }
-        Err(InstallError::Verification(why)) => {
+        ErrorKind::Corrupt => {
             let _ = writeln!(
                 err,
-                "nvmod install-nv-rs: verification failed: {why}\nnothing was installed"
+                "nvmod install-nv-rs: verification failed: {}\nnothing was installed",
+                e.summary
             );
             VERIFICATION
         }
-        Err(InstallError::Failed(why)) => {
+        _ => {
             let _ = writeln!(
                 err,
-                "nvmod install-nv-rs: failed and was rolled back: {why}"
+                "nvmod install-nv-rs: failed and was rolled back: {}",
+                e.summary
             );
             ROLLED_BACK
         }
