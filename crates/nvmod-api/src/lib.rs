@@ -41,6 +41,7 @@
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
+//! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
@@ -53,6 +54,7 @@ pub mod job;
 pub mod loadorder;
 pub mod mods;
 pub mod plugins;
+pub mod profile;
 pub mod run;
 pub mod saves;
 pub mod stage;
