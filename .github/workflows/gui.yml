@@ -48,7 +48,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
         with:
           token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
 
@@ -110,7 +110,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@8e402cc4904be3f6bdb53bad3d9b5d7951bed491 # v0.50.3
+      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
         with:
           token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
 
