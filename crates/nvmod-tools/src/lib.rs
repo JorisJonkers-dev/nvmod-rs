@@ -9,7 +9,6 @@ mod capabilities;
 mod contract;
 mod fetch;
 mod lock;
-pub mod lodwright;
 mod negotiate;
 mod runner;
 mod source;

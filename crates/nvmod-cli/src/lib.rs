@@ -13,7 +13,6 @@ mod init;
 mod install_mod;
 mod install_nvrs;
 mod lock;
-mod lod;
 mod logging;
 mod mods;
 mod mods_life;
@@ -171,13 +170,6 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               against its install record, and the launch plan of the vanilla plus xNVSE path
                               (a Linux entry that invokes Proton, a Windows entry that runs the game executable
                               directly); exit 3 when verification fails
-  nvmod lod plan --instance <dir> [--profile <name>] [--world <name>] [--blocks] [--lodwright <path>]
-                [--lock <file>] [--store <dir>] [--timeout-secs <n>] [--json]
-  nvmod lod generate --instance <dir> ...
-                              plan the LOD blocks of the Load order through the pinned lodwright-rs (read only:
-                              nothing is written into the Instance; the plan is checked against the vendored
-                              contract, a tool failure exits 4); generate exits 2 with the reason until
-                              lodwright-rs can generate
   nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]
                               count the extender opcodes the compiled scripts of the active plugins call (read
                               only; prints only opcode numbers, command names from the tables you name, counts
@@ -351,7 +343,6 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("sort") => sort::run(&args[1..], out, err),
         Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),
-        Some("lod") => lod::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
         Some("ttw") => ttw::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),

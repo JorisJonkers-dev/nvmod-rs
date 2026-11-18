@@ -3,9 +3,23 @@
 These transcripts record what `nvmod` 0.8.1 (the release tagged `v0.8.1`) printed and returned for the commands that
 rauls-trusty-toolbox ADR-0019 moves out of nvmod: `tools contracts` (the issue calls it `contracts`), `verify`,
 `tools`, `run`, `install-nv-rs`, `lod`, `ttw` and `setup`. They are the reference that raul's replacements are compared
-with before the nvmod commands are removed (issue #90).
+with before the nvmod commands are removed (issue #90). A command that is already removed keeps its transcripts under
+`removed/` (see [Removed commands](#removed-commands)).
 
 Replay: `cargo test -p nvmod-cli --test baseline`. Re-record: see [Re-recording](#re-recording).
+
+## Removed commands
+
+`lod` was removed from nvmod in issue #166. Its 13 transcripts (`plan-*`, `generate-is-refused-with-reason`, `usage-*`)
+moved unchanged to `removed/lod/`: they were recorded before removal, at release v0.8.1, and are the reference for
+raul's `lod` replacement. The replay test in this crate does not run them (nvmod no longer has the command, so there is
+nothing to replay) and ignores the `removed/` folder when it looks for stray files; the test
+`removed_lod_transcripts_still_parse_and_are_unchanged` checks that they stay whole (valid JSON, the folder name as
+`command`, the fields of the format, `release` `0.8.1`, 13 of them, and the SHA-256 of each as listed in
+`removed/lod/SHA256SUMS`), and `lod_is_an_unknown_command` checks that nvmod exits 5 for it. Their fixtures (the fake lodwright, the pinned lock and the
+golden plan `tests/golden/lodwright-plan.json`) and the setup functions of `tests/baseline.rs` that built them (`lod_with`, `pin_lodwright`, `lod_plan`, ...) were deleted
+with the command; they are in the repository history at commit `599c22d` (the baseline, #182), the last one before
+the removal. The tag `v0.8.1` has the command but not the baseline harness. Do not re-record them. The same applies to each command removed later.
 
 ## Layout
 
@@ -19,7 +33,7 @@ Replay: `cargo test -p nvmod-cli --test baseline`. Re-record: see [Re-recording]
 - The cases are defined in `tests/baseline.rs`: each case is a name, the arguments, and the name of a Rust setup function
   that builds its fixture under the scratch root. Nothing is recorded from a machine's own files.
 - Fixtures are synthetic: a fake Steam base copy, a fake Fallout 3 folder, fake executables and plugins (`nvmod-testkit`),
-  fake release servers on the loopback address, shell scripts for Proton, the TTW installer, lodwright-rs, `gh` and
+  fake release servers on the loopback address, shell scripts for Proton, the TTW installer, `gh` and
   `cargo`. No game data, no mod names, no private paths.
 
 ## Normalisation
@@ -110,12 +124,6 @@ the cases go; a macOS diff of that kind would show up as a changed line and is a
   A new nvmod release changes only the `release` field and, where printed, `<VERSION>`, so a bless there shows no other
   diff.
 
-**First pin of lodwright-rs.** `lod plan-nothing-pinned-is-refused` runs against the shipped `tools.lock.toml`, which
-pins no lodwright-rs in 0.8.1. The first release that pins it changes this transcript on every OS (the message becomes a
-plan or a fetch error). That is expected: re-record with `NVMOD_BLESS=1` on a workstation, check that only that
-transcript changed, and commit it in the same pull request as the pin. CI will fail on that pull request until the
-transcript is re-recorded; that failure is the signal to re-record, not a flake.
-
 ## Reusing this in the Toolbox
 
 The transcript format is the contract. A raul-side replay needs:
@@ -148,9 +156,6 @@ Cases per command (the file names). `usage-*` cases exit 5 unless the table says
 | `verify` | `clean-json`, `clean-text`, `clean-named-proton`, `doctor-error-json` (exit 3), `doctor-error-text` (exit 3), `nv-rs-changed-json` (exit 3), `unknown-profile` (exit 2), `not-an-instance` (exit 2), `missing-instance-option` (exit 5), `unknown-option` (exit 5) | |
 | `run` | `dry-run-game-json`, `dry-run-game-text`, `dry-run-game-with-game-args`, `launch-game-wait`, `launch-game-wait-exit-code-passes-through` (exit 7), `unknown-title-is-refused` (exit 2), `nv-rs-not-installed-is-refused` (exit 2), `not-an-instance-is-refused` (exit 2), `missing-instance-option` (exit 5), `unknown-option` (exit 5) | The "Proton" is a script that prints its arguments and exits 0, or 7 for the pass-through case. The game is never started. Only `--wait` launches are recorded: a detached start has no exit code to record. |
 | `install-nv-rs` | `source-build-installs-and-checks`, `source-build-failing-build-is-refused-and-rolled-back` (exit 4), `source-build-failing-check-is-refused-and-rolled-back` (exit 4), `release-fetched-verified-and-installed`, `release-wrong-checksum-installs-nothing` (exit 3), `release-failing-check-rolled-back` (exit 4), `release-asset-not-listed` (exit 3), `refused-without-source-or-release` (exit 2), `refused-not-an-instance` (exit 2), `usage-*` (exit 5) | The command has no `--json`, so its transcripts are text. The source build uses the cargo wrapper above; its failing-build transcript keeps nvmod's line only, so it does not depend on the pinned toolchain's diagnostics. The release is a fake one served from `file://`. |
-| `lod plan` | `plan-json`, `plan-text`, `plan-world-and-blocks-json`, `plan-unknown-world-plans-every-world`, `plan-tool-fails-exit-4`, `plan-contract-broken-exit-4`, `plan-program-differs-from-pin-is-not-run` (exit 3), `plan-unstaged-is-refused` (exit 2), `plan-nothing-pinned-is-refused` (exit 2) | The fake lodwright is a shell script that prints the golden plan of lodwright-rs v0.1.0 (`tests/golden/lodwright-plan.json`, synthetic worldspaces). `plan-nothing-pinned-is-refused` depends on the shipped lock: see [Re-recording](#re-recording). |
-| `lod generate` | `generate-is-refused-with-reason` | Exit 2 with the reason, nothing run. |
-| `lod` usage | `usage-no-subcommand`, `usage-no-instance`, `usage-unknown-subcommand` | Exit 5. |
 | `ttw` | `installs-text`, `installs-json`, `installer-fails-exit-4-rolled-back`, `report-says-failed-exit-4-rolled-back`, `report-breaks-contract-exit-4-rolled-back`, `installer-writes-nothing-exit-4-rolled-back`, `installer-not-the-pinned-file-exit-3`, `installer-unpinned-is-refused` (exit 2), `lock-without-installer-is-refused` (exit 2), `bad-base-is-refused-before-installer` (exit 2), `missing-fallout3-folder-is-refused` (exit 2), `usage-missing-fallout3-option` (exit 5), `usage-unknown-option` (exit 5) | The installer is a shell script that writes a synthetic output folder and a report in the `ttw-installer-result` shape. The shipped lock pins no installer, so every case passes its own lock. |
 | `setup` | `full-run-json`, `full-run-text`, `dry-run-text`, `dry-run-json`, `skip-nv-rs-json`, `skip-nv-rs-without-ttw-options-json`, `failing-nv-rs-check-exit-4-leaves-no-instance`, `wrong-release-checksum-exit-3-leaves-no-instance` (exit 3), `failing-mod-install-rolls-back` (exit 2), `failing-mod-install-keep-partial` (exit 2), `existing-instance-refused` (exit 2), `unsupported-base-refused` (exit 2), `resume-without-state-refused` (exit 2), `restart-without-yes-refused` (exit 2), `usage-missing-required-option` (exit 5), `usage-unknown-option` (exit 5) | The full run takes the fake nv-rs release from `file://`, the fake TTW installer (pinned by its own lock), one synthetic mod archive, the synthetic masterlist and `sort --apply`. `failing-mod-install-*` use an archive that is not a zip: that step exits 2 (refused), not 4, and the transcript records it. |
 
@@ -161,6 +166,5 @@ Cases per command (the file names). `usage-*` cases exit 5 unless the table says
 - `setup --resume` after a partial run, and `setup --restart --yes`: they need an Instance left by an earlier failed run.
   A fixture that builds one would have to be recorded in sequence; the single-case transcripts do not do that.
 - Detached `run` (no `--wait`): nothing to record beyond the plan, and the plan is the `--dry-run` transcript.
-- `lod generate` with a lodwright-rs that can generate: 0.8.1 refuses with the reason, and no synthetic generator exists.
 - `ttw` and `setup` with a real TTW package or a real base copy: no game data is used anywhere in this baseline.
 - `tools fetch` over a real network, and nv-rs releases from GitHub: every release is a local fake.
