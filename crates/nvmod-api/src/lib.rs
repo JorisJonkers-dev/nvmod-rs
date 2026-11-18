@@ -40,6 +40,7 @@
 //! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
+//! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
@@ -57,6 +58,7 @@ pub mod plugins;
 pub mod profile;
 pub mod run;
 pub mod saves;
+pub mod stage;
 pub mod target;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};

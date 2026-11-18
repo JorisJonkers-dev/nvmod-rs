@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]`: build the Staging tree of a profile.
 
-use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
-use nvmod_instance::NvmodInstance;
-use nvmod_stage::{Options, StageError};
+use crate::{OK, REFUSED, USAGE, args::Args};
+use nvmod_api::stage::StageRequest;
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 const USAGE_LINE: &str = "usage: nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]";
 
@@ -21,36 +21,19 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             return USAGE;
         }
     };
-    let root = Path::new(args.option("instance").unwrap_or_default());
-    if !NvmodInstance::is_instance(root) {
-        let _ = writeln!(
-            err,
-            "nvmod stage: refused: {} is not an nvmod Instance (made by `nvmod init`)",
-            root.display()
-        );
-        return REFUSED;
-    }
-    let result = NvmodInstance::open(root)
-        .map_err(|e| StageError::Refused(crate::install_mod::describe_open_error(root, &e)))
-        .and_then(|instance| {
-            let profile = instance
-                .resolve_profile(args.option("profile"))
-                .map_err(|e| StageError::Refused(e.to_string()))?;
-            nvmod_stage::stage(
-                &instance,
-                &profile,
-                Options {
-                    copy_only: args.flag("copy"),
-                },
-            )
-        });
-    match result {
-        Ok(report) => {
+    let request = StageRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        copy: args.flag("copy"),
+    };
+    match nvmod_api::stage::stage(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(staged)) => {
+            let report = &staged.report;
             if args.flag("json") {
                 let _ = writeln!(
                     out,
                     "{}",
-                    serde_json::to_string_pretty(&report).unwrap_or_default()
+                    serde_json::to_string_pretty(report).unwrap_or_default()
                 );
             } else {
                 let m = &report.manifest;
@@ -78,13 +61,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             }
             OK
         }
-        Err(StageError::Refused(reason)) => {
-            let _ = writeln!(err, "nvmod stage: refused: {reason}");
-            REFUSED
-        }
-        Err(StageError::Failed(why)) => {
-            let _ = writeln!(err, "nvmod stage: {why}");
-            ROLLED_BACK
-        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure("stage", &e, err),
     }
 }

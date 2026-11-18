@@ -18,11 +18,11 @@ nvmod-plugins = { workspace = true }
 nvmod-profile = { workspace = true }
 nvmod-run = { workspace = true }
 nvmod-saves = { workspace = true }
+nvmod-stage = { workspace = true }
 loot-rs = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]
-nvmod-stage = { workspace = true }
 nvmod-testkit = { workspace = true }
 serde_json = { workspace = true }
 
