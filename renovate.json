@@ -30,6 +30,11 @@
   ],
   "packageRules": [
     {
+      "description": "Crates from crates.io wait 7 days after publication, as Cargo does (.cargo/config.toml). The organisation's own git dependencies have their own rules.",
+      "matchManagers": ["cargo"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "description": "One pull request per loot-rs release: the Cargo.toml tag, Cargo.lock and both tools.lock.toml lines move together, in the group the shared preset gives first-party Cargo git dependencies.",
       "matchDepNames": ["loot-rs"],
       "groupName": "jorisjonkers-dev cargo git dependencies",
