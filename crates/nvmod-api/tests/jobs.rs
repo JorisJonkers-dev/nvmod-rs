@@ -13,6 +13,7 @@ use nvmod_api::plugins::{
     ListRequest as PluginListRequest,
 };
 use nvmod_api::run::PlanRequest;
+use nvmod_api::stage::StageRequest;
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{
@@ -437,6 +438,16 @@ fn every_request_round_trips_through_json() {
         serde_json::from_str::<PlanRequest>(&text).unwrap(),
         plan_request
     );
+    let stage_request = StageRequest {
+        instance: PathBuf::from("/x"),
+        profile: Some("Default".into()),
+        copy: true,
+    };
+    let text = serde_json::to_string(&stage_request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<StageRequest>(&text).unwrap(),
+        stage_request
+    );
 }
 
 #[test]
@@ -453,6 +464,9 @@ fn a_request_without_its_optional_fields_takes_the_documented_defaults() {
     assert_eq!(saves.prefix, None);
     let list: ListRequest = serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
     assert_eq!(list.category, None);
+    let stage: StageRequest =
+        serde_json::from_str(r#"{"instance": "/x", "profile": null}"#).unwrap();
+    assert!(!stage.copy);
 }
 
 #[test]
@@ -1445,4 +1459,89 @@ fn init_cancelled_before_it_starts_writes_nothing() {
     let outcome = nvmod_api::init::create(&request, &mut NoProgress, &cancel).expect("runs");
     assert!(matches!(outcome, Outcome::Cancelled));
     assert!(!request.instance.exists());
+}
+
+#[test]
+fn stage_builds_the_tree_of_a_profile() {
+    let s = Scratch::new();
+    fs::remove_dir_all(s.root().join("staging")).unwrap();
+    let request = StageRequest {
+        instance: s.root(),
+        profile: None,
+        copy: false,
+    };
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    let staged = nvmod_api::stage::stage(&request, &mut progress, &CancelToken::new())
+        .expect("stages")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(staged.profile, "Default");
+    assert_eq!(staged.report.manifest.profile, "Default");
+    assert_eq!(staged.report.manifest.files, 3);
+    assert_eq!(staged.report.manifest.overridden, 0);
+    assert!(staged.report.tree.ends_with("staging/Default/data"));
+    assert_eq!(
+        fs::read(s.root().join("staging/Default/data/patch.esp")).unwrap(),
+        fs::read(s.root().join("mods/Patch/Patch.esp")).unwrap()
+    );
+    assert!(s.root().join("staging/Default.json").is_file());
+    let first = events.first().expect("an event");
+    assert_eq!(first.step, "build-tree");
+    assert_eq!(first.label, "stage.stage.building-tree");
+    let copy_request = StageRequest {
+        copy: true,
+        ..request
+    };
+    let copied = nvmod_api::stage::stage(&copy_request, &mut NoProgress, &CancelToken::new())
+        .expect("stages")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(copied.report.manifest.copied, copied.report.manifest.files);
+    assert_eq!(copied.report.manifest.linked, 0);
+}
+
+#[test]
+fn a_stage_of_an_unknown_profile_is_a_refusal() {
+    let s = Scratch::new();
+    let request = StageRequest {
+        instance: s.root(),
+        profile: Some("Nope".into()),
+        copy: false,
+    };
+    let error = nvmod_api::stage::stage(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "stage.stage");
+    assert!(error.summary.contains("Nope"), "{error}");
+}
+
+#[test]
+fn a_stage_of_a_folder_that_is_not_an_instance_is_a_refusal() {
+    let dir = TempDir::new("api-stage-none");
+    let request = StageRequest {
+        instance: dir.path().to_path_buf(),
+        profile: None,
+        copy: false,
+    };
+    let error = nvmod_api::stage::stage(&request, &mut NoProgress, &CancelToken::new())
+        .expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert!(error.summary.contains("not an nvmod Instance"), "{error}");
+}
+
+#[test]
+fn a_stage_cancelled_before_the_write_changes_nothing() {
+    let s = Scratch::new();
+    fs::remove_dir_all(s.root().join("staging")).unwrap();
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let request = StageRequest {
+        instance: s.root(),
+        profile: None,
+        copy: false,
+    };
+    let outcome = nvmod_api::stage::stage(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert!(!s.root().join("staging").exists());
 }

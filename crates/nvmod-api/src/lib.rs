@@ -40,6 +40,7 @@
 //! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
+//! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //!
 //! [`API_VERSION`] is the version of this API: the nvmod release version, which every release's tag and notes
@@ -54,6 +55,7 @@ pub mod mods;
 pub mod plugins;
 pub mod run;
 pub mod saves;
+pub mod stage;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};
 
