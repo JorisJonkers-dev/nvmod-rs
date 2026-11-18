@@ -7,7 +7,6 @@
 # release.yml dispatches this workflow when release-please creates a release (a tag made with the default token starts
 # no other workflow), with publish true. A manual dispatch on an existing tag is the dry run: it builds and attests,
 # and uploads to the release only when `publish` is true, which the publish job allows for release-please tags only.
-# PACKAGES_PROXY_TOKEN reaches the build and SBOM jobs only (the ones that download crates), never the publish job.
 # Verify an asset with docs/releasing.md.
 name: Release assets
 
@@ -62,9 +61,6 @@ jobs:
           ref: refs/tags/${{ inputs.tag }}
           path: src
           persist-credentials: false
-      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
-        with:
-          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
 
       - name: The tag matches the workspace version
         shell: bash
@@ -136,9 +132,6 @@ jobs:
           ref: refs/tags/${{ inputs.tag }}
           path: src
           persist-credentials: false
-      - uses: JorisJonkers-dev/github-workflows/actions/setup-package-proxy@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
-        with:
-          token: ${{ secrets.PACKAGES_PROXY_TOKEN }}
       - name: CycloneDX SBOM of the nvmod binary
         working-directory: src
         run: |
