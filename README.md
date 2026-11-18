@@ -24,8 +24,9 @@ These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and plann
 
 - setup (the pipeline with its journal and resume), `ttw`, `lod`, the engine install (`install-nv-rs`), `run`,
   `tools`, `verify` and `contracts`;
-- the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`);
-- the view model and service seam (`nvmod-ui-model`, `nvmod-ui-service`) and the GUI (`gui/`).
+- the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`).
+
+The GUI is raul's alone (rauls-trusty-toolbox ADR-0019); nvmod has no GUI, view model or service seam.
 
 Each moved command is removed from nvmod when it moves; use `raul` for it from then on. Until then the commands work
 as documented.
