@@ -7,6 +7,9 @@ use nvmod_api::backup::{
 };
 use nvmod_api::import_mo2::{ImportOutput, ImportRequest};
 use nvmod_api::install::{InstallOutput, InstallRequest, Report, RollbackRequest};
+use nvmod_api::install_nvrs::{
+    self as nvrs, InstallRequest as NvRsInstallRequest, Method as NvRsMethod,
+};
 use nvmod_api::loadorder::{SortRequest, sort};
 use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
 use nvmod_api::plugins::{
@@ -21,7 +24,8 @@ use nvmod_api::verify::{Severity, VerifyRequest};
 use nvmod_api::{API_VERSION, CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{
-    BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, snapshot, write_file,
+    BaseBuilder, FakeNvRs, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, snapshot,
+    write_file,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -2023,6 +2027,92 @@ fn target_set_cancelled_before_the_write_changes_nothing() {
         fs::read(s.root().join("nvmod-instance.json")).unwrap(),
         before
     );
+}
+
+/// A request that builds nv-rs from `source` with the toolchain that runs the tests.
+fn nvrs_request(instance: PathBuf, source: &Path) -> NvRsInstallRequest {
+    NvRsInstallRequest {
+        instance,
+        source: Some(source.to_path_buf()),
+        release: false,
+        cargo: Some(PathBuf::from(env!("CARGO"))),
+        release_url: nvrs::DEFAULT_RELEASE_URL.to_owned(),
+        asset: nvrs::DEFAULT_ASSET.to_owned(),
+        repo: nvrs::DEFAULT_REPO.to_owned(),
+        gh: PathBuf::from("gh"),
+        curl: PathBuf::from("curl"),
+        retry_delay_ms: 1000,
+    }
+}
+
+#[test]
+fn install_nvrs_builds_nv_rs_from_a_synthetic_source() {
+    let s = Scratch::bare();
+    let source = TempDir::new("api-nvrs-src");
+    FakeNvRs::new().write(source.path());
+    let request = nvrs_request(s.root(), source.path());
+    let mut events: Vec<Event> = Vec::new();
+    let mut progress = |e: &Event| events.push(e.clone());
+    let done = nvrs::install(&request, &mut progress, &CancelToken::new())
+        .expect("installs")
+        .done()
+        .expect("not cancelled");
+    assert_eq!(done.method, NvRsMethod::Source);
+    assert!(done.binary.is_file());
+    assert!(done.check.command.join(" ").contains("--check"));
+    assert!(done.check.output.contains("fake check passed"));
+    assert!(s.root().join("nv-rs/install.json").is_file());
+    let first = events.first().expect("an event");
+    assert_eq!(first.step, "install-nv-rs");
+    assert_eq!(first.label, "install_nvrs.install.installing");
+}
+
+#[test]
+fn install_nvrs_refuses_a_folder_that_is_not_an_instance() {
+    let dir = TempDir::new("api-nvrs-none");
+    let source = TempDir::new("api-nvrs-none-src");
+    FakeNvRs::new().write(source.path());
+    let request = nvrs_request(dir.path().to_path_buf(), source.path());
+    let outcome = nvrs::install(&request, &mut NoProgress, &CancelToken::new());
+    let error = outcome.expect_err("refused");
+    assert_eq!(error.kind, ErrorKind::Refused);
+    assert_eq!(error.job, "install_nvrs.install");
+    assert!(error.summary.contains("not an nvmod Instance"), "{error}");
+    assert!(!dir.path().join("nv-rs").exists());
+}
+
+#[test]
+fn install_nvrs_cancelled_before_the_write_changes_nothing() {
+    let s = Scratch::bare();
+    let source = TempDir::new("api-nvrs-cancel-src");
+    FakeNvRs::new().write(source.path());
+    let request = nvrs_request(s.root(), source.path());
+    let before = snapshot(s.inst.path());
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    let outcome = nvrs::install(&request, &mut NoProgress, &cancel).expect("no error");
+    assert!(matches!(outcome, Outcome::Cancelled));
+    assert_eq!(snapshot(s.inst.path()), before);
+    assert!(!s.root().join("nv-rs").exists());
+}
+
+#[test]
+fn an_install_nv_rs_request_round_trips_through_json_with_the_defaults() {
+    let request = nvrs_request(PathBuf::from("/x"), Path::new("/src"));
+    let text = serde_json::to_string(&request).unwrap();
+    assert_eq!(
+        serde_json::from_str::<NvRsInstallRequest>(&text).unwrap(),
+        request
+    );
+    let bare: NvRsInstallRequest = serde_json::from_str(r#"{"instance": "/x"}"#).unwrap();
+    assert_eq!(bare.release_url, nvrs::DEFAULT_RELEASE_URL);
+    assert_eq!(bare.asset, nvrs::DEFAULT_ASSET);
+    assert_eq!(bare.repo, nvrs::DEFAULT_REPO);
+    assert_eq!(bare.gh, PathBuf::from("gh"));
+    assert_eq!(bare.curl, PathBuf::from("curl"));
+    assert_eq!(bare.retry_delay_ms, 1000);
+    assert_eq!(bare.source, None);
+    assert!(!bare.release);
 }
 
 /// A lock that pins the fake installer at its checksum, as `nvmod tools fetch` would leave it.
