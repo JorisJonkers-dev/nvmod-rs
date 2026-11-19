@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]`: which
+//! `nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--plugin-names <file>] [--json]`: which
 //! extender opcodes the compiled scripts of the active plugins call, how often, and which plugins call them (G-01
 //! of the nv-rs gap analysis). Read only. Nothing but opcode numbers, command names from the tables the caller
 //! names, call counts and plugin file names is printed; script text, form data and record contents are never
@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 /// The schema of the `--json` output.
 const SCHEMA: u32 = 1;
-const USAGE_LINE: &str = "usage: nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]";
+const USAGE_LINE: &str = "usage: nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--plugin-names <file>] [--json]";
 /// The first opcode of xNVSE; below it are the game's own commands.
 const XNVSE_FIRST: u32 = 0x1400;
 /// Largest plugin read, as a bound on memory.
@@ -71,6 +71,8 @@ impl Block {
 #[derive(Default)]
 struct Names {
     by_opcode: BTreeMap<u32, Vec<String>>,
+    /// Names from `--plugin-names`, used only for the blocks that have no table of their own.
+    plugin: BTreeMap<u32, String>,
 }
 
 impl Names {
@@ -95,6 +97,27 @@ impl Names {
                 if !name.is_empty() {
                     entry.push((*name).to_owned());
                 }
+            }
+        }
+    }
+
+    /// A plain list for the plugins without a table (MCM, `JohnnyGuitar`, kNVSE, ShowOff): one `opcode<TAB>name`
+    /// per line, the opcode in hex with or without `0x`. `#` lines, lines that do not parse, empty names and extra
+    /// columns are ignored.
+    fn add_plain(&mut self, text: &str) {
+        for line in text.lines().filter(|l| !l.starts_with('#')) {
+            let mut cols = line.split('\t');
+            let opcode = cols
+                .next()
+                .map(|c| c.trim().trim_start_matches("0x").trim_start_matches("0X"));
+            let (Some(Ok(opcode)), Some(name)) =
+                (opcode.map(|c| u32::from_str_radix(c, 16)), cols.next())
+            else {
+                continue;
+            };
+            let name = name.trim();
+            if !name.is_empty() {
+                self.plugin.entry(opcode).or_insert_with(|| name.to_owned());
             }
         }
     }
@@ -258,7 +281,7 @@ fn rows_of(tally: Tally, names: &Names, built: &Built) -> Vec<OpcodeRow> {
             let known = if block.has_table() {
                 names.by_opcode.get(&opcode).cloned().unwrap_or_default()
             } else {
-                Vec::new()
+                names.plugin.get(&opcode).cloned().into_iter().collect()
             };
             Some(OpcodeRow {
                 opcode: format!("0x{opcode:04X}"),
@@ -281,7 +304,13 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let args = match Args::parse(
         args,
         &["json"],
-        &["instance", "profile", "jip-table", "nvse-names"],
+        &[
+            "instance",
+            "profile",
+            "jip-table",
+            "nvse-names",
+            "plugin-names",
+        ],
     ) {
         Ok(a) if a.positional.is_empty() && a.option("instance").is_some() => a,
         Ok(_) => {
@@ -306,6 +335,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     for (option, add) in [
         ("jip-table", Names::add_jip as fn(&mut Names, &str)),
         ("nvse-names", Names::add_nvse),
+        ("plugin-names", Names::add_plain),
     ] {
         if let Some(file) = args.option(option) {
             match std::fs::read_to_string(file) {
