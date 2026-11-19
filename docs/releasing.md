@@ -29,6 +29,11 @@ Assets are uploaded to a GitHub release only when `publish` is true, and the pub
 release-please release: the tag must be `vX.Y.Z`, reachable from `main`, on a `chore(main): release X.Y.Z` commit.
 `release.yml` dispatches with `publish=true` for the tag it just created; a manual dispatch defaults to false.
 
+To add the macOS archive to a release made before it existed, without a new version, dispatch with `macos_only`:
+`gh workflow run release-assets.yml -R JorisJonkers-dev/nvmod-rs --ref main -f tag=vX.Y.Z -f publish=true -f macos_only=true`.
+It uploads only the macOS archive, and `SHA256SUMS` and `release-index.json` made again over the release's own other
+assets (the index's date becomes that day's); the OCI packages and the Toolbox notice are left out.
+
 ## Packages
 
 A published release also pushes the two archives as OCI packages on ghcr.io:

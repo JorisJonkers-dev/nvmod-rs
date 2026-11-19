@@ -5,6 +5,10 @@
 #   SHA256SUMS, nvmod-<v>.cdx.json (CycloneDX SBOM), release-index.json
 # plus one GitHub artifact attestation over all of them, made by this workflow. Tools are never bundled.
 #
+# macos_only (with publish) adds the macOS archive to an existing release without a new version; the packages and the
+# Toolbox notice are skipped: gh workflow run release-assets.yml -R JorisJonkers-dev/nvmod-rs --ref main
+#   -f tag=vX.Y.Z -f publish=true -f macos_only=true
+#
 # release.yml dispatches this workflow when release-please creates a release (a tag made with the default token starts
 # no other workflow), with publish true. A manual dispatch on an existing tag is the dry run: it builds and attests,
 # and uploads to the release only when `publish` is true, which the publish job allows for release-please tags only.
@@ -23,6 +27,11 @@ on:
         required: false
         default: false
         type: boolean
+      macos_only:
+        description: Add only the macOS archive to the release (with SHA256SUMS and release-index.json made again); the other archives and the packages stay as they are
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -32,8 +41,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The macOS command, one processor per runner in parallel (x86_64 cross-compiled on Apple silicon); the macOS entry of
+  # `build` joins the two halves with lipo. Uncached, as every release build here.
+  macos-half:
+    name: Build nvmod for ${{ matrix.rust-target }}
+    strategy:
+      fail-fast: true
+      matrix:
+        rust-target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          path: src
+          persist-credentials: false
+      - name: Build nvmod
+        working-directory: src
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
+        run: |
+          set -euo pipefail
+          rustup target add "$RUST_TARGET"
+          cargo build --release --locked -p nvmod-cli --target "$RUST_TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nvmod-macos-${{ matrix.rust-target }}
+          path: src/target/${{ matrix.rust-target }}/release/nvmod
+          if-no-files-found: error
+          retention-days: 3
+
   build:
     name: Build ${{ matrix.target }}
+    needs: macos-half
     strategy:
       fail-fast: false
       matrix:
@@ -80,7 +123,13 @@ jobs:
           [ "v$version" = "$TAG" ] || { echo "Cargo.toml is $version, the tag is $TAG"; exit 1; }
           echo "VERSION=$version" >>"$GITHUB_ENV"
 
-      # rust-toolchain.toml pins the compiler; rustup installs it on first use. On macOS both processors are built and
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ matrix.target == 'macos' }}
+        with:
+          pattern: nvmod-macos-*
+          path: ${{ runner.temp }}/halves
+
+      # rust-toolchain.toml pins the compiler; rustup installs it on first use. On macOS the two halves of macos-half are
       # joined into one binary at the path the other targets use.
       - name: Build nvmod
         shell: bash
@@ -88,13 +137,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$TARGET" = macos ]; then
-            rustup target add aarch64-apple-darwin x86_64-apple-darwin
-            cargo build --release --locked -p nvmod-cli --target aarch64-apple-darwin
-            cargo build --release --locked -p nvmod-cli --target x86_64-apple-darwin
             mkdir -p target/release
             lipo -create -output target/release/nvmod \
-              target/aarch64-apple-darwin/release/nvmod target/x86_64-apple-darwin/release/nvmod
-            lipo -archs target/release/nvmod
+              "$RUNNER_TEMP/halves/nvmod-macos-aarch64-apple-darwin/nvmod" "$RUNNER_TEMP/halves/nvmod-macos-x86_64-apple-darwin/nvmod"
+            chmod 0755 target/release/nvmod
+            lipo -archs target/release/nvmod | tee "$RUNNER_TEMP/archs"
+            grep -qw arm64 "$RUNNER_TEMP/archs" && grep -qw x86_64 "$RUNNER_TEMP/archs"
           else
             cargo build --release --locked -p nvmod-cli
           fi
@@ -183,6 +231,7 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
       PUBLISH: ${{ inputs.publish }}
+      MACOS_ONLY: ${{ inputs.macos_only }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
     steps:
@@ -212,6 +261,17 @@ jobs:
           merge-multiple: true
           path: dist
 
+      # macos_only: the release keeps its own Linux and Windows archives and SBOM; only the macOS archive is new. The
+      # release's files replace the ones just built, so SHA256SUMS and the index below describe what the release holds.
+      - name: Keep the release's other assets (macos_only)
+        if: ${{ env.MACOS_ONLY == 'true' }}
+        run: |
+          set -euo pipefail
+          find dist -maxdepth 1 -type f ! -name '*-universal-macos.tar.zst' -delete
+          gh release download "$TAG" --repo "$REPO" --dir dist \
+            --pattern '*-x86_64-linux.tar.zst' --pattern '*-x86_64-windows.zip' --pattern '*.cdx.json'
+          ls -l dist
+
       - name: SHA256SUMS and release-index.json
         run: |
           set -euo pipefail
@@ -232,7 +292,11 @@ jobs:
         if: ${{ env.PUBLISH == 'true' }}
         run: |
           set -euo pipefail
-          gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          if [ "$MACOS_ONLY" = true ]; then
+            gh release upload "$TAG" dist/*-universal-macos.tar.zst dist/SHA256SUMS dist/release-index.json --repo "$REPO" --clobber
+          else
+            gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          fi
           notes="$(gh release view "$TAG" --repo "$REPO" --json body --jq .body)"
           if ! grep -q '<!-- release-assets -->' <<<"$notes"; then
             {
@@ -265,7 +329,7 @@ jobs:
   packages:
     name: OCI packages
     needs: publish
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && !inputs.macos_only }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:
@@ -389,7 +453,7 @@ jobs:
   toolbox:
     name: Tell the Toolbox
     needs: publish
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && !inputs.macos_only }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     permissions: {}
