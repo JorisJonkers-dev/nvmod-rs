@@ -2,7 +2,7 @@
 
 These transcripts record what `nvmod` 0.8.1 (the release tagged `v0.8.1`) printed and returned for the commands that
 rauls-trusty-toolbox ADR-0019 moves out of nvmod: `tools contracts` (the issue calls it `contracts`), `verify`,
-`tools`, `run`, `install-nv-rs`, `lod` and `ttw` (`lod` and `ttw` are removed; see [Removed commands](#removed-commands)). They are the reference that raul's replacements are compared
+`tools`, `run`, `install-nv-rs`, `lod`, `setup` and `ttw` (`lod`, `setup` and `ttw` are removed; see [Removed commands](#removed-commands)). They are the reference that raul's replacements are compared
 with before the nvmod commands are removed (issue #90). A command that is already removed keeps its transcripts under
 `removed/` (see [Removed commands](#removed-commands)).
 
