@@ -101,13 +101,15 @@ impl Names {
         }
     }
 
-    /// A plain list for the plugins without a table (MCM, JohnnyGuitar, kNVSE, ShowOff): one `opcode<TAB>name`
+    /// A plain list for the plugins without a table (MCM, `JohnnyGuitar`, kNVSE, ShowOff): one `opcode<TAB>name`
     /// per line, the opcode in hex with or without `0x`. `#` lines, lines that do not parse, empty names and extra
     /// columns are ignored.
     fn add_plain(&mut self, text: &str) {
         for line in text.lines().filter(|l| !l.starts_with('#')) {
             let mut cols = line.split('\t');
-            let opcode = cols.next().map(|c| c.trim().trim_start_matches("0x"));
+            let opcode = cols
+                .next()
+                .map(|c| c.trim().trim_start_matches("0x").trim_start_matches("0X"));
             let (Some(Ok(opcode)), Some(name)) =
                 (opcode.map(|c| u32::from_str_radix(c, 16)), cols.next())
             else {

@@ -364,7 +364,7 @@ fn plugin_names_name_opcodes_of_blocks_without_a_table() {
     write_file(
         &s.inst.path().join("fnv"),
         "tables/plugin-names.tsv",
-        b"# MCM, JohnnyGuitar, kNVSE and ShowOff\n3101\tJGExample\textra column\n0x3c93\tSOExample\nnot a line\nzzzz\tBad\n3922\t\n1401\tIgnoredInTableBlock\n",
+        b"# MCM, JohnnyGuitar, kNVSE and ShowOff\n3101\tJGExample\textra column\n0X3c93\tSOExample\nnot a line\nzzzz\tBad\n3922\t\n1401\tIgnoredInTableBlock\n",
     );
     let root = s.root();
     let (jip, nvse, plugin) = (
