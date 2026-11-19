@@ -32,8 +32,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The macOS command, one processor per runner in parallel (x86_64 cross-compiled on Apple silicon); the macOS entry of
+  # `build` joins the two halves with lipo. Uncached, as every release build here.
+  macos-half:
+    name: Build nvmod for ${{ matrix.rust-target }}
+    strategy:
+      fail-fast: true
+      matrix:
+        rust-target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          path: src
+          persist-credentials: false
+      - name: Build nvmod
+        working-directory: src
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
+        run: |
+          set -euo pipefail
+          rustup target add "$RUST_TARGET"
+          cargo build --release --locked -p nvmod-cli --target "$RUST_TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nvmod-macos-${{ matrix.rust-target }}
+          path: src/target/${{ matrix.rust-target }}/release/nvmod
+          if-no-files-found: error
+          retention-days: 3
+
   build:
     name: Build ${{ matrix.target }}
+    needs: macos-half
     strategy:
       fail-fast: false
       matrix:
@@ -80,7 +114,13 @@ jobs:
           [ "v$version" = "$TAG" ] || { echo "Cargo.toml is $version, the tag is $TAG"; exit 1; }
           echo "VERSION=$version" >>"$GITHUB_ENV"
 
-      # rust-toolchain.toml pins the compiler; rustup installs it on first use. On macOS both processors are built and
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ matrix.target == 'macos' }}
+        with:
+          pattern: nvmod-macos-*
+          path: ${{ runner.temp }}/halves
+
+      # rust-toolchain.toml pins the compiler; rustup installs it on first use. On macOS the two halves of macos-half are
       # joined into one binary at the path the other targets use.
       - name: Build nvmod
         shell: bash
@@ -88,13 +128,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$TARGET" = macos ]; then
-            rustup target add aarch64-apple-darwin x86_64-apple-darwin
-            cargo build --release --locked -p nvmod-cli --target aarch64-apple-darwin
-            cargo build --release --locked -p nvmod-cli --target x86_64-apple-darwin
             mkdir -p target/release
             lipo -create -output target/release/nvmod \
-              target/aarch64-apple-darwin/release/nvmod target/x86_64-apple-darwin/release/nvmod
-            lipo -archs target/release/nvmod
+              "$RUNNER_TEMP/halves/nvmod-macos-aarch64-apple-darwin/nvmod" "$RUNNER_TEMP/halves/nvmod-macos-x86_64-apple-darwin/nvmod"
+            chmod 0755 target/release/nvmod
+            lipo -archs target/release/nvmod | tee "$RUNNER_TEMP/archs"
+            grep -qw arm64 "$RUNNER_TEMP/archs" && grep -qw x86_64 "$RUNNER_TEMP/archs"
           else
             cargo build --release --locked -p nvmod-cli
           fi
