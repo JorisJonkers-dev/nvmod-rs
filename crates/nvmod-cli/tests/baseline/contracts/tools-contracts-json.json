@@ -40,14 +40,6 @@
       "contract": "nv-rs-release-manifest",
       "current": 1,
       "tool": "nv-rs"
-    },
-    {
-      "accepted": [
-        1
-      ],
-      "contract": "ttw-installer-result",
-      "current": 1,
-      "tool": "ttw-installer"
     }
   ]
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod sort --instance <dir> [--profile <name>] --masterlist <file> [--apply] [--json]`, and
 //! `nvmod sort --instance <dir> [--profile <name>] --keep-order [--json]`, which keeps the Load order as it is and
-//! only writes the plugin file times (what an imported MO2 order needs, see `nvmod setup`).
+//! only writes the plugin file times (what an imported MO2 order needs).
 
 use crate::{OK, REFUSED, ROLLED_BACK, USAGE, args::Args};
 use nvmod_instance::NvmodInstance;

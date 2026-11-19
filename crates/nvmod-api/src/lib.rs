@@ -49,7 +49,6 @@
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //! | [`verify::verify`] | [`verify::VerifyRequest`] | [`verify::VerifyOutput`] |
 //! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
-//! | [`ttw::install`] | [`ttw::InstallRequest`] | [`ttw::InstallOutput`] |
 //! | [`conflicts::report`] | [`conflicts::ReportRequest`] | [`conflicts::ReportOutput`] |
 //! | [`tree::show`] | [`tree::TreeRequest`] | [`tree::TreeOutput`] |
 //!
@@ -74,7 +73,6 @@ pub mod sort_apply;
 pub mod stage;
 pub mod target;
 pub mod tree;
-pub mod ttw;
 pub mod verify;
 
 pub use job::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome, Progress};

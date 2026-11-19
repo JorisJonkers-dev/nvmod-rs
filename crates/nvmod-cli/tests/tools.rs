@@ -531,7 +531,10 @@ fn contracts_lists_what_this_nvmod_accepts() {
     let (code, out, _) = nvmod(&["tools", "contracts", "--json"]);
     assert_eq!(code, 0);
     let json: Value = serde_json::from_str(&out).unwrap();
-    assert!(json.as_array().unwrap().iter().any(|r| {
-        r["contract"] == "ttw-installer-result" && r["accepted"] == serde_json::json!([1])
-    }));
+    assert!(
+        json.as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["contract"] == "lodwright-plan")
+    );
 }

@@ -14,7 +14,6 @@ mod runner;
 mod source;
 mod store;
 mod trust;
-pub mod ttw;
 mod verify;
 
 pub use acquire::{Acquire, AcquireError, Acquired, Pin, pin_of};

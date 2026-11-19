@@ -2,7 +2,7 @@
 
 These transcripts record what `nvmod` 0.8.1 (the release tagged `v0.8.1`) printed and returned for the commands that
 rauls-trusty-toolbox ADR-0019 moves out of nvmod: `tools contracts` (the issue calls it `contracts`), `verify`,
-`tools`, `run`, `install-nv-rs`, `lod`, `ttw` and `setup`. They are the reference that raul's replacements are compared
+`tools`, `run`, `install-nv-rs`, `lod` and `ttw` (`lod` and `ttw` are removed; see [Removed commands](#removed-commands)). They are the reference that raul's replacements are compared
 with before the nvmod commands are removed (issue #90). A command that is already removed keeps its transcripts under
 `removed/` (see [Removed commands](#removed-commands)).
 
@@ -14,26 +14,46 @@ Replay: `cargo test -p nvmod-cli --test baseline`. Re-record: see [Re-recording]
 moved unchanged to `removed/lod/`: they were recorded before removal, at release v0.8.1, and are the reference for
 raul's `lod` replacement. The replay test in this crate does not run them (nvmod no longer has the command, so there is
 nothing to replay) and ignores the `removed/` folder when it looks for stray files; the test
-`removed_lod_transcripts_still_parse_and_are_unchanged` checks that they stay whole (valid JSON, the folder name as
+`removed_transcripts_still_parse_and_are_unchanged` checks that they stay whole (valid JSON, the folder name as
 `command`, the fields of the format, `release` `0.8.1`, 13 of them, and the SHA-256 of each as listed in
-`removed/lod/SHA256SUMS`), and `lod_is_an_unknown_command` checks that nvmod exits 5 for it. Their fixtures (the fake lodwright, the pinned lock and the
+`removed/lod/SHA256SUMS`), and `removed_commands_are_unknown_commands` checks that nvmod exits 5 for it. Their fixtures (the fake lodwright, the pinned lock and the
 golden plan `tests/golden/lodwright-plan.json`) and the setup functions of `tests/baseline.rs` that built them (`lod_with`, `pin_lodwright`, `lod_plan`, ...) were deleted
 with the command; they are in the repository history at commit `599c22d` (the baseline, #182), the last one before
 the removal. The tag `v0.8.1` has the command but not the baseline harness. Do not re-record them. The same applies to each command removed later.
+
+`setup` was removed from nvmod in issue #164. Its 16 transcripts (`full-run-*`, `dry-run-*`, `skip-nv-rs-*`, `failing-*`,
+`existing-instance-refused`, `unsupported-base-refused`, `resume-without-state-refused`, `restart-without-yes-refused`,
+`wrong-release-checksum-*` and `usage-*`) moved unchanged to `removed/setup/`, with their `SHA256SUMS`. Their `release`
+field says `0.8.1`, as it did before the move. They are the reference for raul's setup. The replay test does not run
+them, and `removed_transcripts_still_parse_and_are_unchanged` checks them the same way as the `lod` ones (16 of them).
+The fixtures that built them were deleted from `tests/baseline.rs` with the command: `setup_world` (the steam base copy,
+the Fallout 3 folder, the masterlist, the mod archive, the fake nv-rs release, the `gh` script and the fake TTW installer
+with its lock) and the cases built on it, `setup_ok`, `setup_failing_check`, `setup_wrong_checksum`, `setup_broken_mod`,
+`setup_existing_instance`, `setup_unknown_base` and `setup_never_ran`. They are in the history before the removal. Do not
+re-record them.
+
+`ttw` was removed from nvmod in issue #165. Its 13 transcripts (`installs-*`, `installer-*`, `report-*`,
+`lock-without-installer-is-refused`, `bad-base-is-refused-before-installer`, `missing-fallout3-folder-is-refused`,
+`usage-*`) moved unchanged to `removed/ttw/`, with their `SHA256SUMS`. Their `release` field says `0.8.1`, as it did
+before the move. They are the reference for raul's TTW. The replay test does not run them, and
+`removed_transcripts_still_parse_and_are_unchanged` checks them the same way as the `lod` ones (13 of them), and
+`removed_commands_are_unknown_commands` checks that `ttw` exits 5. The fixtures that built them were deleted from
+`tests/baseline.rs` with the command: `TTW_GOOD`, `TTW_REPORT`, `ttw_instance`, `write_installer`, `write_ttw_lock`,
+`ttw_with` and the cases built on them. They are in the history before the removal. Do not re-record them.
 
 ## Layout
 
 - `<command>/<case>.json` is one transcript. Its fields are `command` (the folder), `args` (as typed, with `<TMP>` for the
   scratch directory), `exit_code`, `stdout`, `stderr`, and `release` (the nvmod release the transcript was taken from; a
   note, not compared).
-- `stdout` that is one JSON document is stored parsed. A `--json` stream (one document per line, as `setup` prints its
+- `stdout` that is one JSON document is stored parsed. A `--json` stream (one document per line, as a `--json` run prints its
   events) is stored as an array of those documents. Other text is stored as an array of lines, so a changed line shows
   as a changed line in the diff.
 - `stderr` is stored as an array of lines, after the toolchain filter below.
 - The cases are defined in `tests/baseline.rs`: each case is a name, the arguments, and the name of a Rust setup function
   that builds its fixture under the scratch root. Nothing is recorded from a machine's own files.
 - Fixtures are synthetic: a fake Steam base copy, a fake Fallout 3 folder, fake executables and plugins (`nvmod-testkit`),
-  fake release servers on the loopback address, shell scripts for Proton, the TTW installer, `gh` and
+  fake release servers on the loopback address, shell scripts for Proton, `gh` and
   `cargo`. No game data, no mod names, no private paths.
 
 ## Normalisation
@@ -156,15 +176,10 @@ Cases per command (the file names). `usage-*` cases exit 5 unless the table says
 | `verify` | `clean-json`, `clean-text`, `clean-named-proton`, `doctor-error-json` (exit 3), `doctor-error-text` (exit 3), `nv-rs-changed-json` (exit 3), `unknown-profile` (exit 2), `not-an-instance` (exit 2), `missing-instance-option` (exit 5), `unknown-option` (exit 5) | |
 | `run` | `dry-run-game-json`, `dry-run-game-text`, `dry-run-game-with-game-args`, `launch-game-wait`, `launch-game-wait-exit-code-passes-through` (exit 7), `unknown-title-is-refused` (exit 2), `nv-rs-not-installed-is-refused` (exit 2), `not-an-instance-is-refused` (exit 2), `missing-instance-option` (exit 5), `unknown-option` (exit 5) | The "Proton" is a script that prints its arguments and exits 0, or 7 for the pass-through case. The game is never started. Only `--wait` launches are recorded: a detached start has no exit code to record. |
 | `install-nv-rs` | `source-build-installs-and-checks`, `source-build-failing-build-is-refused-and-rolled-back` (exit 4), `source-build-failing-check-is-refused-and-rolled-back` (exit 4), `release-fetched-verified-and-installed`, `release-wrong-checksum-installs-nothing` (exit 3), `release-failing-check-rolled-back` (exit 4), `release-asset-not-listed` (exit 3), `refused-without-source-or-release` (exit 2), `refused-not-an-instance` (exit 2), `usage-*` (exit 5) | The command has no `--json`, so its transcripts are text. The source build uses the cargo wrapper above; its failing-build transcript keeps nvmod's line only, so it does not depend on the pinned toolchain's diagnostics. The release is a fake one served from `file://`. |
-| `ttw` | `installs-text`, `installs-json`, `installer-fails-exit-4-rolled-back`, `report-says-failed-exit-4-rolled-back`, `report-breaks-contract-exit-4-rolled-back`, `installer-writes-nothing-exit-4-rolled-back`, `installer-not-the-pinned-file-exit-3`, `installer-unpinned-is-refused` (exit 2), `lock-without-installer-is-refused` (exit 2), `bad-base-is-refused-before-installer` (exit 2), `missing-fallout3-folder-is-refused` (exit 2), `usage-missing-fallout3-option` (exit 5), `usage-unknown-option` (exit 5) | The installer is a shell script that writes a synthetic output folder and a report in the `ttw-installer-result` shape. The shipped lock pins no installer, so every case passes its own lock. |
-| `setup` | `full-run-json`, `full-run-text`, `dry-run-text`, `dry-run-json`, `skip-nv-rs-json`, `skip-nv-rs-without-ttw-options-json`, `failing-nv-rs-check-exit-4-leaves-no-instance`, `wrong-release-checksum-exit-3-leaves-no-instance` (exit 3), `failing-mod-install-rolls-back` (exit 2), `failing-mod-install-keep-partial` (exit 2), `existing-instance-refused` (exit 2), `unsupported-base-refused` (exit 2), `resume-without-state-refused` (exit 2), `restart-without-yes-refused` (exit 2), `usage-missing-required-option` (exit 5), `usage-unknown-option` (exit 5) | The full run takes the fake nv-rs release from `file://`, the fake TTW installer (pinned by its own lock), one synthetic mod archive, the synthetic masterlist and `sort --apply`. `failing-mod-install-*` use an archive that is not a zip: that step exits 2 (refused), not 4, and the transcript records it. |
 
 ## Not recorded
 
 - `install-nv-rs` with `NVMOD_CARGO` set in the environment: the environment of a case is fixed by the test, so the
   toolchain comes from `--cargo` only.
-- `setup --resume` after a partial run, and `setup --restart --yes`: they need an Instance left by an earlier failed run.
-  A fixture that builds one would have to be recorded in sequence; the single-case transcripts do not do that.
 - Detached `run` (no `--wait`): nothing to record beyond the plan, and the plan is the `--dry-run` transcript.
-- `ttw` and `setup` with a real TTW package or a real base copy: no game data is used anywhere in this baseline.
 - `tools fetch` over a real network, and nv-rs releases from GitHub: every release is a local fake.
