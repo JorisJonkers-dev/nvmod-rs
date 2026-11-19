@@ -144,8 +144,8 @@ fn run_setup_step(args: &[&str], root: &Path) {
     assert_eq!(code, 0, "fixture step {args:?} failed: {out}{err}");
 }
 
-/// A lock pinning `lodwright-rs` to `TOOL_BODY` at the fake server, a linked `loot-rs` and a third-party
-/// `ttw-installer` with no checksum, all for this platform. `sha` overrides the pinned checksum.
+/// A lock pinning `lodwright-rs` to `TOOL_BODY` at the fake server, a linked `loot-rs` and a stand-in third-party
+/// tool named `ttw-installer` (a plain name, the real installer is gone) with no checksum, all for this platform. `sha` overrides the pinned checksum.
 fn lock_text(url: &str, sha: &str) -> String {
     let platform = platform();
     format!(
@@ -1686,6 +1686,7 @@ fn removed_transcripts_still_parse_and_are_unchanged() {
                 .find_map(|l| l.strip_suffix(name).and_then(|h| h.strip_suffix("  ")))
                 .unwrap_or_else(|| panic!("{name} is not listed in SHA256SUMS"));
             assert_eq!(sha256_hex(text.as_bytes()), want, "{name} changed");
+            assert_eq!(sums.lines().count(), expected, "SHA256SUMS of {folder}");
             count += 1;
         }
         assert_eq!(
