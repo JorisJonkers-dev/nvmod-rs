@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.11.0...v0.12.0) (2026-11-19)
+
+
+### Features
+
+* **release:** attach a universal macOS archive to each release ([#199](https://github.com/JorisJonkers-dev/nvmod-rs/issues/199)) ([b435a3b](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b435a3b8fa8fe479b6987756704a6190b32cad89))
+
 ## [0.11.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.10.0...v0.11.0) (2026-11-19)
 
 
