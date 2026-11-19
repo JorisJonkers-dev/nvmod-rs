@@ -5,6 +5,10 @@
 #   SHA256SUMS, nvmod-<v>.cdx.json (CycloneDX SBOM), release-index.json
 # plus one GitHub artifact attestation over all of them, made by this workflow. Tools are never bundled.
 #
+# macos_only (with publish) adds the macOS archive to an existing release without a new version; the packages and the
+# Toolbox notice are skipped: gh workflow run release-assets.yml -R JorisJonkers-dev/nvmod-rs --ref main
+#   -f tag=vX.Y.Z -f publish=true -f macos_only=true
+#
 # release.yml dispatches this workflow when release-please creates a release (a tag made with the default token starts
 # no other workflow), with publish true. A manual dispatch on an existing tag is the dry run: it builds and attests,
 # and uploads to the release only when `publish` is true, which the publish job allows for release-please tags only.
@@ -20,6 +24,11 @@ on:
         type: string
       publish:
         description: Upload the assets to the release (false is a dry run)
+        required: false
+        default: false
+        type: boolean
+      macos_only:
+        description: Add only the macOS archive to the release (with SHA256SUMS and release-index.json made again); the other archives and the packages stay as they are
         required: false
         default: false
         type: boolean
@@ -222,6 +231,7 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
       PUBLISH: ${{ inputs.publish }}
+      MACOS_ONLY: ${{ inputs.macos_only }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
     steps:
@@ -251,6 +261,17 @@ jobs:
           merge-multiple: true
           path: dist
 
+      # macos_only: the release keeps its own Linux and Windows archives and SBOM; only the macOS archive is new. The
+      # release's files replace the ones just built, so SHA256SUMS and the index below describe what the release holds.
+      - name: Keep the release's other assets (macos_only)
+        if: ${{ env.MACOS_ONLY == 'true' }}
+        run: |
+          set -euo pipefail
+          find dist -maxdepth 1 -type f ! -name '*-universal-macos.tar.zst' -delete
+          gh release download "$TAG" --repo "$REPO" --dir dist \
+            --pattern '*-x86_64-linux.tar.zst' --pattern '*-x86_64-windows.zip' --pattern '*.cdx.json'
+          ls -l dist
+
       - name: SHA256SUMS and release-index.json
         run: |
           set -euo pipefail
@@ -271,7 +292,11 @@ jobs:
         if: ${{ env.PUBLISH == 'true' }}
         run: |
           set -euo pipefail
-          gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          if [ "$MACOS_ONLY" = true ]; then
+            gh release upload "$TAG" dist/*-universal-macos.tar.zst dist/SHA256SUMS dist/release-index.json --repo "$REPO" --clobber
+          else
+            gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          fi
           notes="$(gh release view "$TAG" --repo "$REPO" --json body --jq .body)"
           if ! grep -q '<!-- release-assets -->' <<<"$notes"; then
             {
@@ -304,7 +329,7 @@ jobs:
   packages:
     name: OCI packages
     needs: publish
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && !inputs.macos_only }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:
@@ -428,7 +453,7 @@ jobs:
   toolbox:
     name: Tell the Toolbox
     needs: publish
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && !inputs.macos_only }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     permissions: {}
