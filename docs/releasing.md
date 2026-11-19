@@ -9,6 +9,7 @@ then dispatches `release-assets.yml`, which builds `nvmod` from that tag with `-
 | --- | --- |
 | `nvmod-<v>-x86_64-linux.tar.zst` | the CLI, built on Ubuntu 22.04 (glibc 2.35 baseline); XDG paths |
 | `nvmod-<v>-x86_64-windows.zip` | the CLI in the portable layout: `nvmod.portable` marker, data beside the program, no administrator rights |
+| `nvmod-<v>-universal-macos.tar.zst` | the CLI for macOS, one binary for Apple silicon and Intel (arm64 and x86_64 joined with `lipo`); not code-signed yet, so Gatekeeper asks before the first run |
 | `SHA256SUMS` | checksums of every other asset |
 | `nvmod-<v>.cdx.json` | CycloneDX 1.5 SBOM of the `nvmod` binary |
 | `release-index.json` | what `nvmod update check` reads (ADR-0010): latest version, date, notes URL, per-platform URL, SHA-256 and size, `known_good_set`, `advisories` |

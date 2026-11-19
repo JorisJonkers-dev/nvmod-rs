@@ -1,6 +1,7 @@
 # Builds the nvmod CLI for a release tag and attaches it to the GitHub release (ADR-0009, ADR-0010):
 #   nvmod-<v>-x86_64-linux.tar.zst   built on an old glibc baseline (ubuntu-22.04)
 #   nvmod-<v>-x86_64-windows.zip     portable layout with the nvmod.portable marker
+#   nvmod-<v>-universal-macos.tar.zst one binary for Apple silicon and Intel Macs (lipo), built on macos-latest
 #   SHA256SUMS, nvmod-<v>.cdx.json (CycloneDX SBOM), release-index.json
 # plus one GitHub artifact attestation over all of them, made by this workflow. Tools are never bundled.
 #
@@ -38,17 +39,25 @@ jobs:
       matrix:
         include:
           - target: linux
+            arch: x86_64
             os: ubuntu-22.04
             exe: nvmod
           - target: windows
+            arch: x86_64
             os: windows-2022
             exe: nvmod.exe
+          - target: macos
+            arch: universal
+            os: macos-latest
+            exe: nvmod
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     permissions:
       contents: read
     env:
       TAG: ${{ inputs.tag }}
+      TARGET: ${{ matrix.target }}
+      ARCH: ${{ matrix.arch }}
     steps:
       # The tag's source goes to src/; the packaging scripts come from the workflow's own ref in tooling/, so a tag that
       # predates them still builds.
@@ -71,11 +80,24 @@ jobs:
           [ "v$version" = "$TAG" ] || { echo "Cargo.toml is $version, the tag is $TAG"; exit 1; }
           echo "VERSION=$version" >>"$GITHUB_ENV"
 
-      # rust-toolchain.toml pins the compiler; rustup installs it on first use.
+      # rust-toolchain.toml pins the compiler; rustup installs it on first use. On macOS both processors are built and
+      # joined into one binary at the path the other targets use.
       - name: Build nvmod
         shell: bash
         working-directory: src
-        run: cargo build --release --locked -p nvmod-cli
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = macos ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+            cargo build --release --locked -p nvmod-cli --target aarch64-apple-darwin
+            cargo build --release --locked -p nvmod-cli --target x86_64-apple-darwin
+            mkdir -p target/release
+            lipo -create -output target/release/nvmod \
+              target/aarch64-apple-darwin/release/nvmod target/x86_64-apple-darwin/release/nvmod
+            lipo -archs target/release/nvmod
+          else
+            cargo build --release --locked -p nvmod-cli
+          fi
 
       - name: Third-party notices
         shell: bash
@@ -88,7 +110,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -I tooling/scripts/package_release.py package --target "${{ matrix.target }}" --version "$VERSION" \
+          python3 -I tooling/scripts/package_release.py package --target "$TARGET" --version "$VERSION" \
             --binary "src/target/release/${{ matrix.exe }}" --notices "$RUNNER_TEMP/notices.txt" --out dist
 
       # Run the packaged program from a folder of its own, as a user does.
@@ -97,13 +119,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir "$RUNNER_TEMP/smoke"
-          if [ "${{ matrix.target }}" = windows ]; then
-            powershell -NoProfile -Command "Expand-Archive -Path dist/nvmod-$VERSION-x86_64-windows.zip -DestinationPath '$RUNNER_TEMP/smoke'"
-            ls "$RUNNER_TEMP/smoke/nvmod-$VERSION-x86_64-windows/nvmod.portable"
+          folder="nvmod-$VERSION-$ARCH-$TARGET"
+          if [ "$TARGET" = windows ]; then
+            powershell -NoProfile -Command "Expand-Archive -Path dist/$folder.zip -DestinationPath '$RUNNER_TEMP/smoke'"
+            ls "$RUNNER_TEMP/smoke/$folder/nvmod.portable"
           else
-            zstd -dc "dist/nvmod-$VERSION-x86_64-linux.tar.zst" | tar -x -C "$RUNNER_TEMP/smoke"
+            zstd -dc "dist/$folder.tar.zst" | tar -x -C "$RUNNER_TEMP/smoke"
           fi
-          "$RUNNER_TEMP/smoke/nvmod-$VERSION-x86_64-${{ matrix.target }}/${{ matrix.exe }}" --version
+          "$RUNNER_TEMP/smoke/$folder/${{ matrix.exe }}" --version
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

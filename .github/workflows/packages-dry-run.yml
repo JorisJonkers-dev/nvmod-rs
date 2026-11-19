@@ -1,6 +1,6 @@
 # A pull request that changes how the release packages are made builds the Linux archive and prints what a release
-# would push as an OCI package, without logging in to a registry and without any write permission. A broken
-# package is found here, before a release.
+# would push as an OCI package, and builds and runs the macOS archive, without logging in to a registry and without
+# any write permission. A broken package is found here, before a release.
 name: Packages dry run
 
 on:
@@ -45,3 +45,37 @@ jobs:
           archive="packages/nvmod-$VERSION-x86_64-linux.tar.zst"
           echo "Would push: ghcr.io/jorisjonkers-dev/nvmod-rs:${VERSION}-x86_64-linux"
           echo "Archive SHA-256: $(sha256sum "$archive" | awk '{print $1}')"
+
+  # The macOS release archive as release-assets.yml builds it: arm64 and x86_64 joined into one binary, packaged, and
+  # the packaged program run from a folder of its own.
+  macos-archive:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build nvmod for both processors
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release --locked -p nvmod-cli --target aarch64-apple-darwin
+          cargo build --release --locked -p nvmod-cli --target x86_64-apple-darwin
+          mkdir -p target/release
+          lipo -create -output target/release/nvmod \
+            target/aarch64-apple-darwin/release/nvmod target/x86_64-apple-darwin/release/nvmod
+          lipo -archs target/release/nvmod | tee "$RUNNER_TEMP/archs"
+          grep -qw arm64 "$RUNNER_TEMP/archs" && grep -qw x86_64 "$RUNNER_TEMP/archs"
+      - name: Create and run the macOS archive
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n1)"
+          cargo metadata --locked --format-version 1 >"$RUNNER_TEMP/metadata.json"
+          python3 -I scripts/package_release.py notices --metadata "$RUNNER_TEMP/metadata.json" --out "$RUNNER_TEMP/notices.txt"
+          python3 -I scripts/package_release.py package --target macos --version "$VERSION" \
+            --binary target/release/nvmod --notices "$RUNNER_TEMP/notices.txt" --out packages
+          mkdir "$RUNNER_TEMP/smoke"
+          zstd -dc "packages/nvmod-$VERSION-universal-macos.tar.zst" | tar -x -C "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/nvmod-$VERSION-universal-macos/nvmod" --version

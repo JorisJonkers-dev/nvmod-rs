@@ -6,6 +6,10 @@ Rust. The product that players install is
 and shows its reports. `nvmod` also works alone from the command line, and it never fetches, finds or starts another
 Component.
 
+**Systems.** Built and tested on Linux, Windows and macOS on every pull request (the known Windows and macOS test
+failures are #98). Each release attaches the command for Linux x86-64, Windows x86-64 and macOS (one binary for Apple
+silicon and Intel); see [docs/releasing.md](docs/releasing.md).
+
 ## Scope
 
 nvmod-rs keeps mod management:
