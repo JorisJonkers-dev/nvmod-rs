@@ -167,7 +167,7 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               nothing is written into the Instance; the plan is checked against the vendored
                               contract, a tool failure exits 4); generate exits 2 with the reason until
                               lodwright-rs can generate
-  nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]
+  nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--plugin-names <file>] [--json]
                               count the extender opcodes the compiled scripts of the active plugins call (read
                               only; prints only opcode numbers, command names from the tables you name, counts
                               and plugin file names; docs/nvse-usage.md)
