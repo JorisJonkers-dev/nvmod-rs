@@ -357,3 +357,88 @@ fn usage_errors_and_refusals_have_their_own_exit_codes() {
     let (code, _, err) = nvmod(&["nvse-usage", "--instance", &s.root(), "--profile", "Nope"]);
     assert_eq!(code, 2, "{err}");
 }
+
+#[test]
+fn plugin_names_name_opcodes_of_blocks_without_a_table() {
+    let s = Scratch::new();
+    write_file(
+        &s.inst.path().join("fnv"),
+        "tables/plugin-names.tsv",
+        b"# MCM, JohnnyGuitar, kNVSE and ShowOff\n3101\tJGExample\textra column\n0x3c93\tSOExample\nnot a line\nzzzz\tBad\n3922\t\n1401\tIgnoredInTableBlock\n",
+    );
+    let root = s.root();
+    let (jip, nvse, plugin) = (
+        s.table("jip.tsv"),
+        s.table("names.rs"),
+        s.table("plugin-names.tsv"),
+    );
+    let base = [
+        "nvse-usage",
+        "--instance",
+        &root,
+        "--jip-table",
+        &jip,
+        "--nvse-names",
+        &nvse,
+        "--json",
+    ];
+    let (code, without, err) = nvmod(&base);
+    assert_eq!(code, 0, "{err}");
+    let mut args = base.to_vec();
+    args.extend(["--plugin-names", &plugin]);
+    let (code, with, err) = nvmod(&args);
+    assert_eq!(code, 0, "{err}");
+    let (without, with): (Value, Value) = (
+        serde_json::from_str(&without).unwrap(),
+        serde_json::from_str(&with).unwrap(),
+    );
+    // Named from the file, still without a table to judge them against.
+    let r = row(&with, "0x3101");
+    assert_eq!(
+        (r["name"].as_str(), r["status"].as_str()),
+        (Some("JGExample"), Some("no-table"))
+    );
+    assert_eq!(row(&with, "0x3C93")["name"], "SOExample");
+    // Lines that do not parse, and names that are empty, leave the opcode unnamed.
+    assert!(row(&with, "0x3922")["name"].is_null());
+    assert!(row(&with, "0x5000")["name"].is_null());
+    // Opcodes of a block with a table keep the names of that table.
+    assert_eq!(row(&with, "0x1401")["name"], "GetBaseObject");
+    // Without the option nothing is named in those blocks, and nothing else differs.
+    assert!(row(&without, "0x3101")["name"].is_null());
+    let strip = |mut v: Value| {
+        for r in v["opcodes"].as_array_mut().unwrap() {
+            if r["status"] == "no-table" {
+                r["name"] = Value::Null;
+            }
+        }
+        v
+    };
+    assert_eq!(strip(with), without);
+}
+
+#[test]
+fn an_unreadable_plugin_names_file_is_refused() {
+    let s = Scratch::new();
+    let (code, _, err) = nvmod(&[
+        "nvse-usage",
+        "--instance",
+        &s.root(),
+        "--plugin-names",
+        "/nonexistent/names.tsv",
+    ]);
+    assert_eq!(code, 2, "{err}");
+    write_file(
+        &s.inst.path().join("fnv"),
+        "tables/binary.tsv",
+        &[0xff, 0xfe, 0x00],
+    );
+    let (code, _, err) = nvmod(&[
+        "nvse-usage",
+        "--instance",
+        &s.root(),
+        "--plugin-names",
+        &s.table("binary.tsv"),
+    ]);
+    assert_eq!(code, 2, "{err}");
+}

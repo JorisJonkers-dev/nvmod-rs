@@ -49,11 +49,16 @@ licence of the vendored tables is still an open point, `docs/research/nv-rs-buil
 nvmod nvse-usage --instance <instance dir> [--profile <name>] \
     --jip-table ~/Projects/JorisJonkers-dev/nv-rs/crates/jip/data/source-57.30.tsv \
     --nvse-names ~/Projects/JorisJonkers-dev/nv-rs/crates/nvse/src/names.rs \
-    [--json]
+    [--plugin-names <file>] [--json]
 ```
 
 The Instance must be staged (`nvmod stage`). The installed nv-rs's `capabilities.json` is read from the Instance.
 Without `--jip-table` and `--nvse-names` rows have no name and are `unchecked`.
+
+`--plugin-names <file>` names the opcodes of the blocks that have no table (MCM, JohnnyGuitar, kNVSE, ShowOff and
+unknown ranges): one `opcode<TAB>name` per line, the opcode in hex with or without `0x`. Lines starting with `#`,
+lines that do not parse, empty names and extra columns are ignored; opcodes of the xNVSE and JIP LN blocks keep the
+names of their own tables. A named row keeps the status `no-table`.
 
 Exit codes follow the other commands: 0 done, 2 refused (Instance, profile, `plugins.txt` or staging tree or a
 named table not readable), 5 command line not understood.

@@ -148,7 +148,7 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               against its install record, and the launch plan of the vanilla plus xNVSE path
                               (a Linux entry that invokes Proton, a Windows entry that runs the game executable
                               directly); exit 3 when verification fails
-  nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--json]
+  nvmod nvse-usage --instance <dir> [--profile <name>] [--jip-table <file>] [--nvse-names <file>] [--plugin-names <file>] [--json]
                               count the extender opcodes the compiled scripts of the active plugins call (read
                               only; prints only opcode numbers, command names from the tables you name, counts
                               and plugin file names; docs/nvse-usage.md)
