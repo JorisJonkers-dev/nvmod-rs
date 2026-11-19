@@ -13,7 +13,7 @@ fn sample(name: &str) -> Value {
 }
 
 /// Each contract, its recorded sample, and a field whose removal must be rejected.
-const CASES: [(&str, &str, &str); 5] = [
+const CASES: [(&str, &str, &str); 4] = [
     ("lodwright-plan", "lodwright-plan", "worlds"),
     ("loot-sort", "loot-sort", "sorted"),
     ("nv-rs-capabilities", "nv-rs-capabilities", "extenders"),
@@ -22,7 +22,6 @@ const CASES: [(&str, &str, &str); 5] = [
         "nv-rs-release-manifest",
         "executable",
     ),
-    ("ttw-installer-result", "ttw-installer-result", "outcome"),
 ];
 
 #[test]
@@ -85,17 +84,8 @@ fn a_missing_required_field_is_rejected_with_the_contract_named() {
 
 #[test]
 fn contracts_without_a_legacy_reading_need_a_schema_version() {
-    for contract in [
-        "nv-rs-capabilities",
-        "nv-rs-release-manifest",
-        "ttw-installer-result",
-    ] {
-        let recorded = if contract == "ttw-installer-result" {
-            "ttw-installer-result"
-        } else {
-            contract
-        };
-        let mut doc = sample(recorded);
+    for contract in ["nv-rs-capabilities", "nv-rs-release-manifest"] {
+        let mut doc = sample(contract);
         doc.as_object_mut().unwrap().remove("schema_version");
         assert!(matches!(
             builtin(contract).unwrap().check(&doc),
@@ -202,7 +192,7 @@ fn a_document_with_the_wrong_contract_name_is_refused() {
 
 #[test]
 fn the_recorded_samples_name_their_contract_where_the_tool_does() {
-    for contract in ["lodwright-plan", "loot-sort", "ttw-installer-result"] {
+    for contract in ["lodwright-plan", "loot-sort"] {
         let doc = sample(contract);
         assert_eq!(doc["contract"], contract);
         assert_eq!(
@@ -222,42 +212,6 @@ fn a_name_is_only_required_after_the_handshake() {
         c.check_at(&doc, Some(1), true),
         Err(ContractError::WrongName { found: None, .. })
     ));
-}
-
-#[test]
-fn the_wrapper_answers_the_handshake_for_the_ttw_installers() {
-    use nvmod_tools::{Handshake, negotiate, ttw};
-    let handshake = Handshake::from_value(&ttw::handshake()).unwrap();
-    let contract = builtin(ttw::CONTRACT).unwrap();
-    // It lists what the vendored contract accepts, and the lock's version of it is negotiable.
-    assert_eq!(
-        handshake.versions(ttw::CONTRACT).unwrap(),
-        contract.accepted()
-    );
-    assert_eq!(
-        negotiate(
-            ttw::TOOL,
-            ttw::CONTRACT,
-            1,
-            &contract.accepted(),
-            &handshake
-        ),
-        Ok(1)
-    );
-}
-
-#[test]
-fn the_record_the_wrapper_builds_names_its_contract() {
-    use nvmod_tools::ttw::{Facts, normalise};
-    let dir = std::path::Path::new("/out");
-    let facts = Facts {
-        installer: ("synthetic", "0.0.0"),
-        exit_code: 0,
-        output_dir: dir,
-        files_found: 1,
-    };
-    let record = normalise(&facts, None).unwrap();
-    assert_eq!(record["contract"], "ttw-installer-result");
 }
 
 #[test]

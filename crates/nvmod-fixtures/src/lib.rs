@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The synthetic inputs of one `nvmod setup` run, written to a folder: a base copy, a fake Fallout 3 folder, a
-//! masterlist, a fake nv-rs release served from a folder, a fake TTW installer with the lock that pins it, a fake
-//! `gh` and one fixture archive. Everything is made by `nvmod-testkit`, in code; no game data, no network.
+//! The synthetic inputs of one `nvmod setup` run, written to a folder: a base copy, a masterlist, a fake nv-rs
+//! release served from a folder, a fake `gh` and one fixture archive. Everything is made by `nvmod-testkit`, in code; no game data, no network.
 //!
 //! The cross-repo end-to-end test in nv-linux runs the pinned `nvmod` against these. The same fixtures back
 //! `crates/nvmod-cli/tests/setup.rs`, so a change in what `setup` needs shows up there first.
@@ -10,7 +9,7 @@
 use nvmod_testkit::{
     BaseBuilder, FakeRelease, PeBuilder, PluginBuilder, ZipBuilder, write_file, write_script,
 };
-use nvmod_tools::{platform, sha256_hex};
+use nvmod_tools::sha256_hex;
 use std::path::{Path, PathBuf};
 
 /// Which run the fixtures are made for.
@@ -20,8 +19,6 @@ pub enum Variant {
     Ok,
     /// The fake nv-rs release lists a wrong SHA-256: `setup` exits 3 and leaves no Instance.
     WrongChecksum,
-    /// The fake TTW installer exits non-zero: `setup` exits 4 and rolls back.
-    FailingInstaller,
 }
 
 impl Variant {
@@ -31,7 +28,6 @@ impl Variant {
         match name {
             "ok" => Some(Variant::Ok),
             "wrong-checksum" => Some(Variant::WrongChecksum),
-            "failing-installer" => Some(Variant::FailingInstaller),
             _ => None,
         }
     }
@@ -42,7 +38,6 @@ impl Variant {
         match self {
             Variant::Ok => 0,
             Variant::WrongChecksum => 3,
-            Variant::FailingInstaller => 4,
         }
     }
 }
@@ -75,7 +70,6 @@ fn s(path: &Path) -> String {
 #[must_use]
 pub fn write_rig(dir: &Path, variant: Variant) -> Rig {
     let base = dir.join("base");
-    let fo3 = dir.join("fo3");
     let work = dir.join("work");
     let release = work.join("release");
     std::fs::create_dir_all(&release).expect("create work folder");
@@ -87,7 +81,6 @@ pub fn write_rig(dir: &Path, variant: Variant) -> Rig {
         "Data/FalloutNV.esm",
         &PluginBuilder::master().build(),
     );
-    write_file(&fo3, "Fallout3.exe", b"synthetic fallout 3");
     let masterlist = work.join("masterlist.yaml");
     std::fs::write(
         &masterlist,
@@ -102,30 +95,6 @@ pub fn write_rig(dir: &Path, variant: Variant) -> Rig {
     fake_release.write(&release, sha256_hex);
 
     let gh = s(&write_script(&work, "gh", "exit 0"));
-    let esm = work.join("ttw.esm");
-    std::fs::write(&esm, PluginBuilder::master().build()).expect("write ttw.esm");
-    let body = if variant == Variant::FailingInstaller {
-        "echo fake-failure-text >&2\nexit 3".to_owned()
-    } else {
-        format!(
-            "dest=\"\"\nprev=\"\"\nfor a in \"$@\"; do [ \"$prev\" = --dest ] && dest=\"$a\"; prev=\"$a\"; done\n\
-             mkdir -p \"$dest/Meshes\"\necho generated > \"$dest/Meshes/ttw.nif\"\n\
-             cp {} \"$dest/TaleOfTwoWastelands.esm\"\n",
-            esm.display()
-        )
-    };
-    let installer = write_script(&work, "ttw-installer", &body);
-    let hash = sha256_hex(&std::fs::read(&installer).expect("read installer"));
-    let lock = work.join("tools.lock.toml");
-    std::fs::write(
-        &lock,
-        format!(
-            "schema_version = 1\n\n[[tool]]\nname = \"ttw-installer\"\nversion = \"0.2.0\"\nkind = \"third-party\"\n\
-             contracts = {{ ttw-installer-result = 1 }}\n\n[tool.assets.{}]\nurl = \"http://127.0.0.1:9/ttw\"\nsha256 = \"{hash}\"\n",
-            platform()
-        ),
-    )
-    .expect("write lock");
 
     let core = work.join("Core.zip");
     ZipBuilder::new()
@@ -149,12 +118,6 @@ pub fn write_rig(dir: &Path, variant: Variant) -> Rig {
         &gh,
         "--retry-delay-ms",
         "0",
-        "--fallout3",
-        &s(&fo3),
-        "--installer",
-        &s(&installer),
-        "--lock",
-        &s(&lock),
         "--mod",
         &s(&core),
     ]
@@ -206,12 +169,6 @@ mod tests {
                 .unwrap()
                 .expected_setup_exit(),
             3
-        );
-        assert_eq!(
-            Variant::parse("failing-installer")
-                .unwrap()
-                .expected_setup_exit(),
-            4
         );
         assert!(Variant::parse("nope").is_none());
     }

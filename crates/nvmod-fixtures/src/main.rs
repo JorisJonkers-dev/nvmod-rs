@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! `nvmod-fixtures <folder> [ok|wrong-checksum|failing-installer]`: write the synthetic fixtures of a setup run into
+//! `nvmod-fixtures <folder> [ok|wrong-checksum]`: write the synthetic fixtures of a setup run into
 //! the (empty or new) folder and print one JSON document with the arguments to run, to stdout.
 
 #[cfg(unix)]
@@ -7,7 +7,7 @@ fn main() {
     use nvmod_fixtures::{Variant, write_rig};
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (Some(dir), variant) = (args.first(), args.get(1).map_or("ok", String::as_str)) else {
-        eprintln!("usage: nvmod-fixtures <folder> [ok|wrong-checksum|failing-installer]");
+        eprintln!("usage: nvmod-fixtures <folder> [ok|wrong-checksum]");
         std::process::exit(5);
     };
     let Some(variant) = Variant::parse(variant) else {

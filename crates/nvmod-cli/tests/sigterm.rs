@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! SIGTERM and SIGINT during a writing command, against the real binary: the step in flight is rolled back (or,
-//! for `setup --keep-partial`, the partial Instance is kept), the `finished` record says which, and the exit
-//! code is 4. A step is held open by the test hook `NVMOD_PAUSE_AT=<step>`, which creates `NVMOD_PAUSE_FILE`
+//! SIGTERM and SIGINT during a writing command, against the real binary: the step in flight is rolled back, the
+//! `finished` record says so, and the exit code is 4. A step is held open by the test hook `NVMOD_PAUSE_AT=<step>`, which creates `NVMOD_PAUSE_FILE`
 //! when the step is reached. No game data is used.
 #![cfg(unix)]
 use nvmod_testkit::{
@@ -286,62 +285,4 @@ fn sigterm_during_import_mo2_removes_the_new_instance() {
     assert_eq!(out.status.code(), Some(4), "{out:?}");
     assert_eq!(last_json_line(&out)["outcome"], "rolled-back");
     assert!(!instance.exists(), "the half-made Instance is removed");
-}
-
-fn setup_args(s: &Scratch, instance: &Path, extra: &[&str]) -> Vec<String> {
-    let base = base_copy();
-    let mut args = strings(&[
-        "setup",
-        "--base",
-        base.path().to_str().unwrap(),
-        "--instance",
-        instance.to_str().unwrap(),
-        "--masterlist",
-        s.work.path().join("masterlist.yaml").to_str().unwrap(),
-        "--skip-nv-rs",
-        "--mod",
-        &s.zip("Late.zip"),
-        "--json",
-    ]);
-    args.extend(strings(extra));
-    // The base copy lives as long as the process of the caller needs it.
-    std::mem::forget(base);
-    args
-}
-
-#[test]
-fn sigterm_during_setup_rolls_the_run_back_or_keeps_it_with_keep_partial() {
-    let s = Scratch::new();
-    let instance = s.work.path().join("rolled").join("fnv");
-    let out = interrupt(
-        &setup_args(&s, &instance, &[]),
-        "lists",
-        "TERM",
-        s.work.path(),
-    );
-    assert_eq!(out.status.code(), Some(4), "{out:?}");
-    let record = last_json_line(&out);
-    assert_eq!(record["event"], "finished");
-    assert_eq!(record["outcome"], "rolled-back");
-    assert_eq!(record["rolled_back"], true);
-    assert_eq!(record["interrupted"], true);
-    assert!(!instance.exists(), "nothing is left behind");
-
-    let kept = s.work.path().join("kept").join("fnv");
-    let out = interrupt(
-        &setup_args(&s, &kept, &["--keep-partial"]),
-        "lists",
-        "TERM",
-        s.work.path(),
-    );
-    assert_eq!(out.status.code(), Some(4), "{out:?}");
-    let record = last_json_line(&out);
-    assert_eq!(record["outcome"], "kept-partial");
-    assert_eq!(record["resumable"], true);
-    assert_eq!(record["interrupted"], true);
-    assert!(kept.is_dir(), "the partial Instance stays resumable");
-    assert!(
-        !kept.join("mods/Late").exists(),
-        "the step in flight is undone"
-    );
 }

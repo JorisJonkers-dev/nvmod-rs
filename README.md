@@ -22,7 +22,7 @@ nvmod-rs keeps mod management:
 
 These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and planned in its `docs/REORG.md`:
 
-- setup (the pipeline with its journal and resume), `ttw`, `lod` (removed in #166; raul runs LOD), the engine install (`install-nv-rs`), `run`,
+- setup (removed in #164; raul composes it from the mod-management jobs), `ttw` (removed in #165; raul runs TTW through ttwright), `lod` (removed in #166; raul runs LOD), the engine install (`install-nv-rs`), `run`,
   `tools`, `verify` and `contracts`;
 - the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`).
 

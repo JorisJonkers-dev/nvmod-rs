@@ -9,8 +9,8 @@ use std::io::Write;
 use std::path::Path;
 
 thread_local! {
-    /// The Instances this thread holds the lock of: `setup` runs its steps through `run`, which must not
-    /// try to take the lock its own caller holds.
+    /// The Instances this thread holds the lock of, so a nested command run under the lock does not try to
+    /// take it again.
     static HELD: std::cell::RefCell<Vec<std::path::PathBuf>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
@@ -26,8 +26,8 @@ fn writes(args: &[String]) -> bool {
     let word = |i: usize| args.get(i).map(String::as_str);
     let has = |flag: &str| args.iter().any(|a| a == flag);
     match word(0) {
-        Some("stage" | "target" | "install-nv-rs" | "ttw" | "rollback") => true,
-        Some("setup" | "install") => !has("--dry-run"),
+        Some("stage" | "target" | "install-nv-rs" | "rollback") => true,
+        Some("install") => !has("--dry-run"),
         Some("mods") => {
             matches!(word(1), Some("enable" | "disable" | "reorder")) && !has("--dry-run")
         }

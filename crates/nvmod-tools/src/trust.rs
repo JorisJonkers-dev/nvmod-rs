@@ -116,14 +116,17 @@ mod tests {
         let mut trust = Trust::load(dir.path()).unwrap();
         assert_eq!(trust.confirmed.len(), 0);
         trust
-            .record(dir.path(), "ttw", "1.0", &"AB".repeat(32))
+            .record(dir.path(), "some-tool", "1.0", &"AB".repeat(32))
             .unwrap();
         let again = Trust::load(dir.path()).unwrap();
-        assert_eq!(again.find("ttw", "1.0"), Some("ab".repeat(32).as_str()));
-        assert_eq!(again.find("ttw", "1.1"), None);
+        assert_eq!(
+            again.find("some-tool", "1.0"),
+            Some("ab".repeat(32).as_str())
+        );
+        assert_eq!(again.find("some-tool", "1.1"), None);
         assert_eq!(again.find("other", "1.0"), None);
         trust
-            .record(dir.path(), "ttw", "1.0", &"cd".repeat(32))
+            .record(dir.path(), "some-tool", "1.0", &"cd".repeat(32))
             .unwrap();
         assert_eq!(Trust::load(dir.path()).unwrap().confirmed.len(), 1);
     }

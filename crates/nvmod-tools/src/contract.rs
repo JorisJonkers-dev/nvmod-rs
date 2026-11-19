@@ -50,7 +50,6 @@ pub const SNAPSHOTS: &[Snapshot] = &[
     snapshot!("loot-rs", "loot-sort", 1, true),
     snapshot!("nv-rs", "nv-rs-capabilities", 1, false),
     snapshot!("nv-rs", "nv-rs-release-manifest", 1, false),
-    snapshot!("ttw-installer", "ttw-installer-result", 1, false),
 ];
 
 /// Why a document was not accepted under a contract.

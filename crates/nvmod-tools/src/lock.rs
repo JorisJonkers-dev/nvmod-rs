@@ -296,11 +296,11 @@ sha256 = "{HASH}"
     fn a_third_party_tool_may_lack_both() {
         let text = r#"schema_version = 1
 [[tool]]
-name = "ttw-installer"
+name = "third-party-tool"
 version = "3.4"
 kind = "third-party"
 [tool.assets.linux-x86_64]
-url = "https://example.com/ttw"
+url = "https://example.com/tool"
 "#;
         let lock = Lock::parse(text).unwrap();
         assert_eq!(lock.tools[0].assets["linux-x86_64"].sha256, None);

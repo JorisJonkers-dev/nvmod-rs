@@ -23,13 +23,10 @@ mod profile;
 mod profile_apply;
 mod run;
 mod saves;
-mod setup;
-mod setup_state;
 mod sort;
 mod stage;
 mod target;
 mod tools;
-mod ttw;
 mod verify;
 
 pub use logging::{begin as begin_run_log, run_logged};
@@ -123,12 +120,6 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               [--gh <path>] [--curl <path>] [--asset <name>] [--repo <o/r>]
                               build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
                               or PATH) or fetch and verify the fork's release; then run `nv-viewer <data> --check`
-  nvmod ttw --instance <dir> --fallout3 <dir> [--package <file>] [--installer <path>] [--profile <name>] [--json]
-                [--lock <file>] [--store <dir>] [--timeout-secs <n>]
-                              Tale of Two Wastelands through the pinned external installer (never reimplemented):
-                              verify the base game, run the installer with the Fallout 3 folder (it verifies
-                              Fallout 3), check its reported result, import the output as the Mod
-                              `Tale of Two Wastelands`; a failure exits 4 and changes nothing
   nvmod profile create --instance <dir> [--name <name>]
                               make an empty profile (default name `Default`)
   nvmod profile apply --instance <dir> [--profile <name>] [--prefix <dir>] [--dry-run] [--json]
@@ -151,19 +142,6 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               or print the checksums that `nvmod run` compares before and after a launch
   nvmod target <vanilla|nv-rs> --instance <dir>
                               choose what the Instance runs on (the Doctor checks xNVSE's DLL on vanilla)
-  nvmod setup --base <dir> --instance <dir> --masterlist <file> [--import-mo2 <dir>] [--mod <archive>]...
-                [--fallout3 <dir> [--package <file>] [--installer <path>] [--lock <file>] [--store <dir>]]
-                [--release | --source <dir>] [--skip-nv-rs] [--profile <name>] [--answers <file>]
-                [--keep-partial] [--dry-run] [--json]
-  nvmod setup --resume --instance <dir> [--json]
-  nvmod setup --restart --instance <dir> --yes
-                              base copy to a modded, Doctor-clean Instance in one run: init (or the MO2 import),
-                              nv-rs, TTW, each --mod, stage, `sort --apply`, then the Doctor. A failing step
-                              removes what the run made and exits with its code, unless --keep-partial leaves
-                              the Instance resumable: --resume then continues from the first unfinished step
-                              (finished steps are checked again, not trusted) and --restart --yes removes the
-                              partial Instance; --dry-run lists the steps and writes nothing; --json prints one
-                              event per line (plan, resumed, skipped, step, finished)
   nvmod verify --instance <dir> [--profile <name>] [--masterlist <file>] [--catalog <file>] [--proton <program>]
                 [--fail-on <severity>] [--json]
                               confirm an install (read only): the Doctor on the Instance, the installed nv-rs
@@ -208,14 +186,13 @@ exit codes:
   3  verification failure
   4  step failed and rolled back
   5  command line not understood\n
-SIGTERM or SIGINT during setup, install, ttw, import-mo2, mods or sort --apply rolls the step in flight back
-(setup keeps a partial Instance with --keep-partial) and exits 4 with a `finished` record.\n";
+SIGTERM or SIGINT during install, import-mo2, mods or sort --apply rolls the step in flight back
+and exits 4 with a `finished` record.\n";
 
-/// Whether `args` is a command that writes to an Instance and so rolls back when it is stopped: `setup`,
-/// `install`, `ttw`, `import-mo2`, `mods enable|disable|reorder`, `plugins enable|disable|move|lock|unlock` and `sort --apply`.
+/// Whether `args` is a command that writes to an Instance and so rolls back when it is stopped: `install`, `import-mo2`, `mods enable|disable|reorder`, `plugins enable|disable|move|lock|unlock` and `sort --apply`.
 fn writes_instance(args: &[String]) -> bool {
     match args.first().map(String::as_str) {
-        Some("setup" | "install" | "ttw" | "import-mo2") => true,
+        Some("install" | "import-mo2") => true,
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
             Some(
@@ -250,8 +227,7 @@ fn writes_instance(args: &[String]) -> bool {
 
 /// [`run`] for the binary. For a writing command (see [`writes_instance`]) SIGTERM and SIGINT (Ctrl+C on
 /// Windows) do not kill the process: they ask the step in flight to stop, which the journal machinery rolls
-/// back (setup keeps a partial Instance with `--keep-partial`). The run then ends with exit code 4 and a
-/// `finished` record: setup's own event, or for the other commands `{"event":"finished",...,"interrupted":true,
+/// back. The run then ends with exit code 4 and a `finished` record: `{"event":"finished",...,"interrupted":true,
 /// "outcome":"rolled-back"}` on standard output with `--json` and a line on standard error without.
 pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     if writes_instance(args) {
@@ -259,10 +235,7 @@ pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8
         let _ = ctrlc::set_handler(nvmod_core::cancel::request);
     }
     let code = run(args, out, err);
-    if code == ROLLED_BACK
-        && nvmod_core::cancel::requested()
-        && args.first().map(String::as_str) != Some("setup")
-    {
+    if code == ROLLED_BACK && nvmod_core::cancel::requested() {
         let command = args.first().map_or("nvmod", String::as_str);
         if args.iter().any(|a| a == "--json") {
             let _ = writeln!(
@@ -336,7 +309,6 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("profile") => profile::run(&args[1..], out, err),
         Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
-        Some("setup") => setup::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
         Some("exec") => exec::run(&args[1..], out, err),
         Some("run") => run::run(&args[1..], out, err),
@@ -344,7 +316,6 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
-        Some("ttw") => ttw::run(&args[1..], out, err),
         Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
