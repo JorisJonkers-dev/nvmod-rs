@@ -3,14 +3,16 @@
 """Release packaging helpers for .github/workflows/release-assets.yml. Standard library only.
 
     package_release.py notices --metadata FILE --out FILE
-    package_release.py package --target {linux,windows} --version V --binary FILE --notices FILE --out DIR
+    package_release.py package --target {linux,windows,macos} --version V --binary FILE --notices FILE --out DIR
     package_release.py sums    --dir DIR --out FILE
     package_release.py index   --dir DIR --tag TAG --repo OWNER/REPO --date YYYY-MM-DD [--set-id ID] --out FILE
 
 `notices` lists the crates that the `nvmod` binary links (from `cargo metadata --locked`), with licence and source.
-`package` builds nvmod-<version>-x86_64-linux.tar.zst or nvmod-<version>-x86_64-windows.zip (ADR-0009). Nothing but
+`package` builds nvmod-<version>-x86_64-linux.tar.zst, nvmod-<version>-x86_64-windows.zip (ADR-0009) or
+nvmod-<version>-universal-macos.tar.zst (arm64 and x86_64 in one binary, joined with lipo). Nothing but
 nvmod, the licence and the notices is packaged: tools are fetched by lock, never bundled. The Windows zip carries
-the `nvmod.portable` marker (data beside the program, no administrator rights); the tarball follows XDG.
+the `nvmod.portable` marker (data beside the program, no administrator rights); the tarballs keep the system's own
+data folders.
 `index` writes release-index.json (ADR-0010) from the archives found in DIR.
 """
 
@@ -29,7 +31,11 @@ from pathlib import Path
 BINARY_PACKAGE = "nvmod-cli"
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_SCHEMA_VERSION = 1
-ARCHIVE_RE = re.compile(r"^nvmod-(?P<v>\d+\.\d+\.\d+[^-]*)-x86_64-(?P<p>linux|windows)\.(tar\.zst|zip)$")
+# The processor part of each target's archive name: the macOS binary holds both arm64 and x86_64.
+ARCH = {"linux": "x86_64", "windows": "x86_64", "macos": "universal"}
+ARCHIVE_RE = re.compile(
+    r"^nvmod-(?P<v>\d+\.\d+\.\d+[^-]*)-(?P<a>x86_64|universal)-(?P<p>linux|windows|macos)\.(tar\.zst|zip)$"
+)
 README_TEXT = """nvmod {version}
 
 nvmod installs and manages a modded Fallout New Vegas / TTW setup on nv-rs. It never bundles game data or
@@ -92,7 +98,7 @@ def sha256_of(path: Path) -> str:
 
 def stage(target: str, version: str, binary: Path, notices: Path, work: Path) -> Path:
     portable = target == "windows"
-    folder = work / f"nvmod-{version}-x86_64-{target}"
+    folder = work / f"nvmod-{version}-{ARCH[target]}-{target}"
     folder.mkdir(parents=True)
     exe = "nvmod.exe" if portable else "nvmod"
     (folder / exe).write_bytes(binary.read_bytes())
@@ -153,7 +159,9 @@ def build_index(directory: Path, tag: str, repo: str, date: str, set_id: str | N
             continue
         if match["v"] != version:
             raise SystemExit(f"{path.name} is not version {version}")
-        platforms[f"x86_64-{match['p']}"] = {
+        if match["a"] != ARCH[match["p"]]:
+            continue
+        platforms[f"{match['a']}-{match['p']}"] = {
             "url": f"{base}/{path.name}",
             "sha256": sha256_of(path),
             "size": path.stat().st_size,
@@ -178,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     n.add_argument("--metadata", type=Path, required=True)
     n.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("package")
-    p.add_argument("--target", choices=["linux", "windows"], required=True)
+    p.add_argument("--target", choices=sorted(ARCH), required=True)
     p.add_argument("--version", required=True)
     p.add_argument("--binary", type=Path, required=True)
     p.add_argument("--notices", type=Path, required=True)

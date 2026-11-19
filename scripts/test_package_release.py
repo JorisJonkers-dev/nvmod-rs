@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Self-tests of package_release.py: no network, no cargo."""
 
+import io
 import json
+import subprocess
+import tarfile
 import tempfile
 import unittest
 import zipfile
@@ -51,11 +54,26 @@ class PackageReleaseTests(unittest.TestCase):
             self.assertIn("nvmod-1.2.3-x86_64-windows/nvmod.portable", names)
             self.assertIn("nvmod-1.2.3-x86_64-windows/LICENSE", names)
 
+    def test_macos_tarball_is_universal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            (tmp / "bin").write_bytes(b"binary")
+            (tmp / "notices").write_text("n")
+            archive = pr.package("macos", "1.2.3", tmp / "bin", tmp / "notices", tmp / "out")
+            self.assertEqual(archive.name, "nvmod-1.2.3-universal-macos.tar.zst")
+            listing = subprocess.run(["zstd", "-dc", str(archive)], check=True, capture_output=True).stdout
+            with tarfile.open(fileobj=io.BytesIO(listing)) as tf:
+                names = tf.getnames()
+                self.assertEqual(tf.getmember("nvmod-1.2.3-universal-macos/nvmod").mode, 0o755)
+            self.assertIn("nvmod-1.2.3-universal-macos/LICENSE", names)
+            self.assertNotIn("nvmod-1.2.3-universal-macos/nvmod.portable", names)
+
     def test_sums_and_index(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             (tmp / "nvmod-1.2.3-x86_64-linux.tar.zst").write_bytes(b"abc")
             (tmp / "nvmod-1.2.3-x86_64-windows.zip").write_bytes(b"abcd")
+            (tmp / "nvmod-1.2.3-universal-macos.tar.zst").write_bytes(b"abcde")
             sums = tmp / "SHA256SUMS"
             pr.write_sums(tmp, sums)
             self.assertIn(
@@ -69,6 +87,7 @@ class PackageReleaseTests(unittest.TestCase):
                 index["platforms"]["x86_64-windows"]["url"],
                 "https://github.com/o/r/releases/download/v1.2.3/nvmod-1.2.3-x86_64-windows.zip",
             )
+            self.assertEqual(index["platforms"]["universal-macos"]["size"], 5)
             self.assertEqual(index["advisories"], [])
             json.dumps(index)
 
