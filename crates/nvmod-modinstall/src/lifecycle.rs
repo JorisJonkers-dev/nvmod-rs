@@ -100,6 +100,15 @@ pub enum Action {
         /// Only this Mod's files; needed when a file has several providers.
         to: Option<String>,
     },
+    /// Take what programs did to the Staging tree back into the Instance: new files and replaced files go to
+    /// Overwrite (or to the Mod `to`), then the tree is built again, which puts every provider's file back. A
+    /// file written in place and a file deleted are only reported.
+    Sweep {
+        /// The Mod that takes the output, instead of Overwrite.
+        to: Option<String>,
+        /// A glob of paths to stage as copies from now on (added to the profile's protect list).
+        protect: Option<String>,
+    },
     /// Set the categories of a Mod (the first is the primary one); empty clears them.
     Categories {
         /// The category ids.
@@ -127,6 +136,7 @@ impl Action {
             Action::OverwriteMove { .. } => "overwrite-move",
             Action::OverwriteDelete { .. } => "overwrite-delete",
             Action::OverwriteSync { .. } => "overwrite-sync",
+            Action::Sweep { .. } => "sweep",
         }
     }
 }
@@ -158,6 +168,9 @@ pub struct Report {
     /// The paths inside Overwrite an overwrite action moves (or would), `/` separated.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<String>,
+    /// What a sweep found, path by path.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub changes: Vec<nvmod_stage::sweep::Change>,
     /// Files in the Staging tree after the change; `None` when it was not staged again.
     pub staged_files: Option<usize>,
     /// The journal `nvmod rollback` uses; `None` for a dry run or when nothing changed.
@@ -269,6 +282,11 @@ struct Plan {
     dependants: Vec<String>,
     detail: Option<String>,
     files: Vec<String>,
+    changes: Vec<nvmod_stage::sweep::Change>,
+    /// Build the Staging tree again although no step ran.
+    restage: bool,
+    /// A sweep: journaled, but a stop is not rolled back (the files moved are what the program wrote).
+    sweep: bool,
     name: String,
 }
 
@@ -456,6 +474,9 @@ impl Ctx<'_> {
             Action::OverwriteMove { to } => self.overwrite_move(&mut plan, target, to)?,
             Action::OverwriteDelete { more } => self.overwrite_delete(&mut plan, target, more)?,
             Action::OverwriteSync { to } => self.overwrite_sync(&mut plan, to.as_deref())?,
+            Action::Sweep { to, protect } => {
+                self.sweep(&mut plan, to.as_deref(), protect.as_deref())?;
+            }
         }
         Ok(plan)
     }
@@ -992,7 +1013,8 @@ pub fn apply(
         staged: journal::staging_exists(instance, profile),
     };
     let plan = ctx.plan(target, action)?;
-    let unchanged = plan.steps.is_empty() && plan.modlist.is_none() && plan.plugins.is_none();
+    let unchanged =
+        plan.steps.is_empty() && plan.modlist.is_none() && plan.plugins.is_none() && !plan.restage;
     let mut report = Report {
         status: if dry_run {
             "dry-run"
@@ -1011,14 +1033,19 @@ pub fn apply(
         dependants: plan.dependants.clone(),
         detail: plan.detail.clone(),
         files: plan.files.clone(),
+        changes: plan.changes.clone(),
         staged_files: None,
         journal: None,
     };
     if dry_run || unchanged {
         return Ok(report);
     }
-    let mut entry = journal::begin_kind(instance, profile, "", journal::KIND_LIFECYCLE)
-        .map_err(ModsError::Refused)?;
+    let kind = if plan.sweep {
+        journal::KIND_SWEEP
+    } else {
+        journal::KIND_LIFECYCLE
+    };
+    let mut entry = journal::begin_kind(instance, profile, "", kind).map_err(ModsError::Refused)?;
     let dir = instance.profile_dir(profile);
     let outcome = (|| -> Result<Option<usize>, String> {
         for step in &plan.steps {
@@ -1050,6 +1077,9 @@ pub fn apply(
             report.journal = Some(entry.id);
             Ok(report)
         }
+        Err(why) if plan.sweep => Err(ModsError::Failed(format!(
+            "{why}; the sweep stopped, nothing is lost (files already moved are in Overwrite or the Mod); run `nvmod sweep` again"
+        ))),
         Err(why) => match journal::undo(instance, &entry) {
             Ok(()) => Err(ModsError::Failed(format!(
                 "{why}; the change was rolled back"

@@ -8,6 +8,7 @@ use super::{Ctx, Plan, Step, insert_index, refuse, rel_mod, valid_mod_name};
 use crate::lists;
 use crate::mods::{ModsError, Place, join};
 use nvmod_instance::{NvmodInstance, find_ci};
+use nvmod_stage::glob::selects;
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -72,53 +73,6 @@ fn walk(dir: &Path) -> Result<Vec<(String, u64)>, String> {
     go(dir, "", &mut out)?;
     out.sort();
     Ok(out)
-}
-
-/// A glob over `/` separated paths, ignoring case: `*` and `?` stay inside one name, `**` crosses folders.
-fn glob_match(pattern: &str, path: &str) -> bool {
-    fn go(p: &[char], s: &[char]) -> bool {
-        match p.first() {
-            None => s.is_empty(),
-            Some('*') if p.get(1) == Some(&'*') => {
-                let rest = &p[2..];
-                let rest = if rest.first() == Some(&'/') {
-                    &rest[1..]
-                } else {
-                    rest
-                };
-                (0..=s.len()).any(|i| go(rest, &s[i..]))
-            }
-            Some('*') => {
-                let rest = &p[1..];
-                let stop = s.iter().position(|c| *c == '/').unwrap_or(s.len());
-                (0..=stop).any(|i| go(rest, &s[i..]))
-            }
-            Some('?') => s.first().is_some_and(|c| *c != '/') && go(&p[1..], &s[1..]),
-            Some(c) => {
-                s.first()
-                    .is_some_and(|d| d.to_lowercase().eq(c.to_lowercase()))
-                    && go(&p[1..], &s[1..])
-            }
-        }
-    }
-    let p: Vec<char> = pattern.chars().collect();
-    let s: Vec<char> = path.chars().collect();
-    go(&p, &s)
-}
-
-/// Whether `pattern` selects `path`: it matches the path, or a folder the path is under.
-fn selects(pattern: &str, path: &str) -> bool {
-    let mut at = 0;
-    loop {
-        let end = path[at..].find('/').map_or(path.len(), |i| at + i);
-        if glob_match(pattern, &path[..end]) {
-            return true;
-        }
-        if end == path.len() {
-            return false;
-        }
-        at = end + 1;
-    }
 }
 
 /// A path inside Overwrite: `/` separated names, none empty, `.` or `..`.
@@ -476,25 +430,104 @@ impl Ctx<'_> {
     }
 }
 
+impl Ctx<'_> {
+    /// `path` (absolute, under the Instance folder) relative to it, `/` separated.
+    fn relative(&self, path: &Path) -> String {
+        path.strip_prefix(&self.instance.root)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/")
+    }
+
+    /// The sweep: what programs did to the Staging tree since it was built (see `nvmod_stage::sweep`).
+    pub(super) fn sweep(
+        &self,
+        plan: &mut Plan,
+        to: Option<&str>,
+        protect: Option<&str>,
+    ) -> Result<(), ModsError> {
+        use nvmod_stage::sweep::Kind;
+        let changes =
+            nvmod_stage::sweep::scan(self.instance, self.profile).map_err(ModsError::Refused)?;
+        let (base_rel, base_dir) = match to {
+            Some(name) => {
+                let found = self.mod_found(name)?;
+                let folder = Self::folder_or_refuse(&found)?.to_owned();
+                (rel_mod(&folder), self.mods.join(&folder))
+            }
+            None => (OVERWRITE.to_owned(), self.overwrite_dir()),
+        };
+        let tree = self.relative(&self.instance.staging_dir(self.profile).join("data"));
+        let mut taken: Vec<String> = Vec::new();
+        let mut moved: Vec<String> = Vec::new();
+        let mut skipped: Vec<String> = Vec::new();
+        for change in &changes {
+            if !matches!(change.kind, Kind::New | Kind::Replaced) {
+                continue;
+            }
+            let (there, exists) = spelled(&base_dir, &change.spelled);
+            let lower = there.to_lowercase();
+            if taken.contains(&lower) {
+                skipped.push(change.path.clone());
+                continue;
+            }
+            taken.push(lower);
+            let dest = format!("{base_rel}/{there}");
+            if exists {
+                plan.steps.push(Step::TrashPath {
+                    from: dest.clone(),
+                    keep: dest.clone(),
+                });
+            }
+            plan.steps.push(Step::Move {
+                from: format!("{tree}/{}", change.path),
+                to: dest,
+            });
+            moved.push(there);
+        }
+        if let Some(glob) = protect {
+            checked(&glob.replace("**", "x").replace(['*', '?'], "x"))?;
+            let file = self
+                .instance
+                .profile_dir(self.profile)
+                .join(nvmod_stage::PROTECT_FILE);
+            let old = fs::read(&file).unwrap_or_default();
+            let text = nvmod_formats::text::decode(&old);
+            if !nvmod_stage::sweep::parse_globs(&text)
+                .iter()
+                .any(|g| g == glob)
+            {
+                let mut text = text;
+                if !text.is_empty() && !text.ends_with('\n') {
+                    text.push('\n');
+                }
+                text.push_str(glob);
+                text.push('\n');
+                plan.steps.push(Step::Write {
+                    path: self.relative(&file),
+                    bytes: text.into_bytes(),
+                });
+            }
+        }
+        if !skipped.is_empty() {
+            plan.detail = Some(format!(
+                "left in the tree, same path as another file by letter case: {}",
+                skipped.join(", ")
+            ));
+        }
+        plan.sweep = true;
+        plan.restage = !changes.is_empty() || !plan.steps.is_empty();
+        plan.stage = true;
+        plan.files = moved;
+        plan.changes = changes;
+        "sweep".clone_into(&mut plan.name);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn globs_ignore_case_and_stars_stay_in_a_name_unless_doubled() {
-        assert!(glob_match("*.log", "Run.LOG"));
-        assert!(!glob_match("*.log", "a/run.log"));
-        assert!(glob_match("**/*.log", "a/b/run.log"));
-        assert!(glob_match("a/?.ini", "A/x.ini"));
-        assert!(!glob_match("a/?.ini", "a/xy.ini"));
-    }
-
-    #[test]
-    fn a_pattern_that_names_a_folder_takes_everything_under_it() {
-        assert!(selects("Logs", "logs/a/b.txt"));
-        assert!(selects("logs/*", "logs/a/b.txt"));
-        assert!(!selects("logs", "other/logs.txt"));
-    }
 
     #[test]
     fn paths_stay_inside_overwrite() {
