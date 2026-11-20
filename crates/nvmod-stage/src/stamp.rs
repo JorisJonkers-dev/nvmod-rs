@@ -20,7 +20,7 @@ pub fn target_time(index: usize) -> SystemTime {
 
 /// A plugin file that needs a new time.
 #[derive(Debug)]
-pub(crate) struct Stamp {
+pub struct Stamp {
     path: PathBuf,
     time: SystemTime,
     linked: bool,
@@ -49,9 +49,21 @@ fn shares_inode(_: &Path, _: &fs::Metadata) -> bool {
     false
 }
 
+/// Whether a plugin file of `order` in the Staging tree `data` has a time that is not its target time (links are
+/// not looked at: they matter for writing, not for what the game reads).
+#[must_use]
+pub fn times_stale(data: &Path, order: &[Slot]) -> bool {
+    order.iter().enumerate().any(|(index, slot)| {
+        staged_file(data, &slot.name)
+            .and_then(|path| fs::metadata(path).ok())
+            .is_some_and(|meta| meta.modified().ok() != Some(target_time(index)))
+    })
+}
+
 /// The plugin files of `order` that are in the Staging tree and whose time is not right yet, or that still share
 /// their inode with a Mod folder's file.
-pub(crate) fn plan(data: &Path, order: &[Slot]) -> Vec<Stamp> {
+#[must_use]
+pub fn plan(data: &Path, order: &[Slot]) -> Vec<Stamp> {
     let mut stamps = Vec::new();
     for (index, slot) in order.iter().enumerate() {
         let Some(path) = staged_file(data, &slot.name) else {
@@ -81,7 +93,10 @@ fn detach(path: &Path) -> Result<(), String> {
 }
 
 /// Detach and stamp every file. Returns how many were detached.
-pub(crate) fn apply(stamps: &[Stamp]) -> Result<usize, String> {
+///
+/// # Errors
+/// The reason, naming the file, when a copy or a time could not be written.
+pub fn apply(stamps: &[Stamp]) -> Result<usize, String> {
     let mut detached = 0;
     for stamp in stamps {
         let io = |e: std::io::Error| format!("{}: {e}", stamp.path.display());

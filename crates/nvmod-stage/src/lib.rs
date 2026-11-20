@@ -6,8 +6,11 @@
 //! Layout: `staging/<profile>/data/...` is the tree, `staging/<profile>.json` its manifest.
 
 mod plan;
+pub mod stamp;
 
 use nvmod_core::{Finding, Severity};
+use nvmod_formats::plugins::parse_plugin_list;
+use nvmod_formats::text::read_limited;
 use nvmod_instance::{NvmodInstance, find_ci};
 use plan::Plan;
 use serde::{Deserialize, Serialize};
@@ -15,6 +18,79 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub use plan::{Collision, is_mod_metadata, mod_files};
+
+/// One plugin of a Load order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Slot {
+    /// The file name as the lists spell it.
+    pub name: String,
+    /// Listed in `plugins.txt`.
+    pub active: bool,
+}
+
+/// The plugins of `profile_dir` in `loadorder.txt` order (or `plugins.txt` order when there is no
+/// `loadorder.txt`), each marked active when `plugins.txt` lists it. Plugins only in `plugins.txt` follow at the end.
+///
+/// # Errors
+/// The reason, when the profile has neither list or a list cannot be read.
+pub fn read_slots(profile_dir: &Path) -> Result<Vec<Slot>, String> {
+    let read = |file: &str| -> Result<Option<Vec<String>>, String> {
+        let path = profile_dir.join(file);
+        if !path.is_file() {
+            return Ok(None);
+        }
+        read_limited(&path)
+            .map(|bytes| Some(parse_plugin_list(&bytes)))
+            .map_err(|e| format!("{}: {e}", path.display()))
+    };
+    let active = read("plugins.txt")?;
+    let order = read("loadorder.txt")?;
+    if active.is_none() && order.is_none() {
+        return Err(format!(
+            "{} has neither plugins.txt nor loadorder.txt",
+            profile_dir.display()
+        ));
+    }
+    let active = active.unwrap_or_default();
+    let is_active = |name: &str| active.iter().any(|a| a.eq_ignore_ascii_case(name));
+    let mut slots: Vec<Slot> = Vec::new();
+    for name in order.unwrap_or_default().into_iter().chain(active.clone()) {
+        if !slots.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
+            let active = is_active(&name);
+            slots.push(Slot { name, active });
+        }
+    }
+    Ok(slots)
+}
+
+/// The file of `name` in the `Data` folder of a Staging tree (paths are lowercase there), ignoring case.
+#[must_use]
+pub fn staged_file(data: &Path, name: &str) -> Option<PathBuf> {
+    let direct = data.join(name.to_lowercase());
+    if direct.is_file() {
+        Some(direct)
+    } else {
+        find_ci(data, name).filter(|p| p.is_file())
+    }
+}
+
+/// The Load order of `profile` when it has a list, for the file times of a new tree.
+fn load_order(instance: &NvmodInstance, profile: &str) -> Result<Vec<Slot>, StageError> {
+    let dir = instance.profile_dir(profile);
+    if !dir.join("plugins.txt").is_file() && !dir.join("loadorder.txt").is_file() {
+        return Ok(Vec::new());
+    }
+    read_slots(&dir).map_err(StageError::Refused)
+}
+
+/// Whether the plugin file times of the built tree of `profile` do not follow its `loadorder.txt`: what a game
+/// that orders by file time would read as another order. `false` when there is no tree or no list.
+#[must_use]
+pub fn times_stale(instance: &NvmodInstance, profile: &str) -> bool {
+    let data = instance.staging_dir(profile).join("data");
+    data.is_dir()
+        && load_order(instance, profile).is_ok_and(|order| stamp::times_stale(&data, &order))
+}
 
 /// How to build the tree.
 #[derive(Debug, Clone, Copy, Default)]
@@ -195,6 +271,18 @@ pub fn stage(
             return Err(failed(why));
         }
     };
+    // The game orders plugins by file time: the new tree gets the times of the Load order, as `sort --apply`
+    // gives them, so building the tree again never undoes a sort.
+    let stamped = load_order(instance, profile).and_then(|order| {
+        stamp::apply(&stamp::plan(&partial.join("data"), &order)).map_err(StageError::Failed)
+    });
+    if let Err(e) = stamped {
+        let _ = fs::remove_dir_all(&partial);
+        return Err(match e {
+            StageError::Failed(why) => failed(why),
+            refused @ StageError::Refused(_) => refused,
+        });
+    }
     let manifest = Manifest {
         schema: SCHEMA,
         profile: profile.to_owned(),
