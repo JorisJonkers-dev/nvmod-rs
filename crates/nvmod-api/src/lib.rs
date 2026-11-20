@@ -84,6 +84,7 @@ pub mod profile_ops;
 pub mod run;
 pub mod saves;
 pub mod sort_apply;
+pub mod sort_requirements;
 pub mod stage;
 pub mod target;
 pub mod tree;

@@ -75,9 +75,20 @@ pub fn sort(
         "loadorder.sort.reading-masterlist",
     ));
     let masterlist = nvmod_loadorder::load_masterlist(&request.masterlist).map_err(failure)?;
-    let Some(proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
+    let Some(mut proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
         return Ok(Outcome::Cancelled);
     };
+    // The capabilities file is only read on the nv-rs target; a missing or invalid one is no coverage, never an
+    // error of the sort (the Doctor is where that is reported).
+    let caps = (instance.config.target == nvmod_core::Target::NvRs)
+        .then(|| nvmod_tools::Capabilities::load(&instance.nv_rs_capabilities()).ok())
+        .flatten();
+    crate::sort_requirements::adjust(
+        &mut proposal.output,
+        &nvmod_catalog::Catalog::builtin(),
+        instance.config.target,
+        caps.as_ref(),
+    );
     // A stop asked for while loot-rs finished its last step still wins, whether or not the proposal is applied.
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
