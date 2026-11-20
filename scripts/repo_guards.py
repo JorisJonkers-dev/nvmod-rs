@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Repository guards: SPDX headers, no game data or binaries, .gitignore.
 
-    repo_guards.py [--root DIR] {spdx,data,gitignore,release,all}
+    repo_guards.py [--root DIR] {spdx,data,gitignore,release,decisions,all}
 
 Every tracked file is checked. Exit status 0 when clean, 1 when a rule is broken (one line per violation).
 
@@ -15,6 +15,8 @@ Every tracked file is checked. Exit status 0 when clean, 1 when a rule is broken
              version, and release.yml's `cargo update --workspace` then refreshes its Cargo.lock entry),
              release-please-config.json bumps that workspace version, and no extra-files entry names a manifest that
              is not a workspace member. `fuzz` is its own workspace and is excluded.
+  decisions  docs/DECISIONS.md is frozen history and never grows: a decision is one new file under docs/decisions/
+             (see docs/decisions/README.md), so parallel pull requests do not conflict on one table.
 """
 
 from __future__ import annotations
@@ -39,6 +41,8 @@ MAX_BYTES = 256 * 1024
 RELEASE_CONFIG = "release-please-config.json"
 WORKSPACE_VERSION_PATH = "$.workspace.package.version"
 EXCLUDED_CRATES = {"fuzz"}
+DECISIONS_FILE = "docs/DECISIONS.md"
+DECISIONS_FROZEN_LINES = 315
 
 
 def tracked_files(root: Path) -> list[str]:
@@ -140,6 +144,19 @@ def check_release(root: Path) -> list[str]:
     return bad
 
 
+def check_decisions(root: Path) -> list[str]:
+    path = root / DECISIONS_FILE
+    if not path.is_file():
+        return []
+    lines = len(path.read_text(encoding="utf-8").splitlines())
+    if lines > DECISIONS_FROZEN_LINES:
+        return [
+            f"{DECISIONS_FILE}: {lines} lines, frozen at {DECISIONS_FROZEN_LINES}; record a decision as one new file "
+            "docs/decisions/<YYYY-MM-DD>-<slug>.md instead (docs/decisions/README.md)"
+        ]
+    return []
+
+
 def run(root: Path, command: str) -> list[str]:
     files = tracked_files(root)
     bad: list[str] = []
@@ -151,12 +168,14 @@ def run(root: Path, command: str) -> list[str]:
         bad += check_gitignore(root)
     if command in ("release", "all"):
         bad += check_release(root)
+    if command in ("decisions", "all"):
+        bad += check_decisions(root)
     return bad
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["spdx", "data", "gitignore", "release", "all"])
+    parser.add_argument("command", choices=["spdx", "data", "gitignore", "release", "decisions", "all"])
     parser.add_argument("--root", type=Path, default=Path("."))
     args = parser.parse_args(argv)
     violations = run(args.root.resolve(), args.command)

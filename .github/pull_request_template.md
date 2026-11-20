@@ -8,6 +8,7 @@ What this pull request changes and why.
       screenshot from real data. Test files are built in code (`crates/nvmod-testkit`).
 - [ ] Every parser of untrusted input reads through bounded readers and has a fuzz target in `fuzz/`.
 - [ ] Every catalogue entry or format fact carries its provenance (`docs/PRACTICES.md`).
+- [ ] A new decision is one new file under `docs/decisions/`; `docs/DECISIONS.md` is not edited.
 - [ ] New source files carry `SPDX-License-Identifier: GPL-3.0-only` in their first five lines.
 - [ ] Checks: `task check` passes locally.
 

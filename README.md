@@ -74,4 +74,4 @@ Every command prints JSON with `--json`, so scripts and the headless harness nev
 `mise install`, then `task check` runs what the pipeline runs. On NixOS without a linker:
 `nix shell nixpkgs#gcc nixpkgs#lld -c cargo test` with `RUSTFLAGS="-Clink-self-contained=-linker"`. Heavy commands
 go through `capped` (see [`docs/PRACTICES.md`](docs/PRACTICES.md)). Decisions and the questions the owner should
-revisit are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+revisit are one file each in [`docs/decisions/`](docs/decisions/README.md); earlier ones are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
