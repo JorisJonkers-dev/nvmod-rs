@@ -147,6 +147,31 @@ impl NvmodInstance {
         self.write_config(config)
     }
 
+    /// Record `name` as the active Profile (or none) and write `nvmod-instance.json` (temporary file, then a rename).
+    ///
+    /// # Errors
+    /// `Io` when writing fails; the old file is then still in place.
+    pub fn set_selected_profile(&mut self, name: Option<&str>) -> Result<(), InstanceError> {
+        let mut config = self.config.clone();
+        config.selected_profile = name.map(str::to_owned);
+        self.write_config(config)
+    }
+
+    /// The active Profile: the recorded one when its folder exists, else the only Profile there is, else `None`.
+    #[must_use]
+    pub fn active_profile(&self) -> Option<String> {
+        let names = self.profiles();
+        if let Some(chosen) = &self.config.selected_profile
+            && names.iter().any(|n| n == chosen)
+        {
+            return Some(chosen.clone());
+        }
+        match names.as_slice() {
+            [only] => Some(only.clone()),
+            _ => None,
+        }
+    }
+
     fn write_config(&mut self, config: Instance) -> Result<(), InstanceError> {
         let io = |e: std::io::Error| InstanceError::Io(format!("{}: {e}", self.root.display()));
         let text =
@@ -233,7 +258,8 @@ impl NvmodInstance {
         names
     }
 
-    /// The profile a command works on: `wanted` when given and present, else the only profile there is.
+    /// The profile a command works on: `wanted` when given and present, else the active Profile (the one
+    /// `nvmod profile select` recorded, or the only profile there is).
     ///
     /// # Errors
     /// `Refused` when `wanted` names no profile, when there is none, or when there are several and none is named.
@@ -244,7 +270,9 @@ impl NvmodInstance {
             (Some(name), _) => Err(InstanceError::Refused(format!(
                 "the Instance has no profile `{name}`"
             ))),
-            (None, [only]) => Ok(only.clone()),
+            (None, _) if self.active_profile().is_some() => {
+                Ok(self.active_profile().unwrap_or_default())
+            }
             (None, []) => Err(InstanceError::Refused(
                 "the Instance has no profile yet".to_owned(),
             )),

@@ -27,6 +27,11 @@ pub const KIND_PLUGINS: &str = "plugins";
 /// file operations (moves, created folders, rewritten files) in reverse, and never removes a Mod by name.
 pub const KIND_LIFECYCLE: &str = "lifecycle";
 
+/// The kind of journal that `nvmod profile copy|rename|delete` write: it undoes the recorded file operations (a
+/// copy is removed, a moved Profile folder goes back, a rewritten `profile.json` is restored) and touches no
+/// Mod folder, no list of another Profile and no Staging tree beyond them.
+pub const KIND_PROFILE: &str = "profile";
+
 const FILES: [&str; 4] = [
     "modlist.txt",
     "plugins.txt",
@@ -115,7 +120,7 @@ pub enum RollbackError {
 pub struct RollbackReport {
     /// The journal undone.
     pub journal: String,
-    /// What was undone: `install`, `sort`, `mods`, `plugins` or `migrate`.
+    /// What was undone: `install`, `sort`, `mods`, `plugins`, `lifecycle`, `profile` or `migrate`.
     pub kind: String,
     /// The Mod removed (empty for a sort or a mods change).
     pub r#mod: String,
@@ -342,6 +347,13 @@ pub fn undo(instance: &NvmodInstance, entry: &Entry) -> Result<(), String> {
         let old = fs::read(root.join("backup").join(INSTANCE_FILE))
             .map_err(|e| format!("backup of {INSTANCE_FILE}: {e}"))?;
         write_atomic(&instance.root.join(INSTANCE_FILE), &old)?;
+        let mut done = journal.clone();
+        "rolled-back".clone_into(&mut done.status);
+        return save(&root, &done);
+    }
+    if journal.kind == KIND_PROFILE {
+        // The operations hold everything a Profile change did, the Staging tree included.
+        undo_ops(instance, journal, &root)?;
         let mut done = journal.clone();
         "rolled-back".clone_into(&mut done.status);
         return save(&root, &done);

@@ -21,6 +21,13 @@
       "format": "uint32",
       "minimum": 0
     },
+    "selected_profile": {
+      "description": "The Profile that is active (`nvmod profile select`). Absent until one is chosen: the only Profile there is\nis then the active one.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "storefront": {
       "description": "The storefront found when the Instance was made.",
       "$ref": "#/$defs/Storefront"

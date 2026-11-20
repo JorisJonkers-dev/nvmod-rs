@@ -13,6 +13,7 @@ pub mod journal;
 pub mod lifecycle;
 mod lists;
 pub mod mods;
+pub mod profiles;
 
 use fomod::{Answers, Env, FileState, Module, Outcome};
 use nvmod_instance::{NvmodInstance, find_ci};

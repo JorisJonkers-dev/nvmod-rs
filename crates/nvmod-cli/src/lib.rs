@@ -22,6 +22,7 @@ mod pe;
 mod plugins;
 mod profile;
 mod profile_apply;
+mod profile_ops;
 mod run;
 mod saves;
 mod sort;
@@ -139,6 +140,18 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               or PATH) or fetch and verify the fork's release; then run `nv-viewer <data> --check`
   nvmod profile create --instance <dir> [--name <name>]
                               make an empty profile (default name `Default`)
+  nvmod profile list --instance <dir> [--json]
+  nvmod profile copy <from> <to> --instance <dir> [--with-saves] [--dry-run] [--json]
+  nvmod profile rename <from> <to> --instance <dir> [--dry-run] [--json]
+  nvmod profile delete <name> --instance <dir> [--dry-run] [--json]
+  nvmod profile select <name> --instance <dir> [--json]
+  nvmod profile set <LocalSaves|LocalSettings|AutomaticArchiveInvalidation> <true|false> --instance <dir>
+                [--profile <name>] [--dry-run] [--json]
+                              manage the profiles: list them with their enabled counts and switches, copy the lists
+                              and INIs (--with-saves: saves/ too; never the Mods), rename or delete one (refused for
+                              the selected profile, or while the game runs; delete moves the folder to
+                              .nvmod/trash/; both are undone by `nvmod rollback`), select the active profile and
+                              record a per-profile switch in its settings.ini (a launch applies it)
   nvmod profile apply --instance <dir> [--profile <name>] [--prefix <dir>] [--dry-run] [--json]
   nvmod profile finish --instance <dir> [--prefix <dir>] [--dry-run] [--json]
                               place a profile in the Wine prefix before a launch (default prefix: <instance>/compatdata):
@@ -238,7 +251,10 @@ fn writes_instance(args: &[String]) -> bool {
             args.get(1).map(String::as_str),
             Some("backup" | "restore" | "transfer")
         ),
-        Some("profile") => matches!(args.get(1).map(String::as_str), Some("apply" | "finish")),
+        Some("profile") => matches!(
+            args.get(1).map(String::as_str),
+            Some("apply" | "finish" | "copy" | "rename" | "delete" | "select" | "set")
+        ),
         _ => false,
     }
 }
