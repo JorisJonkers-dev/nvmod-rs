@@ -868,7 +868,6 @@ dependencies = [
  "nvmod-modinstall",
  "nvmod-stage",
  "nvmod-testkit",
- "winapi-util",
 ]
 
 [[package]]
@@ -996,6 +995,7 @@ dependencies = [
  "nvmod-testkit",
  "serde",
  "serde_json",
+ "winapi-util",
 ]
 
 [[package]]

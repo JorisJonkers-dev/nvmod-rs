@@ -599,6 +599,11 @@ pub fn plan_staging(
             };
         }
     }
+    if nvmod_stage::times_stale(instance, profile) {
+        return StagingAction::Rebuild {
+            reason: "the plugin file times do not follow loadorder.txt".to_owned(),
+        };
+    }
     StagingAction::Current
 }
 
