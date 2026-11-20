@@ -46,7 +46,15 @@ macro_rules! snapshot {
 
 /// Every snapshot compiled into nvmod.
 pub const SNAPSHOTS: &[Snapshot] = &[
-    snapshot!("lodwright-rs", "lodwright-plan", 1, true),
+    snapshot!("lodwright-rs", "lodwright-bands", 1, false),
+    snapshot!("lodwright-rs", "lodwright-defaults", 1, false),
+    // One progress line of `generate`: a line carries neither `schema_version` nor `contract`, so it is read as v1.
+    snapshot!("lodwright-rs", "lodwright-events", 1, true),
+    snapshot!("lodwright-rs", "lodwright-manifest", 1, false),
+    snapshot!("lodwright-rs", "lodwright-plan", 1, false),
+    snapshot!("lodwright-rs", "lodwright-request", 1, false),
+    snapshot!("lodwright-rs", "lodwright-result", 1, false),
+    snapshot!("lodwright-rs", "lodwright-verify", 1, false),
     snapshot!("loot-rs", "loot-sort", 1, true),
     snapshot!("nv-rs", "nv-rs-capabilities", 1, false),
     snapshot!("nv-rs", "nv-rs-release-manifest", 1, false),

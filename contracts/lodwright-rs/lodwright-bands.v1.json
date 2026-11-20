@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BandsDoc",
+  "description": "Bands v1: the answer of `lodwright bands`.",
+  "type": "object",
+  "properties": {
+    "bands": {
+      "description": "One band per statistic, sorted by statistic.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Band"
+      }
+    },
+    "contract": {
+      "description": "The contract name, `lodwright-bands`.",
+      "type": "string",
+      "const": "lodwright-bands"
+    },
+    "runs": {
+      "description": "The number of reports read.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "schema_version": {
+      "description": "The document version; 1.",
+      "type": "integer",
+      "format": "uint32",
+      "const": 1,
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract",
+    "runs",
+    "bands"
+  ],
+  "$defs": {
+    "Band": {
+      "description": "The range of one statistic over the runs.",
+      "type": "object",
+      "properties": {
+        "max": {
+          "description": "The largest value, rounded to three decimals.",
+          "type": "number",
+          "format": "double"
+        },
+        "min": {
+          "description": "The smallest value, rounded to three decimals.",
+          "type": "number",
+          "format": "double"
+        },
+        "runs": {
+          "description": "How many of the runs report the statistic (a per-block one is missing where that block is).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "statistic": {
+          "description": "The statistic, for example `water.mean` or `water.iou:<block path>`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statistic",
+        "min",
+        "max",
+        "runs"
+      ]
+    }
+  }
+}
