@@ -11,7 +11,7 @@ use nvmod_api::install_nvrs::{
     self as nvrs, InstallRequest as NvRsInstallRequest, Method as NvRsMethod,
 };
 use nvmod_api::loadorder::{SortRequest, sort};
-use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place};
+use nvmod_api::mods::{Change, ChangeRequest, ListRequest, Place, RemoveRequest};
 use nvmod_api::plugins::{
     self as plugins_api, Change as PluginChange, ChangeRequest as PluginChangeRequest,
     ListRequest as PluginListRequest,
@@ -2107,4 +2107,112 @@ fn an_install_nv_rs_request_round_trips_through_json_with_the_defaults() {
     assert_eq!(bare.retry_delay_ms, 1000);
     assert_eq!(bare.source, None);
     assert!(!bare.release);
+}
+
+fn remove_request(s: &Scratch, name: &str, force: bool, dry_run: bool) -> RemoveRequest {
+    RemoveRequest {
+        instance: s.root(),
+        profile: None,
+        name: name.into(),
+        force,
+        dry_run,
+    }
+}
+
+#[test]
+fn a_mods_remove_dry_run_reports_the_removal_and_writes_nothing() {
+    let s = Scratch::new();
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let report = nvmod_api::mods::remove(
+        &remove_request(&s, "Patch", false, true),
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("plans")
+    .done()
+    .expect("not cancelled");
+    assert_eq!((report.status, report.action), ("dry-run", "remove"));
+    assert_eq!(report.name, "Patch");
+    assert_eq!(report.plugins_dropped, ["Patch.esp"]);
+    assert!(s.root().join("mods/Patch/Patch.esp").exists());
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn a_mods_remove_with_dependants_is_refused_without_force_and_changes_nothing() {
+    let s = Scratch::new();
+    // Patch.esp needs Base.esp, which Core provides.
+    let error = nvmod_api::mods::remove(
+        &remove_request(&s, "Core", false, true),
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect_err("refused");
+    assert_eq!((error.kind, error.job), (ErrorKind::Refused, "mods.remove"));
+    assert!(error.to_string().contains("Patch.esp"), "{error}");
+    assert!(s.root().join("mods/Core/Base.esp").exists());
+    // With force the plan lists the dependants.
+    let report = nvmod_api::mods::remove(
+        &remove_request(&s, "Core", true, true),
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("plans")
+    .done()
+    .expect("not cancelled");
+    assert_eq!(report.dependants, ["Patch.esp"]);
+}
+
+#[test]
+fn a_mods_remove_of_an_unknown_mod_is_a_refusal_and_a_cancelled_token_stops_it_first() {
+    let s = Scratch::new();
+    let error = nvmod_api::mods::remove(
+        &remove_request(&s, "Nope", false, true),
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect_err("refused");
+    assert_eq!((error.kind, error.job), (ErrorKind::Refused, "mods.remove"));
+    let cancel = CancelToken::new();
+    cancel.cancel();
+    assert!(matches!(
+        nvmod_api::mods::remove(
+            &remove_request(&s, "Patch", false, false),
+            &mut NoProgress,
+            &cancel
+        ),
+        Ok(Outcome::Cancelled)
+    ));
+    assert!(s.root().join("mods/Patch/Patch.esp").exists());
+}
+
+#[test]
+fn a_mods_remove_takes_the_mod_out_and_rollback_brings_it_back() {
+    // The job refuses while a game or Mod Organizer 2 runs on the host (a process source cannot be set in process:
+    // this crate forbids unsafe code), so the test has nothing to do on such a host.
+    if nvmod_backup::game_running()
+        .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
+        .is_some()
+    {
+        return;
+    }
+    let s = Scratch::new();
+    let report = nvmod_api::mods::remove(
+        &remove_request(&s, "Patch", false, false),
+        &mut NoProgress,
+        &CancelToken::new(),
+    )
+    .expect("removes")
+    .done()
+    .expect("not cancelled");
+    assert_eq!(report.status, "changed");
+    assert!(report.journal.is_some());
+    assert!(!s.root().join("mods/Patch").exists());
+    let modlist = fs::read_to_string(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    assert!(!modlist.contains("Patch"), "{modlist}");
+    let plugins = fs::read_to_string(s.root().join("profiles/Default/plugins.txt")).unwrap();
+    assert!(!plugins.contains("Patch.esp"), "{plugins}");
 }
