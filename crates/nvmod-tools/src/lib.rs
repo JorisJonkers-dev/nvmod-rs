@@ -4,9 +4,6 @@
 //! one is refused), and the one subprocess runner every tool call goes through (an argument vector, a timeout, an
 //! output cap, a scrubbed environment, the tool's checksum re-verified before each run).
 
-// `Curl` is deprecated for callers (nvmod-rs#188); nvmod still uses it until it is removed.
-#![allow(deprecated)]
-
 mod acquire;
 mod capabilities;
 mod contract;

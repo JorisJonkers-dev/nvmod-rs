@@ -2,9 +2,6 @@
 //! The `nvmod` command line. Every command prints JSON with `--json`, so scripts and the harness never depend
 //! on a GUI.
 
-// `Curl` is deprecated for callers (nvmod-rs#188); nvmod still uses it until it is removed.
-#![allow(deprecated)]
-
 mod args;
 mod backup;
 mod catalog;

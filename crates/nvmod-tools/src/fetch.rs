@@ -35,18 +35,15 @@ pub trait Fetcher {
 
 /// The `curl` command line as a fetcher.
 ///
-/// Deprecated: nvmod starts no process (nvmod-rs#188). Implement [`Fetcher`] in the caller; the Toolbox moves its
-/// own fetcher into raul (rauls-trusty-toolbox#392) and `Curl` is removed from nvmod in a later release.
-#[deprecated(
-    note = "implement Fetcher in the caller; Curl is removed in a later release (nvmod-rs#188)"
-)]
+/// Not for new callers: nvmod starts no process (nvmod-rs#188). Implement [`Fetcher`] in the caller instead; the
+/// Toolbox moves its own fetcher into raul (rauls-trusty-toolbox#392) and `Curl` is removed from nvmod in a later
+/// release, after that bump. It is not marked `#[deprecated]`, so a caller's `-D warnings` build stays green.
 #[derive(Debug, Clone)]
 pub struct Curl {
     /// The `curl` program.
     pub program: PathBuf,
 }
 
-#[allow(deprecated)]
 impl Curl {
     fn args(url: &str) -> Vec<String> {
         [
