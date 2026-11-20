@@ -143,6 +143,7 @@ fn installing_from_the_library_equals_installing_the_path_plus_the_meta_update()
             dry_run: false,
             answers: None,
             max_extract_bytes: None,
+            extract_limits: nvmod_api::install::LimitOverrides::default(),
         },
         &mut NoProgress,
         &CancelToken::new(),
