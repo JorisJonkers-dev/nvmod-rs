@@ -39,7 +39,7 @@ nvmod-loadorder = { path = "crates/nvmod-loadorder" }
 nvmod-api = { path = "crates/nvmod-api" }
 nvmod-downloads = { path = "crates/nvmod-downloads" }
 # Linked as a library and pinned to a release tag (ADR-0003, docs/architecture/integration.md of nv-linux).
-loot-rs = { git = "https://github.com/JorisJonkers-dev/loot-rs", tag = "v0.7.0" }
+loot-rs = { git = "https://github.com/JorisJonkers-dev/loot-rs", tag = "v0.8.0" }
 nvmod-import = { path = "crates/nvmod-import" }
 nvmod-install = { path = "crates/nvmod-install" }
 nvmod-modinstall = { path = "crates/nvmod-modinstall" }
