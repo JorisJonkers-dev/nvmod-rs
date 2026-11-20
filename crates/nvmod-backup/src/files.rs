@@ -5,7 +5,7 @@ use crate::{Snapshot, clock};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The text lists MO2 keeps per profile and snapshots cover.
 const LISTS: [&str; 5] = [
@@ -196,7 +196,9 @@ pub(crate) fn mo2_backups(profile_dir: &Path) -> Vec<Snapshot> {
 
 /// The name of a running game process, when one is found. Linux only (it reads `/proc`); elsewhere `None`.
 /// The names are `FalloutNV.exe`, `nvse_loader.exe` and `nv-viewer`, plus those in `NVMOD_GAME_PROCESSES`
-/// (comma separated), matched against the process name without regard to case.
+/// (comma separated), matched against the process name without regard to case. A zombie (a process that
+/// has exited and is waiting to be reaped) does not count. `NVMOD_PROC_DIR` replaces `/proc` as the process
+/// source, so a test can name processes without starting any (and without seeing the host's).
 #[must_use]
 pub fn game_running() -> Option<String> {
     process_running(&["FalloutNV.exe", "nvse_loader.exe", "nv-viewer"])
@@ -215,7 +217,13 @@ pub fn process_running(wanted: &[&str]) -> Option<String> {
                 .filter(|n| !n.is_empty()),
         );
     }
-    for entry in fs::read_dir("/proc").into_iter().flatten().flatten() {
+    let root = std::env::var_os("NVMOD_PROC_DIR").map_or_else(|| "/proc".into(), PathBuf::from);
+    find_in(&root, &names)
+}
+
+/// The first process directory under `root` whose `comm` is one of `names` (lower case) and not a zombie.
+fn find_in(root: &Path, names: &[String]) -> Option<String> {
+    for entry in fs::read_dir(root).into_iter().flatten().flatten() {
         if !entry
             .file_name()
             .to_string_lossy()
@@ -228,6 +236,9 @@ pub fn process_running(wanted: &[&str]) -> Option<String> {
             continue;
         };
         let comm = comm.trim().to_ascii_lowercase();
+        if is_zombie(&entry.path()) {
+            continue;
+        }
         // `comm` holds at most 15 characters, so a longer name matches on its prefix.
         if names
             .iter()
@@ -237,4 +248,62 @@ pub fn process_running(wanted: &[&str]) -> Option<String> {
         }
     }
     None
+}
+
+/// Whether the process directory `dir` holds a zombie: `stat` reads `pid (comm) S ...`, and `S` is `Z`.
+/// Unreadable or odd content is not a zombie.
+fn is_zombie(dir: &Path) -> bool {
+    fs::read_to_string(dir.join("stat")).is_ok_and(|stat| {
+        stat.rsplit_once(')')
+            .is_some_and(|(_, rest)| rest.trim_start().starts_with('Z'))
+    })
+}
+
+#[cfg(test)]
+mod proc_tests {
+    use super::*;
+
+    fn proc_entry(root: &Path, pid: &str, comm: &str, state: &str) {
+        let dir = root.join(pid);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("comm"), format!("{comm}\n")).unwrap();
+        fs::write(dir.join("stat"), format!("{pid} ({comm}) {state} 1 1 1")).unwrap();
+    }
+
+    fn scratch(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("nvmod-proc-{tag}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn names() -> Vec<String> {
+        vec!["falloutnv.exe".to_owned()]
+    }
+
+    #[test]
+    fn a_listed_process_is_found_case_insensitively() {
+        let root = scratch("found");
+        proc_entry(&root, "10", "bash", "S");
+        proc_entry(&root, "11", "FalloutNV.exe", "S");
+        assert_eq!(find_in(&root, &names()).as_deref(), Some("falloutnv.exe"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_zombie_and_a_non_process_entry_are_not_a_running_game() {
+        let root = scratch("zombie");
+        proc_entry(&root, "12", "FalloutNV.exe", "Z");
+        proc_entry(&root, "self", "FalloutNV.exe", "S");
+        assert_eq!(find_in(&root, &names()), None);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_missing_source_finds_nothing() {
+        assert_eq!(
+            find_in(Path::new("/nonexistent-nvmod-proc"), &names()),
+            None
+        );
+    }
 }
