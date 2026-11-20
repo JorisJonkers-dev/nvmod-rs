@@ -326,6 +326,11 @@ fn a_missing_capabilities_file_is_a_warning_that_says_no_coverage_was_used() {
         message.contains("no coverage") && message.contains("capabilities.json"),
         "{message}"
     );
+    // The advice is in plain words: it names no command, since the install is not always an `nvmod` one.
+    assert!(
+        !message.contains("install-nv-rs") && !message.contains('`'),
+        "{message}"
+    );
     assert_eq!(report["nv_rs"]["capabilities"]["status"], "missing");
     assert!(report["nv_rs"]["capabilities"]["path"].is_string());
     assert!(!codes(&report).contains(&"extender.coverage".to_owned()));

@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Defaults",
+  "description": "Defaults v1: the answer of `lodwright defaults --json` and of `lodwright_api::request_defaults`.",
+  "type": "object",
+  "properties": {
+    "contract": {
+      "description": "The contract name, `lodwright-defaults`.",
+      "type": "string",
+      "const": "lodwright-defaults"
+    },
+    "levels": {
+      "description": "The terrain levels a request may list.",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
+      }
+    },
+    "options": {
+      "description": "Every option a user can set, in request order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/OptionInfo"
+      }
+    },
+    "schema_version": {
+      "description": "The document version; 1.",
+      "type": "integer",
+      "format": "uint32",
+      "const": 1,
+      "minimum": 0
+    },
+    "version": {
+      "description": "The lodwright version these defaults belong to.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract",
+    "version",
+    "levels",
+    "options"
+  ],
+  "$defs": {
+    "LevelDefault": {
+      "description": "The default of one terrain level, for an option set per level.",
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "The level (cells per block edge).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "value": {
+          "description": "The default at that level."
+        }
+      },
+      "required": [
+        "level",
+        "value"
+      ]
+    },
+    "OptionInfo": {
+      "description": "One option of the request.",
+      "type": "object",
+      "properties": {
+        "default": {
+          "description": "The default, as the request holds it when the key is left out; `null` when the default is \"the machine\ndecides\" or \"no limit\". For a per-level option, see `per_level`."
+        },
+        "key": {
+          "description": "Where the option sits in the request, dotted: `terrain.water`, or `terrain.levels.quality` for a per-level\noption.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "The kind of value.",
+          "$ref": "#/$defs/OptionKind"
+        },
+        "maximum": {
+          "description": "The highest value `validate` accepts, for a number.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minimum": {
+          "description": "The lowest value `validate` accepts, for a number.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "per_level": {
+          "description": "For a per-level option, the default of each level; empty otherwise.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LevelDefault"
+          }
+        },
+        "power_of_two": {
+          "description": "The value must be a power of two.",
+          "type": "boolean"
+        },
+        "since": {
+          "description": "The lodwright release that introduced the option.",
+          "type": "string"
+        },
+        "tier": {
+          "description": "1: shown to every user; 2: per-level terrain settings; 3: an option a release added, shown behind the\nadvanced gate.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "key",
+        "kind",
+        "default",
+        "tier",
+        "since"
+      ]
+    },
+    "OptionKind": {
+      "description": "What kind of value an option takes.",
+      "oneOf": [
+        {
+          "description": "On or off.",
+          "type": "string",
+          "const": "switch"
+        },
+        {
+          "description": "A whole number.",
+          "type": "string",
+          "const": "integer"
+        },
+        {
+          "description": "A number with a fraction.",
+          "type": "string",
+          "const": "number"
+        },
+        {
+          "description": "A list of text entries.",
+          "type": "string",
+          "const": "list"
+        },
+        {
+          "description": "A map from a text key to a number.",
+          "type": "string",
+          "const": "map"
+        }
+      ],
+      "x-open-enum": true
+    }
+  }
+}

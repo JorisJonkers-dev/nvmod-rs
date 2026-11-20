@@ -13,7 +13,63 @@
       "accepted": [
         1
       ],
+      "contract": "lodwright-bands",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-defaults",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-events",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-manifest",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
       "contract": "lodwright-plan",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-request",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-result",
+      "current": 1,
+      "tool": "lodwright-rs"
+    },
+    {
+      "accepted": [
+        1
+      ],
+      "contract": "lodwright-verify",
       "current": 1,
       "tool": "lodwright-rs"
     },
