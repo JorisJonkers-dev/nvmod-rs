@@ -19,6 +19,7 @@ mod logging;
 mod mods;
 mod mods_life;
 mod nvse_usage;
+mod overwrite;
 mod pe;
 mod plugins;
 mod profile;
@@ -126,6 +127,13 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               .nvmod/backups.json); prune keeps the newest 10 and one per day for 14 days;
                               restore verifies (exit 3 on a mismatch), snapshots the current state first and
                               refuses while the game runs; it also reads MO2's own timestamped list backups
+  nvmod overwrite list [--json] | create-mod <name> [<glob>...] | move <path> --to <mod> | delete <path>... |
+                sync [--to <mod>] --instance <dir> [--profile <name>] [--dry-run] [--json]
+                              Overwrite holds what programs wrote that no Mod owns: list it (with the Mods that
+                              provide the same path), make a Mod of all or some of it (at the top of the list; its
+                              plugins are listed as inactive), move a file or folder into a Mod, delete to the trash,
+                              or sync the files a Mod provides back into that Mod (several providers need --to);
+                              every change is undone by `nvmod rollback`
   nvmod plugins list --instance <dir> [--profile <name>] [--json]
   nvmod plugins enable <plugin>... [--with-masters] --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod plugins disable <plugin>... --instance <dir> [--profile <name>] [--dry-run] [--json]
@@ -256,6 +264,10 @@ fn writes_instance(args: &[String]) -> bool {
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
+        Some("overwrite") => matches!(
+            args.get(1).map(String::as_str),
+            Some("create-mod" | "move" | "delete" | "sync")
+        ),
         Some("sort") => args.iter().any(|a| a == "--apply" || a == "--keep-order"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
         Some("saves") => matches!(
@@ -379,6 +391,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("mods") => mods::run(&args[1..], out, err),
         Some("profile") => profile::run(&args[1..], out, err),
+        Some("overwrite") => overwrite::run(&args[1..], out, err),
         Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
