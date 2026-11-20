@@ -28,6 +28,9 @@ fn writes(args: &[String]) -> bool {
     match word(0) {
         Some("stage" | "target" | "install-nv-rs" | "rollback") => true,
         Some("install") => !has("--dry-run"),
+        Some("downloads") => {
+            matches!(word(1), Some("install" | "hide" | "unhide" | "forget")) && !has("--dry-run")
+        }
         Some("mods") => {
             matches!(word(1), Some("enable" | "disable" | "reorder")) && !has("--dry-run")
         }

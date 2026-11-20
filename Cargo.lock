@@ -535,6 +535,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69b6441f590336821bb897fb28fc622898ccceb1d6cea3fde5ea86b090c4de98"
+dependencies = [
+ "cfg-if",
+ "digest",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -656,6 +666,7 @@ dependencies = [
  "nvmod-conflicts",
  "nvmod-core",
  "nvmod-doctor",
+ "nvmod-downloads",
  "nvmod-formats",
  "nvmod-import",
  "nvmod-install",
@@ -778,6 +789,19 @@ dependencies = [
  "nvmod-tools",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "nvmod-downloads"
+version = "0.13.0"
+dependencies = [
+ "md-5",
+ "nvmod-formats",
+ "nvmod-testkit",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
