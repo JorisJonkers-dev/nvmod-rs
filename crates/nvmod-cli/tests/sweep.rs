@@ -176,7 +176,12 @@ fn a_case_variant_of_an_existing_folder_uses_the_existing_spelling() {
     s.create("TEXTURES/New.dds", b"new");
     s.json(&[]);
     assert_eq!(s.read("overwrite/Textures/New.dds"), "new");
-    assert!(!s.root().join("overwrite/TEXTURES").exists());
+    // Compare the stored spelling: `exists()` is case-insensitive on Windows and macOS.
+    let names: Vec<String> = fs::read_dir(s.root().join("overwrite"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(names, ["Textures"]);
 }
 
 #[test]
