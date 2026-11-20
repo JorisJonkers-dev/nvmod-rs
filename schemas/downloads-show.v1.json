@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShowReport",
+  "description": "`nvmod downloads show --json`.",
+  "type": "object",
+  "properties": {
+    "archive": {
+      "description": "The archive.",
+      "$ref": "#/$defs/Archive"
+    },
+    "downloads_dir": {
+      "description": "The folder the archive is in.",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "The version of this layout.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "downloads_dir",
+    "archive"
+  ],
+  "$defs": {
+    "Archive": {
+      "description": "One archive of the downloads folder.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "The archive's file name only.",
+          "type": "string"
+        },
+        "game_name": {
+          "description": "`gameName` of the `.meta`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "has_meta": {
+          "description": "Whether a `.meta` file sits beside it. Without one the provenance is unknown.",
+          "type": "boolean"
+        },
+        "id_source": {
+          "description": "Where `nexus_mod_id` came from.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IdSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "matched_mod": {
+          "description": "The installed Mod it matches.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MatchedMod"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "md5": {
+          "description": "MD5, when asked for.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mod_name": {
+          "description": "`modName` of the `.meta`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified": {
+          "description": "Its last change, in seconds since 1970 (`None` when the file system does not say).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "name": {
+          "description": "`name` of the `.meta`: the file's name on the Nexus.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "newest_version": {
+          "description": "`newestVersion` of the `.meta`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nexus_file_id": {
+          "description": "The Nexus file id (`fileID` of the `.meta`; the file name carries none).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "nexus_mod_id": {
+          "description": "The Nexus mod id (`modID` of the `.meta`, else the file name pattern).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "repository": {
+          "description": "`repository` of the `.meta`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha256": {
+          "description": "SHA-256, when asked for.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size": {
+          "description": "Its size in bytes.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "state": {
+          "description": "Its state.",
+          "$ref": "#/$defs/State"
+        },
+        "version": {
+          "description": "`version` of the `.meta`, else the version of the file name pattern.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "file",
+        "size",
+        "state",
+        "has_meta"
+      ]
+    },
+    "IdSource": {
+      "description": "Where the Nexus mod id of an archive came from.",
+      "oneOf": [
+        {
+          "description": "The `modID` key of the `.meta`.",
+          "type": "string",
+          "const": "meta"
+        },
+        {
+          "description": "The Nexus file name pattern (`<name>-<modid>-<version>-<timestamp>.<ext>`).",
+          "type": "string",
+          "const": "file-name"
+        }
+      ]
+    },
+    "MatchedBy": {
+      "description": "How an installed Mod was matched to an archive.",
+      "oneOf": [
+        {
+          "description": "The Mod's `installationFile` is this archive's file name (compared without regard to case).",
+          "type": "string",
+          "const": "installation-file"
+        },
+        {
+          "description": "No Mod names this archive, but a Mod has the same Nexus mod id: another file of the same Nexus mod.",
+          "type": "string",
+          "const": "mod-id"
+        }
+      ]
+    },
+    "MatchedMod": {
+      "description": "The installed Mod an archive matches.",
+      "type": "object",
+      "properties": {
+        "by": {
+          "description": "How it matched.",
+          "$ref": "#/$defs/MatchedBy"
+        },
+        "name": {
+          "description": "The Mod's folder name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "by"
+      ]
+    },
+    "State": {
+      "description": "Where an archive stands, as MO2 shows it.",
+      "oneOf": [
+        {
+          "description": "A Mod installed from this archive is in the Instance, or the `.meta` says it was installed.",
+          "type": "string",
+          "const": "installed"
+        },
+        {
+          "description": "Downloaded and not installed (including one that was installed and then removed).",
+          "type": "string",
+          "const": "uninstalled"
+        },
+        {
+          "description": "Hidden from the list (`removed=true` in the `.meta`, MO2's \"hide\").",
+          "type": "string",
+          "const": "hidden"
+        },
+        {
+          "description": "An unfinished download (`paused=true`, or a file name ending in `.unfinished`).",
+          "type": "string",
+          "const": "paused"
+        }
+      ]
+    }
+  }
+}

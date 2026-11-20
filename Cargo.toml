@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nvmod-runner", "crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures", "crates/nvmod-conflicts", "crates/nvmod-backup", "crates/nvmod-plugins", "crates/nvmod-profile", "crates/nvmod-runlog", "crates/nvmod-saves", "crates/nvmod-run", "crates/nvmod-bsa", "crates/nvmod-api"]
+members = ["crates/nvmod-runner", "crates/nvmod-core", "crates/nvmod-cli", "crates/nvmod-pe", "crates/nvmod-testkit", "crates/nvmod-formats", "crates/nvmod-catalog", "crates/nvmod-doctor", "crates/nvmod-instance", "crates/nvmod-stage", "crates/nvmod-import", "crates/nvmod-install", "crates/nvmod-modinstall", "crates/nvmod-loadorder", "crates/nvmod-tools", "crates/nvmod-fixtures", "crates/nvmod-conflicts", "crates/nvmod-backup", "crates/nvmod-plugins", "crates/nvmod-profile", "crates/nvmod-runlog", "crates/nvmod-saves", "crates/nvmod-run", "crates/nvmod-bsa", "crates/nvmod-api", "crates/nvmod-downloads"]
 # fuzz/ is its own workspace (libfuzzer-sys stays out of the shipped crates).
 exclude = ["fuzz"]
 
@@ -37,6 +37,7 @@ nvmod-run = { path = "crates/nvmod-run" }
 nvmod-tools = { path = "crates/nvmod-tools" }
 nvmod-loadorder = { path = "crates/nvmod-loadorder" }
 nvmod-api = { path = "crates/nvmod-api" }
+nvmod-downloads = { path = "crates/nvmod-downloads" }
 # Linked as a library and pinned to a release tag (ADR-0003, docs/architecture/integration.md of nv-linux).
 loot-rs = { git = "https://github.com/JorisJonkers-dev/loot-rs", tag = "v0.7.0" }
 nvmod-import = { path = "crates/nvmod-import" }
