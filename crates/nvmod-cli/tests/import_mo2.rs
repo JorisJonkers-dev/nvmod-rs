@@ -423,3 +423,34 @@ fn the_import_writes_a_profile_record_that_loads() {
     );
     assert!(record.mods.iter().all(|m| !m.name.ends_with("_separator")));
 }
+
+#[test]
+fn an_imported_profile_keeps_its_lists_and_the_doctor_names_base_masters_they_lack() {
+    let w = World::new();
+    write_file(w.base.path(), "Data/DeadMoney.esm", b"synthetic master");
+    let (code, out, err) = w.import(&[]);
+    assert_eq!(code, 0, "{out} {err}");
+    let profile = w.instance().join("profiles/Example Profile");
+    // The import copies MO2's lists byte for byte; it does not add the base masters.
+    assert_eq!(std::fs::read(profile.join("plugins.txt")).unwrap(), PLUGINS);
+    let (_, out, err) = nvmod(&[
+        "doctor",
+        "--instance",
+        w.instance().to_str().unwrap(),
+        "--json",
+    ]);
+    let report = json(&out);
+    let found: Vec<_> = report["findings"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{out} {err}"))
+        .iter()
+        .filter(|f| f["code"] == "loadorder.base-master-unlisted")
+        .collect();
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("DeadMoney.esm")
+    );
+}

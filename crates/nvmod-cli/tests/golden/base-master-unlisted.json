@@ -1,0 +1,11 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "loadorder.base-master-unlisted",
+      "message": "the base copy has DeadMoney.esm, HonestHearts.esm that this profile's plugins.txt does not list; the game loads them, but sort, LOD planning and save checks do not see them. List them: `nvmod plugins enable DeadMoney.esm HonestHearts.esm --instance <dir> --profile Default` (each goes to its place among the base masters; nothing else changes), then `nvmod stage` if the Staging tree is stale",
+      "severity": "warning",
+      "subject": "Default"
+    }
+  ]
+}

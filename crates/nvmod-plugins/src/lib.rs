@@ -330,6 +330,20 @@ fn forced_refusal(order: &[Slot], name: &str, what: &str) -> Result<(), PluginsE
     Ok(())
 }
 
+/// Where an unlisted master of the base game goes: right after the last listed master that the game loads before
+/// it (the front when none is listed), so a Profile that lacks the DLC gets them back in the game's order.
+/// `None` for any other plugin.
+fn base_master_place(order: &[Slot], name: &str) -> Option<usize> {
+    let rank = nvmod_instance::BASE_MASTERS
+        .iter()
+        .position(|m| m.eq_ignore_ascii_case(name))?;
+    let before = nvmod_instance::BASE_MASTERS[..rank]
+        .iter()
+        .filter_map(|m| find(order, m))
+        .max();
+    Some(before.map_or(0, |i| i + 1))
+}
+
 fn enable_one(
     ctx: &Context,
     order: &mut Vec<Slot>,
@@ -402,11 +416,15 @@ fn enable_one(
     let at = if let Some(i) = find(order, &canonical) {
         i
     } else {
-        order.push(Slot {
-            name: canonical.clone(),
-            active: false,
-        });
-        order.len() - 1
+        let at = base_master_place(order, &canonical).unwrap_or(order.len());
+        order.insert(
+            at,
+            Slot {
+                name: canonical.clone(),
+                active: false,
+            },
+        );
+        at
     };
     order[at].active = true;
     // Masters that load after the plugin move to just before it.
