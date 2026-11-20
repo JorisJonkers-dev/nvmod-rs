@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.14.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.13.0...v0.14.0) (2026-11-20)
+
+
+### Features
+
+* **api:** a job obeys its own cancel token and not the process-wide stop request ([#221](https://github.com/JorisJonkers-dev/nvmod-rs/issues/221)) ([214612c](https://github.com/JorisJonkers-dev/nvmod-rs/commit/214612cf379c63e15bffc8b98542c8a3f8a8833f))
+* **api:** a typed mods remove job ([#220](https://github.com/JorisJonkers-dev/nvmod-rs/issues/220)) ([c29df95](https://github.com/JorisJonkers-dev/nvmod-rs/commit/c29df95188ddeb64dd4ebd07774bc32e4477d724))
+* **downloads:** the downloads library with list, show, install, hide, unhide and forget ([#217](https://github.com/JorisJonkers-dev/nvmod-rs/issues/217)) ([4b8073f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4b8073f8e711786c7db48ab10c41037d8c2dc3bf))
+* **tools:** vendor all eight lodwright-rs v0.6.0 contracts ([#218](https://github.com/JorisJonkers-dev/nvmod-rs/issues/218)) ([b03b227](https://github.com/JorisJonkers-dev/nvmod-rs/commit/b03b227bec74dc225fc43ae0bfa6f7994ab09ea0))
+
+
+### Bug Fixes
+
+* **doctor:** the missing-capabilities advice names no command ([#219](https://github.com/JorisJonkers-dev/nvmod-rs/issues/219)) ([dd50f20](https://github.com/JorisJonkers-dev/nvmod-rs/commit/dd50f20bac30d5afd1a470db296374a4b5ba708b))
+* **modinstall:** bound archive extraction by entry size, ratio, depth, steps and time ([#81](https://github.com/JorisJonkers-dev/nvmod-rs/issues/81)) ([#216](https://github.com/JorisJonkers-dev/nvmod-rs/issues/216)) ([9701721](https://github.com/JorisJonkers-dev/nvmod-rs/commit/9701721e80e5e2d7e0a42b7d1bbbbc3390b7e43b))
+* **profile:** a new Profile lists the base copy's DLC masters ([#225](https://github.com/JorisJonkers-dev/nvmod-rs/issues/225)) ([767d50b](https://github.com/JorisJonkers-dev/nvmod-rs/commit/767d50bf01cd3f85897e71d0083b3dc15094b557))
+* **run:** the Mod Organizer 2 check reads NVMOD_PROC_DIR and skips zombies ([#211](https://github.com/JorisJonkers-dev/nvmod-rs/issues/211)) ([8c92873](https://github.com/JorisJonkers-dev/nvmod-rs/commit/8c92873545c564cb937069c7fca5bccd90ca510c))
+
 ## [0.13.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.12.0...v0.13.0) (2026-11-20)
 
 
