@@ -776,6 +776,10 @@ pub struct CategorisedRow {
     pub row: crate::mods::ModRow,
     /// The categories in `meta.ini`, the primary one first.
     pub categories: Vec<CategoryRef>,
+    /// Whether the Mod is generated (its `meta.ini` carries the marker of the Toolbox's generated LOD Mod). Such a
+    /// Mod is left out of update checks and conflict results. Only written when true.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub generated: bool,
 }
 
 /// The rows of `profile` with their categories (from each `meta.ini`, named by `categories.dat` at the Instance
@@ -805,7 +809,14 @@ pub fn list_categorised(
                     name: cats.name(id).map(str::to_owned),
                 })
                 .collect();
-            CategorisedRow { row, categories }
+            let generated = row.kind == "mod"
+                && folder_of(&mods, &row.name)
+                    .is_some_and(|f| nvmod_formats::metaini::is_generated_mod_dir(&mods.join(f)));
+            CategorisedRow {
+                row,
+                categories,
+                generated,
+            }
         })
         .filter(|r| only.is_none_or(|id| r.categories.iter().any(|c| c.id == id)))
         .collect()

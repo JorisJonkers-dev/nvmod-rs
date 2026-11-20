@@ -100,6 +100,16 @@ pub struct ModConflict {
     pub overwritten_by_mods: Vec<String>,
 }
 
+/// An enabled Mod the conflict report leaves out, and why.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Excluded {
+    /// The Mod folder name.
+    #[serde(rename = "mod")]
+    pub name: String,
+    /// The reason, one line.
+    pub reason: String,
+}
+
 /// The conflicts of a profile.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Report {
@@ -109,6 +119,9 @@ pub struct Report {
     pub mods: Vec<ModConflict>,
     /// Every contested path once, in path order.
     pub conflicts: Vec<Contested>,
+    /// Enabled Mods left out of the report (a generated Mod), one reason each; absent when none was.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub excluded: Vec<Excluded>,
     /// The archive axes (`conflicts --archives`); absent otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archives: Option<archives::ArchiveReport>,
@@ -319,8 +332,34 @@ pub fn analyze(profile: &str, layers: &[Layer]) -> Report {
         profile: profile.to_owned(),
         mods,
         conflicts,
+        excluded: Vec::new(),
         archives: None,
     }
+}
+
+/// Take the generated Mods out of `layers` (highest priority first) and say why. A generated Mod (the Toolbox's
+/// LOD Mod) has thousands of files at the top priority and would drown the conflict view.
+fn without_generated(instance: &NvmodInstance, layers: Vec<Layer>) -> (Vec<Layer>, Vec<Excluded>) {
+    let mut excluded = Vec::new();
+    let kept = layers
+        .into_iter()
+        .filter(|layer| {
+            let generated = layer.kind == Kind::Mod
+                && nvmod_formats::metaini::is_generated_mod_dir(&instance.mod_dir(&layer.name));
+            if generated {
+                excluded.push(Excluded {
+                    name: layer.name.clone(),
+                    reason: format!(
+                        "`{}` is a generated Mod ({} file(s)); its paths are not listed as conflicts",
+                        layer.name,
+                        layer.files.len()
+                    ),
+                });
+            }
+            !generated
+        })
+        .collect();
+    (kept, excluded)
 }
 
 /// The virtual Data folder of `layers` (highest priority first, the base copy last).
@@ -362,7 +401,10 @@ pub fn provider_file(
 /// # Errors
 /// See [`scan`].
 pub fn conflicts(instance: &NvmodInstance, profile: &str) -> Result<Report, ConflictError> {
-    Ok(analyze(profile, &scan(instance, profile, false)?))
+    let (layers, excluded) = without_generated(instance, scan(instance, profile, false)?);
+    let mut report = analyze(profile, &layers);
+    report.excluded = excluded;
+    Ok(report)
 }
 
 /// The conflicts of `profile` with the archive axes: which archives load, and where an archive and a loose file or
@@ -374,8 +416,9 @@ pub fn conflicts_with_archives(
     instance: &NvmodInstance,
     profile: &str,
 ) -> Result<Report, ConflictError> {
-    let layers = scan(instance, profile, false)?;
+    let (layers, excluded) = without_generated(instance, scan(instance, profile, false)?);
     let mut report = analyze(profile, &layers);
+    report.excluded = excluded;
     report.archives = Some(archives::archive_report(instance, profile, &layers));
     Ok(report)
 }
@@ -409,6 +452,9 @@ impl Report {
     /// # Errors
     /// `Refused` when `name` is not a layer of the report.
     pub fn only(mut self, name: &str) -> Result<Report, ConflictError> {
+        if let Some(left_out) = self.excluded.iter().find(|e| e.name == name) {
+            return Err(ConflictError::Refused(left_out.reason.clone()));
+        }
         if !self.mods.iter().any(|m| m.name == name) {
             return Err(ConflictError::Refused(format!(
                 "the profile `{}` has no enabled Mod `{name}`",
