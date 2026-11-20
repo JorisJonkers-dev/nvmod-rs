@@ -97,33 +97,6 @@ fn print_report(out: &mut dyn Write, r: &Report) {
     }
 }
 
-/// The active plugins of other Mods that need a plugin `target` provides.
-fn dependants_of(instance: &NvmodInstance, profile: &str, target: &str) -> Vec<String> {
-    let Ok(list) = nvmod_plugins::list(instance, profile) else {
-        return Vec::new();
-    };
-    let theirs: Vec<&str> = list
-        .plugins
-        .iter()
-        .filter(|p| {
-            p.provider
-                .as_deref()
-                .is_some_and(|m| m.eq_ignore_ascii_case(target))
-        })
-        .map(|p| p.name.as_str())
-        .collect();
-    list.plugins
-        .iter()
-        .filter(|p| p.active && !theirs.contains(&p.name.as_str()))
-        .filter(|p| {
-            p.masters
-                .iter()
-                .any(|m| theirs.iter().any(|t| t.eq_ignore_ascii_case(&m.name)))
-        })
-        .map(|p| p.name.clone())
-        .collect()
-}
-
 fn known_categories(instance: &NvmodInstance) -> Vec<u32> {
     std::fs::read(instance.root.join("categories.dat")).map_or_default(|b| {
         nvmod_formats::categories::Categories::parse(&b)
@@ -255,7 +228,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     }
     match &mut action {
         Action::Remove { dependants, .. } => {
-            *dependants = dependants_of(&instance, &profile, &target);
+            *dependants = nvmod_api::mods::plugin_dependants(&instance, &profile, &target);
         }
         Action::Categories { known, .. } => *known = known_categories(&instance),
         _ => {}
