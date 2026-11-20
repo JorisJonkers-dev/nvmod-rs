@@ -6,6 +6,7 @@
 //! [`Question`], and an answers file completes it. Nothing is guessed: a type that depends on something this
 //! program cannot see makes the group a question too.
 
+use schemars::JsonSchema;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -27,7 +28,7 @@ pub trait Env {
 }
 
 /// How a group limits the selection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
 pub enum GroupKind {
     /// `SelectAny`.
     SelectAny,
@@ -66,7 +67,7 @@ impl GroupKind {
 }
 
 /// A plugin's type descriptor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
 pub enum PluginType {
     /// Must be installed.
     Required,
@@ -118,12 +119,17 @@ pub struct FileItem {
     pub folder: bool,
     /// Higher wins when two items write the same file.
     pub priority: i32,
+    /// `alwaysInstall`: installed when its step is shown, whether or not its option is chosen.
+    pub always: bool,
+    /// `installIfUsable`: installed when its option is not `NotUsable`, whether or not it is chosen.
+    pub if_usable: bool,
 }
 
 #[derive(Debug, Clone)]
 struct Plugin {
     name: String,
     description: String,
+    image: Option<String>,
     files: Vec<FileItem>,
     flags: Vec<(String, String)>,
     kind: TypeSpec,
@@ -152,6 +158,7 @@ struct Pattern {
 /// A parsed `ModuleConfig.xml`.
 #[derive(Debug, Clone)]
 pub struct Module {
+    name: String,
     required: Vec<FileItem>,
     steps: Vec<Step>,
     patterns: Vec<Pattern>,
@@ -192,6 +199,10 @@ fn ordered<'a, 'b>(container: Option<Node<'a, 'b>>, tag: &'a str) -> Vec<Node<'a
     items
 }
 
+fn flag(node: Node, name: &str) -> bool {
+    attr(node, name).is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+}
+
 fn files_of(node: Option<Node>) -> Vec<FileItem> {
     let Some(node) = node else {
         return Vec::new();
@@ -210,6 +221,8 @@ fn files_of(node: Option<Node>) -> Vec<FileItem> {
                 priority: attr(n, "priority")
                     .and_then(|p| p.trim().parse().ok())
                     .unwrap_or(0),
+                always: flag(n, "alwaysInstall"),
+                if_usable: flag(n, "installIfUsable"),
             })
         })
         .collect()
@@ -340,6 +353,11 @@ impl Module {
                                     .unwrap_or_default()
                                     .trim()
                                     .to_owned(),
+                                image: child(p, "image")
+                                    .and_then(|i| attr(i, "path"))
+                                    .map(str::trim)
+                                    .filter(|path| !path.is_empty())
+                                    .map(str::to_owned),
                                 files: files_of(child(p, "files")),
                                 flags: child(p, "conditionFlags")
                                     .into_iter()
@@ -368,6 +386,11 @@ impl Module {
             })
             .collect();
         Ok(Module {
+            name: child(root, "moduleName")
+                .and_then(|n| n.text())
+                .unwrap_or_default()
+                .trim()
+                .to_owned(),
             required: files_of(child(root, "requiredInstallFiles")),
             steps,
             patterns,
@@ -388,6 +411,9 @@ pub struct QuestionOption {
     /// The type, when it is known (`None`: it depends on something unknown).
     #[serde(rename = "type")]
     pub kind: Option<PluginType>,
+    /// The option's image, a path inside the archive as the FOMOD spells it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
 }
 
 /// A group the installer cannot answer by itself.
@@ -412,7 +438,7 @@ pub struct Question {
 }
 
 /// A choice made without asking.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 pub struct Inferred {
     /// The question id it would have had.
     pub id: String,
@@ -429,6 +455,89 @@ pub struct Selection {
     pub files: Vec<FileItem>,
     /// Choices made without asking.
     pub inferred: Vec<Inferred>,
+    /// The given answers that counted: those of groups the installer reached, each with the options in the
+    /// order of the group. An answer to a step that a flag hides is left out, so replaying this gives the same
+    /// plan.
+    pub answers: Answers,
+}
+
+/// A choice the installer made for a group without asking, with the reason.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct Decided {
+    /// The options chosen.
+    pub selected: Vec<String>,
+    /// Why this was unambiguous.
+    pub reason: String,
+}
+
+/// One option of a [`GroupEvent`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct OptionEvent {
+    /// The name; this is what an answer gives back.
+    pub name: String,
+    /// The author's description (empty when there is none).
+    pub description: String,
+    /// The option's image, a path inside the archive as the FOMOD spells it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    /// The type descriptor evaluated against the flags set so far and the active Plugins. `null` when it
+    /// depends on something nothing here can see (an unanswered group of the same step, a file that is not a
+    /// Plugin).
+    #[serde(rename = "type")]
+    pub kind: Option<PluginType>,
+    /// True when the author gave the type as a `dependencyType` with patterns, false for a fixed type.
+    pub dynamic: bool,
+    /// False for a `NotUsable` option: it cannot be chosen.
+    pub usable: bool,
+    /// Whether to show the option ticked: the answer given, else the choice made for the group, else the
+    /// previous answer, else the author's `Required` and `Recommended` options.
+    pub selected: bool,
+}
+
+/// One group of a [`StepEvent`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct GroupEvent {
+    /// `step name/group name`, the key in the answers.
+    pub id: String,
+    /// The group's name.
+    pub name: String,
+    /// The group's rule.
+    pub kind: GroupKind,
+    /// The fewest options to choose.
+    pub min: usize,
+    /// The most options to choose.
+    pub max: usize,
+    /// Set when the installer decided the group; it needs no answer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decided: Option<Decided>,
+    /// True when the answers given so far answer this group.
+    pub answered: bool,
+    /// The options, in the order the FOMOD shows them.
+    pub options: Vec<OptionEvent>,
+}
+
+/// An install step that has a group to answer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct StepEvent {
+    /// The module's name (`moduleName`; empty when the FOMOD has none).
+    pub module: String,
+    /// The step's name.
+    pub step: String,
+    /// The step's position among all steps of the FOMOD, counting from 0.
+    pub index: usize,
+    /// True when a condition nothing here can evaluate decides whether the step is shown at all.
+    pub may_not_apply: bool,
+    /// Every group of the step, answered, decided and open ones together.
+    pub groups: Vec<GroupEvent>,
+}
+
+/// What [`Module::next`] returns.
+#[derive(Debug)]
+pub enum Next {
+    /// The first step that still has a group to answer.
+    Step(StepEvent),
+    /// Every group is answered or decided.
+    Done(Selection),
 }
 
 /// What the module needs to go on.
@@ -616,6 +725,63 @@ impl Module {
     /// An answer names a group or option that does not exist, breaks the group's rule, or picks an option that
     /// cannot be used; or a group offers nothing to choose from.
     pub fn resolve(&self, env: &dyn Env, answers: &Answers) -> Result<Outcome, String> {
+        let walked = self.walk(env, answers, None)?;
+        if !walked.questions.is_empty() {
+            return Ok(Outcome::Questions(walked.questions));
+        }
+        Ok(Outcome::Ready(self.finish(env, walked)))
+    }
+
+    /// The next step to show, given the answers so far: the first visible step with a group that is neither
+    /// answered nor decided, with every group of the step and its options evaluated against the flags and the
+    /// Plugins. Call it again with the answers to that step added to get the one after. `previous` (the answers
+    /// of an earlier install) only decides which options show ticked for a group that is not answered yet.
+    ///
+    /// # Errors
+    /// The same as [`Module::resolve`].
+    pub fn next(
+        &self,
+        env: &dyn Env,
+        answers: &Answers,
+        previous: &Answers,
+    ) -> Result<Next, String> {
+        let mut walked = self.walk(env, answers, Some(previous))?;
+        if let Some(step) = walked.step.take() {
+            return Ok(Next::Step(step));
+        }
+        Ok(Next::Done(self.finish(env, walked)))
+    }
+
+    /// The module's name (`moduleName`).
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn finish(&self, env: &dyn Env, walked: Walked) -> Selection {
+        let state = walked.state(env);
+        let mut files = walked.files;
+        for pattern in &self.patterns {
+            if state.eval(&pattern.dep) == Tri::Yes {
+                files.extend(pattern.files.iter().cloned());
+            }
+        }
+        Selection {
+            files,
+            inferred: walked.inferred,
+            answers: walked.used,
+        }
+    }
+
+    /// Go through the steps in order. With `stream` (`Some(previous)`) stop after the first step that has an open
+    /// group and describe it; without, collect every open group as a [`Question`].
+    #[allow(clippy::too_many_lines)]
+    fn walk(
+        &self,
+        env: &dyn Env,
+        answers: &Answers,
+        stream: Option<&Answers>,
+    ) -> Result<Walked, String> {
         let ids = self.ids();
         let known: HashSet<&String> = ids.iter().flatten().collect();
         if let Some(bad) = answers.keys().find(|k| !known.contains(k)) {
@@ -628,22 +794,43 @@ impl Module {
             flags: HashMap::new(),
             maybe: HashSet::new(),
         };
-        let mut files = self.required.clone();
-        let (mut inferred, mut questions) = (Vec::new(), Vec::new());
+        let mut walked = Walked {
+            files: self.required.clone(),
+            inferred: Vec::new(),
+            used: Answers::new(),
+            questions: Vec::new(),
+            step: None,
+            flags: HashMap::new(),
+            maybe: HashSet::new(),
+        };
         for (si, step) in self.steps.iter().enumerate() {
             let visible = step.visible.as_ref().map_or(Tri::Yes, |d| st.eval(d));
             if visible == Tri::No {
                 continue;
             }
+            let mut group_events = Vec::new();
+            let mut open = false;
             for (gi, group) in step.groups.iter().enumerate() {
                 let id = ids[si][gi].clone();
                 let types: Vec<Option<PluginType>> =
                     group.plugins.iter().map(|p| st.type_of(p)).collect();
-                let picked = if let Some(given) = answers.get(&id) {
+                let given = answers.get(&id);
+                let picked = if let Some(given) = given {
                     Some((check_answer(group, &types, given, &id)?, None))
                 } else {
                     infer(group.kind, &types).map(|(p, why)| (p, Some(why)))
                 };
+                let (min, max) = bounds(group.kind, group.plugins.len());
+                if let Some(previous) = stream {
+                    group_events.push(group_event(
+                        group,
+                        &id,
+                        &types,
+                        picked.as_ref(),
+                        given.is_some(),
+                        previous.get(&id),
+                    ));
+                }
                 let Some((picks, why)) = picked else {
                     if group
                         .plugins
@@ -652,8 +839,8 @@ impl Module {
                     {
                         return Err(format!("`{id}` offers no option that can be used"));
                     }
-                    let (min, max) = bounds(group.kind, group.plugins.len());
-                    questions.push(Question {
+                    open = true;
+                    walked.questions.push(Question {
                         id,
                         step: step.name.clone(),
                         group: group.name.clone(),
@@ -668,6 +855,7 @@ impl Module {
                                 name: p.name.clone(),
                                 description: p.description.clone(),
                                 kind: *t,
+                                image: p.image.clone(),
                             })
                             .collect(),
                         may_not_apply: visible == Tri::Unknown,
@@ -677,8 +865,16 @@ impl Module {
                     }
                     continue;
                 };
-                if let Some(why) = why {
-                    inferred.push(Inferred {
+                if given.is_some() {
+                    walked.used.insert(
+                        id.clone(),
+                        picks
+                            .iter()
+                            .map(|&i| group.plugins[i].name.clone())
+                            .collect(),
+                    );
+                } else if let Some(why) = why {
+                    walked.inferred.push(Inferred {
                         id,
                         selected: picks
                             .iter()
@@ -687,26 +883,132 @@ impl Module {
                         reason: why.to_owned(),
                     });
                 }
-                for &i in &picks {
-                    let plugin = &group.plugins[i];
-                    if visible == Tri::Yes {
-                        files.extend(plugin.files.iter().cloned());
-                        st.flags.extend(plugin.flags.iter().cloned());
-                    } else {
-                        st.maybe.extend(plugin.flags.iter().map(|(n, _)| n.clone()));
+                for (i, plugin) in group.plugins.iter().enumerate() {
+                    if picks.contains(&i) {
+                        if visible == Tri::Yes {
+                            walked.files.extend(plugin.files.iter().cloned());
+                            st.flags.extend(plugin.flags.iter().cloned());
+                        } else {
+                            st.maybe.extend(plugin.flags.iter().map(|(n, _)| n.clone()));
+                        }
+                    } else if visible == Tri::Yes {
+                        // Files marked alwaysInstall, or installIfUsable for an option that can be used,
+                        // come with the step even when their option is not chosen.
+                        let usable = types[i].is_some_and(|t| t != PluginType::NotUsable);
+                        walked.files.extend(
+                            plugin
+                                .files
+                                .iter()
+                                .filter(|f| f.always || (f.if_usable && usable))
+                                .cloned(),
+                        );
                     }
                 }
             }
-        }
-        if !questions.is_empty() {
-            return Ok(Outcome::Questions(questions));
-        }
-        for pattern in &self.patterns {
-            if st.eval(&pattern.dep) == Tri::Yes {
-                files.extend(pattern.files.iter().cloned());
+            if stream.is_some() && open {
+                walked.step = Some(StepEvent {
+                    module: self.name.clone(),
+                    step: step.name.clone(),
+                    index: si,
+                    may_not_apply: visible == Tri::Unknown,
+                    groups: group_events,
+                });
+                break;
             }
         }
-        Ok(Outcome::Ready(Selection { files, inferred }))
+        if walked.questions.is_empty() {
+            walked.flags = st.flags;
+            walked.maybe = st.maybe;
+        }
+        Ok(walked)
+    }
+}
+
+/// The result of going through the steps.
+struct Walked {
+    files: Vec<FileItem>,
+    inferred: Vec<Inferred>,
+    used: Answers,
+    questions: Vec<Question>,
+    step: Option<StepEvent>,
+    flags: HashMap<String, String>,
+    maybe: HashSet<String>,
+}
+
+impl Walked {
+    /// The state the conditional installs are judged in.
+    fn state<'a>(&self, env: &'a dyn Env) -> State<'a> {
+        State {
+            env,
+            flags: self.flags.clone(),
+            maybe: self.maybe.clone(),
+        }
+    }
+}
+
+/// Describe one group for [`StepEvent`]; `picked` is what the answer or the inference chose.
+fn group_event(
+    group: &Group,
+    id: &str,
+    types: &[Option<PluginType>],
+    picked: Option<&(Vec<usize>, Option<&'static str>)>,
+    answered: bool,
+    previous: Option<&Vec<String>>,
+) -> GroupEvent {
+    let (min, max) = bounds(group.kind, group.plugins.len());
+    let usable = |i: usize| types[i] != Some(PluginType::NotUsable);
+    let ticked: Vec<usize> = if let Some((picks, _)) = picked {
+        picks.clone()
+    } else if let Some(names) = previous {
+        group
+            .plugins
+            .iter()
+            .enumerate()
+            .filter(|(i, p)| usable(*i) && names.contains(&p.name))
+            .map(|(i, _)| i)
+            .take(max)
+            .collect()
+    } else {
+        (0..group.plugins.len())
+            .filter(|&i| {
+                matches!(
+                    types[i],
+                    Some(PluginType::Required | PluginType::Recommended)
+                )
+            })
+            .take(max)
+            .collect()
+    };
+    GroupEvent {
+        id: id.to_owned(),
+        name: group.name.clone(),
+        kind: group.kind,
+        min,
+        max,
+        decided: picked.and_then(|(picks, why)| {
+            why.map(|why| Decided {
+                selected: picks
+                    .iter()
+                    .map(|&i| group.plugins[i].name.clone())
+                    .collect(),
+                reason: why.to_owned(),
+            })
+        }),
+        answered,
+        options: group
+            .plugins
+            .iter()
+            .enumerate()
+            .map(|(i, p)| OptionEvent {
+                name: p.name.clone(),
+                description: p.description.clone(),
+                image: p.image.clone(),
+                kind: types[i],
+                dynamic: matches!(p.kind, TypeSpec::Dynamic(..)),
+                usable: usable(i),
+                selected: ticked.contains(&i),
+            })
+            .collect(),
     }
 }
 
@@ -764,7 +1066,9 @@ mod tests {
 
     impl Env for Plugins {
         fn file_state(&self, file: &str) -> Option<FileState> {
-            if !file.to_ascii_lowercase().ends_with(".esp") {
+            let ext = std::path::Path::new(file).extension();
+            if !ext.is_some_and(|e| e.eq_ignore_ascii_case("esp") || e.eq_ignore_ascii_case("esm"))
+            {
                 return None;
             }
             Some(
@@ -956,5 +1260,220 @@ mod tests {
         assert_eq!(decode_xml(format!("\u{feff}{xml}").as_bytes()), xml);
         assert!(Module::parse("<notconfig/>").is_err());
         assert!(Module::parse("<config>").is_err());
+    }
+
+    const TWO_STEPS: &str = r#"<config><moduleName>Two</moduleName>
+      <installSteps order="Explicit">
+        <installStep name="Look"><optionalFileGroups order="Explicit">
+          <group name="Style" type="SelectExactlyOne"><plugins order="Explicit">
+            <plugin name="Red"><description>red</description><image path="img\red.png"/>
+              <conditionFlags><flag name="style">red</flag></conditionFlags>
+              <files><file source="red" destination="style"/></files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+            <plugin name="Blue"><description>blue</description>
+              <conditionFlags><flag name="style">blue</flag></conditionFlags>
+              <files><file source="blue" destination="style"/></files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+            <plugin name="Green"><files><file source="green" destination="style"/></files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+          </plugins></group>
+          <group name="Base" type="SelectAll"><plugins><plugin name="Core"><files><file source="core" destination="core"/></files></plugin></plugins></group>
+        </optionalFileGroups></installStep>
+        <installStep name="Extras"><visible><dependencies><flagDependency flag="style" value="red"/></dependencies></visible>
+          <optionalFileGroups order="Explicit">
+            <group name="Bits" type="SelectExactlyOne"><plugins order="Explicit">
+              <plugin name="Glow"><files><file source="glow" destination="glow"/></files>
+                <typeDescriptor><dependencyType><defaultType name="Optional"/><patterns>
+                  <pattern><dependencies><fileDependency file="Shine.esm" state="Active"/></dependencies><type name="Recommended"/></pattern>
+                </patterns></dependencyType></typeDescriptor></plugin>
+              <plugin name="Dull"><files><file source="dull" destination="dull"/></files>
+                <typeDescriptor><type name="Recommended"/></typeDescriptor></plugin>
+              <plugin name="Dim"><files><file source="dim" destination="dim"/></files>
+                <typeDescriptor><type name="Recommended"/></typeDescriptor></plugin>
+            </plugins></group>
+          </optionalFileGroups></installStep>
+      </installSteps></config>"#;
+
+    fn ans(pairs: &[(&str, &[&str])]) -> Answers {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), v.iter().map(|s| (*s).to_owned()).collect()))
+            .collect()
+    }
+
+    fn step_of(next: Next) -> StepEvent {
+        match next {
+            Next::Step(s) => s,
+            Next::Done(_) => panic!("expected a step"),
+        }
+    }
+
+    #[test]
+    fn the_stream_gives_the_first_open_step_and_goes_on_with_each_answer() {
+        let m = Module::parse(TWO_STEPS).unwrap();
+        let first = step_of(m.next(&none(), &Answers::new(), &Answers::new()).unwrap());
+        assert_eq!(
+            (first.step.as_str(), first.index, first.module.as_str()),
+            ("Look", 0, "Two")
+        );
+        let group = &first.groups[0];
+        assert_eq!(group.id, "Look/Style");
+        assert!(group.decided.is_none() && !group.answered);
+        assert_eq!(group.options[0].image.as_deref(), Some("img\\red.png"));
+        assert_eq!(group.options[0].description, "red");
+        let ticked: Vec<bool> = group.options.iter().map(|o| o.selected).collect();
+        assert_eq!(ticked, [false, false, false]);
+        let base = &first.groups[1];
+        assert_eq!(
+            base.decided.as_ref().map(|d| d.selected.clone()),
+            Some(vec!["Core".to_owned()])
+        );
+        assert!(
+            base.options[0].selected,
+            "a decided group shows its choice ticked"
+        );
+
+        // Blue hides the second step: the plan is next.
+        let blue = ans(&[("Look/Style", &["Blue"])]);
+        let Next::Done(sel) = m.next(&none(), &blue, &Answers::new()).unwrap() else {
+            panic!("blue ends the stream");
+        };
+        assert_eq!(
+            sel.files
+                .iter()
+                .map(|f| f.source.as_str())
+                .collect::<Vec<_>>(),
+            ["blue", "core"]
+        );
+        assert_eq!(sel.answers, blue);
+
+        // Red shows it.
+        let red = ans(&[("Look/Style", &["Red"])]);
+        let second = step_of(m.next(&none(), &red, &Answers::new()).unwrap());
+        assert_eq!((second.step.as_str(), second.index), ("Extras", 1));
+        assert_eq!(second.groups[0].options[0].kind, Some(PluginType::Optional));
+        assert!(second.groups[0].options[0].dynamic && !second.groups[0].options[1].dynamic);
+    }
+
+    #[test]
+    #[allow(clippy::items_after_statements)]
+    fn an_option_type_follows_the_active_plugins_and_esm_states() {
+        let m = Module::parse(TWO_STEPS).unwrap();
+        let red = ans(&[("Look/Style", &["Red"])]);
+        struct Esm(FileState);
+        impl Env for Esm {
+            fn file_state(&self, file: &str) -> Option<FileState> {
+                file.to_ascii_lowercase()
+                    .ends_with(".esm")
+                    .then_some(self.0)
+            }
+        }
+        let by_state = |state| {
+            let step = step_of(m.next(&Esm(state), &red, &Answers::new()).unwrap());
+            step.groups[0].options[0].kind
+        };
+        assert_eq!(by_state(FileState::Active), Some(PluginType::Recommended));
+        assert_eq!(by_state(FileState::Inactive), Some(PluginType::Optional));
+        assert_eq!(by_state(FileState::Missing), Some(PluginType::Optional));
+        // Not a plugin at all (an Env that cannot tell): the type is unknown.
+        struct Blind;
+        impl Env for Blind {
+            fn file_state(&self, _: &str) -> Option<FileState> {
+                None
+            }
+        }
+        let step = step_of(m.next(&Blind, &red, &Answers::new()).unwrap());
+        assert_eq!(step.groups[0].options[0].kind, None);
+    }
+
+    #[test]
+    fn previous_answers_tick_options_but_a_given_answer_wins() {
+        let m = Module::parse(TWO_STEPS).unwrap();
+        let previous = ans(&[("Look/Style", &["Green"])]);
+        let step = step_of(m.next(&none(), &Answers::new(), &previous).unwrap());
+        let ticked: Vec<bool> = step.groups[0].options.iter().map(|o| o.selected).collect();
+        assert_eq!(ticked, [false, false, true]);
+        let given = ans(&[("Look/Style", &["Red"])]);
+        let step = step_of(m.next(&none(), &given, &previous).unwrap());
+        assert_eq!(step.step, "Extras", "the answered step is passed");
+    }
+
+    #[test]
+    fn a_stale_answer_to_a_hidden_step_is_dropped_from_the_counted_answers() {
+        let m = Module::parse(TWO_STEPS).unwrap();
+        let stale = ans(&[("Look/Style", &["Blue"]), ("Extras/Bits", &["Dull"])]);
+        let Outcome::Ready(sel) = m.resolve(&none(), &stale).unwrap() else {
+            panic!("ready");
+        };
+        assert_eq!(sel.answers, ans(&[("Look/Style", &["Blue"])]));
+    }
+
+    #[test]
+    fn always_install_and_install_if_usable_come_with_an_unchosen_option() {
+        let xml = r#"<config><installSteps order="Explicit"><installStep name="S"><optionalFileGroups order="Explicit">
+          <group name="G" type="SelectExactlyOne"><plugins order="Explicit">
+            <plugin name="A"><files><file source="a" destination="a"/><file source="always" destination="always" alwaysInstall="true"/></files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+            <plugin name="B"><files><file source="b" destination="b"/><file source="usable" destination="usable" installIfUsable="true"/>
+                <file source="always-b" destination="always-b" alwaysInstall="true"/></files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+            <plugin name="C"><files><file source="c" destination="c" installIfUsable="true"/><file source="plain-c" destination="plain-c"/></files>
+              <typeDescriptor><type name="NotUsable"/></typeDescriptor></plugin>
+          </plugins></group></optionalFileGroups></installStep></installSteps></config>"#;
+        let got = picks(xml, &none(), &ans(&[("S/G", &["A"])])).unwrap();
+        assert_eq!(got, ["a", "always", "usable", "always-b"]);
+        let got = picks(xml, &none(), &ans(&[("S/G", &["B"])])).unwrap();
+        assert_eq!(got, ["always", "b", "usable", "always-b"]);
+    }
+
+    #[test]
+    #[allow(clippy::items_after_statements)]
+    fn nested_conditions_and_pattern_order_decide_types_and_conditional_files() {
+        let xml = r#"<config><installSteps order="Explicit"><installStep name="S"><optionalFileGroups order="Explicit">
+          <group name="Pick" type="SelectAny"><plugins order="Explicit">
+            <plugin name="X"><conditionFlags><flag name="x">1</flag></conditionFlags><typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+            <plugin name="Y"><conditionFlags><flag name="y">1</flag></conditionFlags><typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+          </plugins></group></optionalFileGroups></installStep></installSteps>
+          <conditionalFileInstalls><patterns>
+            <pattern><dependencies operator="Or"><dependencies operator="And"><flagDependency flag="x" value="1"/><flagDependency flag="y" value="1"/></dependencies>
+              <fileDependency file="Both.esm" state="Active"/></dependencies>
+              <files><file source="nested" destination="nested"/></files></pattern>
+            <pattern><dependencies><flagDependency flag="x" value="1"/></dependencies>
+              <files><file source="x-only" destination="x-only" priority="2"/></files></pattern>
+          </patterns></conditionalFileInstalls></config>"#;
+        let with =
+            |names: &[&str], env: &dyn Env| picks(xml, env, &ans(&[("S/Pick", names)])).unwrap();
+        assert_eq!(with(&["X", "Y"], &none()), ["nested", "x-only"]);
+        assert_eq!(with(&["X"], &none()), ["x-only"]);
+        assert_eq!(with(&["Y"], &none()), Vec::<String>::new());
+        struct Both;
+        impl Env for Both {
+            fn file_state(&self, file: &str) -> Option<FileState> {
+                file.eq_ignore_ascii_case("Both.esm")
+                    .then_some(FileState::Active)
+            }
+        }
+        assert_eq!(
+            with(&["Y"], &Both),
+            ["nested"],
+            "the Or branch: an active .esm"
+        );
+        // The first pattern of a dependencyType whose condition holds decides.
+        let typed = r#"<config><installSteps order="Explicit"><installStep name="S"><optionalFileGroups><group name="G" type="SelectExactlyOne"><plugins order="Explicit">
+            <plugin name="A"><typeDescriptor><dependencyType><defaultType name="Optional"/><patterns>
+              <pattern><dependencies><fileDependency file="P.esp" state="Active"/></dependencies><type name="NotUsable"/></pattern>
+              <pattern><dependencies><fileDependency file="P.esp" state="Active"/></dependencies><type name="Required"/></pattern>
+            </patterns></dependencyType></typeDescriptor></plugin>
+            <plugin name="B"><typeDescriptor><type name="Optional"/></typeDescriptor></plugin>
+          </plugins></group></optionalFileGroups></installStep></installSteps></config>"#;
+        let active = Plugins(vec![("p.esp", FileState::Active)]);
+        let Outcome::Ready(sel) = Module::parse(typed)
+            .unwrap()
+            .resolve(&active, &Answers::new())
+            .unwrap()
+        else {
+            panic!("A is NotUsable by the first matching pattern, so B is the only usable option");
+        };
+        assert_eq!(sel.inferred[0].selected, ["B"]);
     }
 }

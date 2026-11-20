@@ -142,6 +142,8 @@ fn installing_from_the_library_equals_installing_the_path_plus_the_meta_update()
             name: None,
             dry_run: false,
             answers: None,
+            fomod_answers: None,
+            on_conflict: nvmod_api::install::OnConflict::Refuse,
             max_extract_bytes: None,
             extract_limits: nvmod_api::install::LimitOverrides::default(),
         },

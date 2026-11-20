@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! `nvmod install <archive> --instance <dir> ...` and `nvmod rollback --instance <dir>`.
 
+use crate::fomod_prompt::Answers;
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
+use nvmod_api::fomod::NextRequest;
 use nvmod_api::install::{
-    InstallOutput, InstallRequest, LimitOverrides, Question, Report, RollbackRequest,
+    InstallOutput, InstallRequest, LimitOverrides, OnConflict, Question, ReinstallRequest, Report,
+    RollbackRequest,
 };
-use nvmod_api::{NoProgress, Outcome};
+use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
+const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--interactive] [--on-conflict replace|merge|rename] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
+const REINSTALL_USAGE: &str = "usage: nvmod mods reinstall|reconfigure <mod> --instance <dir> [--profile <name>] [--archive <file>] [--answers <file>] [--interactive] [--dry-run] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]  (--answers and --interactive: reconfigure only)";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
 fn open(args: &Args, name: &str, err: &mut dyn Write) -> Result<NvmodInstance, u8> {
@@ -68,6 +72,9 @@ fn print_report(out: &mut dyn Write, report: &Report, json: bool) {
         for f in &report.files {
             let _ = writeln!(out, "  + {f}");
         }
+    }
+    if let Some(conflict) = report.conflict {
+        let _ = writeln!(out, "  a Mod of that name existed: {conflict}");
     }
     for p in &report.plugins {
         let _ = writeln!(out, "  activates plugin {p}");
@@ -134,12 +141,13 @@ fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str> {
 pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
         args,
-        &["dry-run", "json"],
+        &["dry-run", "json", "interactive"],
         &[
             "instance",
             "profile",
             "name",
             "answers",
+            "on-conflict",
             "max-extract-bytes",
             "max-extract-entries",
             "max-extract-entry-bytes",
@@ -167,6 +175,45 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             return USAGE;
         }
     };
+    let on_conflict = match args.option("on-conflict").map(OnConflict::parse) {
+        None => OnConflict::Refuse,
+        Some(Some(c)) => c,
+        Some(None) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --on-conflict wants replace, merge or rename"
+            );
+            return USAGE;
+        }
+    };
+    if args.flag("interactive") && args.option("answers").is_some() {
+        let _ = writeln!(
+            err,
+            "nvmod install: --interactive and --answers are alternatives"
+        );
+        return USAGE;
+    }
+    let fomod_answers = if args.flag("interactive") {
+        let ask = NextRequest {
+            instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+            profile: args.option("profile").map(str::to_owned),
+            archive: Some(PathBuf::from(&args.positional[0])),
+            answers: Answers::new(),
+            previous: Answers::new(),
+            reconfigure: None,
+            max_extract_bytes: None,
+            extract_limits: limits,
+        };
+        match crate::fomod_prompt::ask(&ask, &mut std::io::stdin().lock(), out) {
+            Ok(answers) => Some(answers),
+            Err(why) => {
+                let _ = writeln!(err, "nvmod install: refused: {why}");
+                return REFUSED;
+            }
+        }
+    } else {
+        None
+    };
     let request = InstallRequest {
         instance: PathBuf::from(args.option("instance").unwrap_or_default()),
         profile: args.option("profile").map(str::to_owned),
@@ -174,6 +221,8 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         name: args.option("name").map(str::to_owned),
         dry_run: args.flag("dry-run"),
         answers: args.option("answers").map(PathBuf::from),
+        fomod_answers,
+        on_conflict,
         max_extract_bytes: None,
         extract_limits: limits,
     };
@@ -188,6 +237,119 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         }
         Ok(Outcome::Cancelled) => REFUSED,
         Err(e) => crate::job_failure("install", &e, err),
+    }
+}
+
+/// `nvmod mods reinstall|reconfigure <mod> --instance <dir> ...`: `args` starts with the verb.
+// One flat command, as `run_install` is.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn run_reinstall(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let reconfigure = args.first().map(String::as_str) == Some("reconfigure");
+    let verb = if reconfigure {
+        "reconfigure"
+    } else {
+        "reinstall"
+    };
+    let parsed = Args::parse(
+        args,
+        &["dry-run", "json", "interactive"],
+        &[
+            "instance",
+            "profile",
+            "archive",
+            "answers",
+            "max-extract-bytes",
+            "max-extract-entries",
+            "max-extract-entry-bytes",
+            "max-extract-ratio",
+            "max-extract-depth",
+            "max-extract-operations",
+            "max-extract-seconds",
+        ],
+    );
+    let args = match parsed {
+        Ok(a)
+            if a.positional.len() == 2
+                && a.option("instance").is_some()
+                && (reconfigure || (a.option("answers").is_none() && !a.flag("interactive")))
+                && !(a.flag("interactive") && a.option("answers").is_some()) =>
+        {
+            a
+        }
+        Ok(_) => {
+            let _ = writeln!(err, "{REINSTALL_USAGE}");
+            return USAGE;
+        }
+        Err(why) => {
+            let _ = writeln!(err, "nvmod mods {verb}: {why}");
+            return USAGE;
+        }
+    };
+    let limits = match extract_limits(&args) {
+        Ok(limits) => limits,
+        Err(flag) => {
+            let _ = writeln!(err, "nvmod mods {verb}: --{flag} wants a number");
+            return USAGE;
+        }
+    };
+    let answers = match args
+        .option("answers")
+        .map(|p| nvmod_modinstall::read_answers(Path::new(p)))
+    {
+        None => None,
+        Some(Ok(a)) => Some(a),
+        Some(Err(why)) => {
+            let _ = writeln!(err, "nvmod mods {verb}: refused: {why}");
+            return REFUSED;
+        }
+    };
+    let answers = if args.flag("interactive") {
+        let ask = NextRequest {
+            instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+            profile: args.option("profile").map(str::to_owned),
+            archive: args.option("archive").map(PathBuf::from),
+            answers: Answers::new(),
+            previous: Answers::new(),
+            reconfigure: Some(args.positional[1].clone()),
+            max_extract_bytes: None,
+            extract_limits: limits,
+        };
+        match crate::fomod_prompt::ask(&ask, &mut std::io::stdin().lock(), out) {
+            Ok(answers) => Some(answers),
+            Err(why) => {
+                let _ = writeln!(err, "nvmod mods {verb}: refused: {why}");
+                return REFUSED;
+            }
+        }
+    } else {
+        answers
+    };
+    let request = ReinstallRequest {
+        instance: PathBuf::from(args.option("instance").unwrap_or_default()),
+        profile: args.option("profile").map(str::to_owned),
+        r#mod: args.positional[1].clone(),
+        archive: args.option("archive").map(PathBuf::from),
+        answers,
+        dry_run: args.flag("dry-run"),
+        max_extract_bytes: None,
+        extract_limits: limits,
+    };
+    let job = if reconfigure {
+        nvmod_api::install::reconfigure
+    } else {
+        nvmod_api::install::reinstall
+    };
+    match job(&request, &mut NoProgress, &CancelToken::new()) {
+        Ok(Outcome::Done(InstallOutput::Installed(report))) => {
+            print_report(out, &report, args.flag("json"));
+            OK
+        }
+        Ok(Outcome::Done(InstallOutput::Questions(questions))) => {
+            print_questions(out, &questions, args.flag("json"));
+            FOUND
+        }
+        Ok(Outcome::Cancelled) => REFUSED,
+        Err(e) => crate::job_failure(verb, &e, err),
     }
 }
 
@@ -223,6 +385,12 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
                 let _ = writeln!(
                     out,
                     "nvmod rollback: undid the Mods change of profile `{}`",
+                    report.profile
+                );
+            } else if report.kind == "lifecycle" {
+                let _ = writeln!(
+                    out,
+                    "nvmod rollback: undid the Mod change of profile `{}`",
                     report.profile
                 );
             } else if report.kind == "sort" {
