@@ -39,7 +39,12 @@ fn writes(args: &[String]) -> bool {
             matches!(word(1), Some("create" | "restore" | "prune")) && !has("--dry-run")
         }
         Some("profile") => {
-            matches!(word(1), Some("create" | "apply" | "finish")) && !has("--dry-run")
+            matches!(
+                word(1),
+                Some(
+                    "create" | "apply" | "finish" | "copy" | "rename" | "delete" | "select" | "set"
+                )
+            ) && !has("--dry-run")
         }
         Some("plugins") => matches!(
             word(1),

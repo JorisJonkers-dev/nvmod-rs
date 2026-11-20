@@ -53,6 +53,10 @@
 //! | [`install_nvrs::install`] | [`install_nvrs::InstallRequest`] | [`install_nvrs::InstallOutput`] |
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
+//! | [`profile_ops::list`] | [`profile_ops::ListRequest`] | [`profile_ops::ListReport`] |
+//! | [`profile_ops::change`] | [`profile_ops::ChangeRequest`] | [`profile_ops::Report`] |
+//! | [`profile_ops::select`] | [`profile_ops::SelectRequest`] | [`profile_ops::SelectOutput`] |
+//! | [`profile_ops::set`] | [`profile_ops::SetRequest`] | [`profile_ops::SetOutput`] |
 //! | [`run::plan`] | [`run::PlanRequest`] | [`run::RunPlan`] |
 //! | [`verify::verify`] | [`verify::VerifyRequest`] | [`verify::VerifyOutput`] |
 //! | [`target::set`] | [`target::SetRequest`] | [`target::SetOutput`] |
@@ -76,6 +80,7 @@ pub mod loadorder;
 pub mod mods;
 pub mod plugins;
 pub mod profile;
+pub mod profile_ops;
 pub mod run;
 pub mod saves;
 pub mod sort_apply;

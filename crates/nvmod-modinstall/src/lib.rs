@@ -13,6 +13,7 @@ pub mod journal;
 pub mod lifecycle;
 mod lists;
 pub mod mods;
+pub mod profiles;
 pub mod saved;
 pub mod session;
 
