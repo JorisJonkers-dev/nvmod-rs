@@ -793,7 +793,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-downloads"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "md-5",
  "nvmod-formats",
