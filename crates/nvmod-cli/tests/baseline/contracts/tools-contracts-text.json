@@ -8,7 +8,14 @@
   "release": "0.8.1",
   "stderr": [],
   "stdout": [
+    "lodwright-bands (lodwright-rs) current v1 accepts v1",
+    "lodwright-defaults (lodwright-rs) current v1 accepts v1",
+    "lodwright-events (lodwright-rs) current v1 accepts v1",
+    "lodwright-manifest (lodwright-rs) current v1 accepts v1",
     "lodwright-plan (lodwright-rs) current v1 accepts v1",
+    "lodwright-request (lodwright-rs) current v1 accepts v1",
+    "lodwright-result (lodwright-rs) current v1 accepts v1",
+    "lodwright-verify (lodwright-rs) current v1 accepts v1",
     "loot-sort (loot-rs) current v1 accepts v1",
     "nv-rs-capabilities (nv-rs) current v1 accepts v1",
     "nv-rs-release-manifest (nv-rs) current v1 accepts v1"

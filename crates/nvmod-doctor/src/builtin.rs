@@ -132,7 +132,7 @@ fn load(
             warn(
                 "capabilities.missing",
                 format!(
-                    "{shown} does not exist, so the installed nv-rs's coverage is unknown: no coverage was used (run `nvmod install-nv-rs`, or install a newer nv-rs)"
+                    "{shown} does not exist, so the installed nv-rs's coverage is unknown: no coverage was used (install the engine again, or install a newer one)"
                 ),
             );
             let reason = Some("the file does not exist".to_owned());

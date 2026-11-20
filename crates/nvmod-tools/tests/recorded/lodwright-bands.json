@@ -1,0 +1,1 @@
+{"schema_version":1,"contract":"lodwright-bands","runs":3,"bands":[{"statistic":"water.mean","min":0.98,"max":0.995,"runs":3},{"statistic":"water.iou:meshes/synthetic/a.btr","min":0.97,"max":0.99,"runs":2}]}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Event",
+  "description": "One progress line.",
+  "oneOf": [
+    {
+      "description": "A block finished.",
+      "type": "object",
+      "properties": {
+        "done": {
+          "description": "Blocks of this kind and level finished so far, in this world.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "event": {
+          "type": "string",
+          "const": "block"
+        },
+        "kind": {
+          "description": "What the block holds; a line without it (written before the kind existed) is a terrain block.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlockKind"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "level": {
+          "description": "Cells per block edge: the terrain level, 4 for an object block, 8 for a tree block.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "of": {
+          "description": "Blocks of this kind and level in total, in this world.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "up_to_date": {
+          "description": "The block's files were kept from an earlier run (its inputs did not change).",
+          "type": "boolean",
+          "default": false
+        },
+        "world": {
+          "description": "World editor id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event",
+        "world",
+        "level",
+        "done",
+        "of"
+      ]
+    }
+  ],
+  "$defs": {
+    "BlockKind": {
+      "description": "What a finished block holds. An open enum: a reader treats a kind it does not know as \"other\".",
+      "oneOf": [
+        {
+          "description": "A terrain block (mesh, diffuse and normal map) of a level.",
+          "type": "string",
+          "const": "terrain"
+        },
+        {
+          "description": "An object LOD block file.",
+          "type": "string",
+          "const": "objects"
+        },
+        {
+          "description": "A tree LOD block file.",
+          "type": "string",
+          "const": "trees"
+        },
+        {
+          "description": "A kind this build does not know, written by a later version. Never written by this build.",
+          "type": "string",
+          "const": "other"
+        }
+      ],
+      "x-open-enum": true
+    }
+  }
+}

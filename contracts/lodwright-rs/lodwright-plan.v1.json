@@ -1,75 +1,375 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "lodwright-plan v1",
-  "description": "Output of `lodwright plan --json`. A snapshot of the schema lodwright-rs owns; a document without schema_version is read as version 1.",
+  "title": "Plan",
+  "description": "Plan v1. It holds numbers and relative output names only: no game content, no absolute path from the data\nfolder.",
   "type": "object",
-  "required": ["worlds"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "contract": { "const": "lodwright-plan" },
+    "arguments_digest": {
+      "description": "SHA-256 of the normalised arguments.",
+      "type": "string"
+    },
+    "capabilities": {
+      "description": "What `generate` can do today.",
+      "$ref": "#/$defs/Capabilities"
+    },
+    "contract": {
+      "description": "The contract name, `lodwright-plan`: a reader refuses a document that names another.",
+      "type": "string",
+      "const": "lodwright-plan"
+    },
+    "inputs_digest": {
+      "description": "SHA-256 over the sizes and contents of the plugins, in load order (never the content itself).",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "The document version; 1.",
+      "type": "integer",
+      "format": "uint32",
+      "const": 1,
+      "minimum": 0
+    },
+    "tool": {
+      "description": "The tool that printed this plan.",
+      "$ref": "#/$defs/ToolInfo"
+    },
+    "warnings": {
+      "description": "Human-readable remarks.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
     "worlds": {
+      "description": "One entry per selected world.",
       "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "form_id", "cells", "bounds", "max_seam_error", "settings_path", "levels"],
-        "properties": {
-          "name": { "type": "string" },
-          "form_id": { "type": "string", "pattern": "^[0-9A-F]{8}$" },
-          "cells": { "type": "integer", "minimum": 0 },
-          "bounds": {
-            "oneOf": [
-              { "type": "null" },
-              {
-                "type": "object",
-                "required": ["min_x", "min_y", "max_x", "max_y"],
-                "properties": {
-                  "min_x": { "type": "integer" },
-                  "min_y": { "type": "integer" },
-                  "max_x": { "type": "integer" },
-                  "max_y": { "type": "integer" }
-                }
-              }
-            ]
-          },
-          "max_seam_error": { "type": "number", "minimum": 0 },
-          "settings_path": { "type": "string" },
-          "levels": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["level", "blocks", "vertices", "triangles", "max_error"],
-              "properties": {
-                "level": { "type": "integer", "minimum": 0 },
-                "blocks": { "type": "integer", "minimum": 0 },
-                "vertices": { "type": "integer", "minimum": 0 },
-                "triangles": { "type": "integer", "minimum": 0 },
-                "max_error": { "type": "number", "minimum": 0 }
-              }
-            }
-          },
-          "blocks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["level", "x", "y", "step", "vertices", "triangles", "max_error", "mesh", "diffuse", "normal", "texture_size", "mips"],
-              "properties": {
-                "level": { "type": "integer", "minimum": 0 },
-                "x": { "type": "integer" },
-                "y": { "type": "integer" },
-                "step": { "type": "integer", "minimum": 1 },
-                "vertices": { "type": "integer", "minimum": 0 },
-                "triangles": { "type": "integer", "minimum": 0 },
-                "max_error": { "type": "number", "minimum": 0 },
-                "mesh": { "type": "string" },
-                "diffuse": { "type": "string" },
-                "normal": { "type": "string" },
-                "texture_size": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2, "maxItems": 2 },
-                "mips": { "type": "integer", "minimum": 0 }
-              }
-            }
-          }
-        }
+        "$ref": "#/$defs/WorldPlan"
       }
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract",
+    "tool",
+    "arguments_digest",
+    "inputs_digest",
+    "capabilities",
+    "worlds"
+  ],
+  "$defs": {
+    "Bounds": {
+      "description": "Inclusive cell bounds of a world.",
+      "type": "object",
+      "properties": {
+        "east": {
+          "description": "Largest cell x.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "north": {
+          "description": "Largest cell y.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "south": {
+          "description": "Smallest cell y.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "west": {
+          "description": "Smallest cell x.",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ]
+    },
+    "Capabilities": {
+      "description": "What `generate` can do today: the kinds of files it writes, then how it runs (worlds, scheduling, memory and\ndeterminism). The run flags are optional keys: a document without them reads them as false.",
+      "type": "object",
+      "properties": {
+        "all_worlds": {
+          "description": "A request that names no world builds every world of the load order, one world at a time.",
+          "type": "boolean",
+          "default": false
+        },
+        "memory_budget_held": {
+          "description": "`limits.memory_mib` is also held while the run goes on: each world's terrain step gets as many workers as\nthe budget leaves room for (same bytes). Measured on Linux, best effort elsewhere.",
+          "type": "boolean",
+          "default": false
+        },
+        "memory_budget_preflight": {
+          "description": "`limits.memory_mib` refuses, before anything is written, a run whose plugins suggest it needs more.",
+          "type": "boolean",
+          "default": false
+        },
+        "object_lod": {
+          "description": "Writes object LOD (`.nif` blocks and the atlas).",
+          "type": "boolean"
+        },
+        "peak_memory_reported": {
+          "description": "The result reports the run's peak resident size (`peak_memory_mib`); measured on Linux only.",
+          "type": "boolean",
+          "default": false
+        },
+        "resume_after_cancel": {
+          "description": "A cancelled run leaves a manifest of its finished blocks, and the next run with the same request keeps them\n(`lodwright-api`'s `a_cancel_after_the_first_block_leaves_a_manifest_the_next_call_resumes_from`).",
+          "type": "boolean",
+          "default": false
+        },
+        "resume_after_kill": {
+          "description": "A killed run (no cancel, for example the process ended) resumes to the bytes of an uninterrupted run.",
+          "type": "boolean",
+          "default": false
+        },
+        "settings": {
+          "description": "Writes the LOD settings file.",
+          "type": "boolean"
+        },
+        "terrain_mesh": {
+          "description": "Writes terrain meshes (`.nif`).",
+          "type": "boolean"
+        },
+        "terrain_texture": {
+          "description": "Writes terrain textures.",
+          "type": "boolean"
+        },
+        "thread_count_independent": {
+          "description": "The output bytes do not depend on the number of worker threads (`limits.threads`). Terrain blocks are the only\nwork spread over threads; `lodwright-gen`'s `the_thread_count_does_not_change_a_single_byte` shows it for them,\nand object and tree LOD are built on one thread per world.",
+          "type": "boolean",
+          "default": false
+        },
+        "tree_lod": {
+          "description": "Writes tree LOD.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "terrain_mesh",
+        "terrain_texture",
+        "settings",
+        "object_lod",
+        "tree_lod"
+      ]
+    },
+    "LevelPlan": {
+      "description": "Totals of one level of one world.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks at this level.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_error": {
+          "description": "Largest height error over all blocks, in world units.",
+          "type": "number",
+          "format": "double"
+        },
+        "triangles": {
+          "description": "Triangles over all blocks.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "vertices": {
+          "description": "Vertices over all blocks.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "level",
+        "blocks",
+        "vertices",
+        "triangles",
+        "max_error"
+      ]
+    },
+    "PlannedBlock": {
+      "description": "One planned block: present only with `--blocks`. Names are relative to the output folder.",
+      "type": "object",
+      "properties": {
+        "diffuse": {
+          "description": "Relative path of the diffuse texture.",
+          "type": "string"
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max_error": {
+          "description": "Height error of the block, in world units.",
+          "type": "number",
+          "format": "double"
+        },
+        "mesh": {
+          "description": "Relative path of the mesh file.",
+          "type": "string"
+        },
+        "mips": {
+          "description": "Mip levels of the textures.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "normal": {
+          "description": "Relative path of the normal texture.",
+          "type": "string"
+        },
+        "step": {
+          "description": "Sampling step in cells.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "texture_size": {
+          "description": "Width and height of the diffuse texture.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "triangles": {
+          "description": "Triangles of the block mesh.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "vertices": {
+          "description": "Vertices of the block mesh.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "x": {
+          "description": "Cell x of the south-west cell.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "y": {
+          "description": "Cell y of the south-west cell.",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "level",
+        "x",
+        "y",
+        "step",
+        "vertices",
+        "triangles",
+        "max_error",
+        "mesh",
+        "diffuse",
+        "normal",
+        "texture_size",
+        "mips"
+      ]
+    },
+    "ToolInfo": {
+      "description": "The tool that produced a document.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Always `lodwright`.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The tool version (`SemVer`, see `VERSIONING.md`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "WorldPlan": {
+      "description": "The plan of one world.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "The blocks; present only when asked for with `--blocks`.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/PlannedBlock"
+          }
+        },
+        "bounds": {
+          "description": "Cell bounds; omitted for a world without cells.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bounds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cells": {
+          "description": "Cells with terrain.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "form_id": {
+          "description": "Absolute form id, eight upper-case hex digits.",
+          "type": "string"
+        },
+        "levels": {
+          "description": "One entry per level.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LevelPlan"
+          }
+        },
+        "max_seam_error": {
+          "description": "Largest height difference across a shared cell edge, in world units.",
+          "type": "number",
+          "format": "double"
+        },
+        "name": {
+          "description": "Editor id of the world.",
+          "type": "string"
+        },
+        "settings_path": {
+          "description": "Relative path of the LOD settings file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "form_id",
+        "cells",
+        "max_seam_error",
+        "settings_path",
+        "levels"
+      ]
     }
   }
 }
