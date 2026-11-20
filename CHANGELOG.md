@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.12.0...v0.13.0) (2026-11-20)
+
+
+### Features
+
+* **cli:** run the program of 'nvmod run' through a launcher the caller gives ([#206](https://github.com/JorisJonkers-dev/nvmod-rs/issues/206)) ([44ee83f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/44ee83f44bc74a8fba11b790a5278ee0cedcf94f))
+* **mods:** a generated Mod is listed as generated and left out of conflict results ([#204](https://github.com/JorisJonkers-dev/nvmod-rs/issues/204)) ([ed197b2](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ed197b2099fb4bbe3b74eff0dfa6161579a6d382))
+
+
+### Bug Fixes
+
+* **backup:** hermetic game detection for tests, and zombies are not a running game ([#209](https://github.com/JorisJonkers-dev/nvmod-rs/issues/209)) ([bbd0814](https://github.com/JorisJonkers-dev/nvmod-rs/commit/bbd08144e1df5e541157eb03851cb52ddb331ad3))
+* **deps:** update minor and patch dependencies ([#203](https://github.com/JorisJonkers-dev/nvmod-rs/issues/203)) ([6abba64](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6abba649b18cd3ef82c8d313878c83db686625d7))
+* **doctor:** an archive of an unsupported version is not a corrupt header ([#205](https://github.com/JorisJonkers-dev/nvmod-rs/issues/205)) ([6a2c387](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6a2c387f532d38b8215423509949de4d560b56d7))
+
 ## [0.12.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.11.0...v0.12.0) (2026-11-19)
 
 
