@@ -534,21 +534,48 @@ fn categories_are_set_listed_filtered_and_the_file_is_untouched() {
     );
 }
 
-// Finding a running game reads the process list (`/proc`, or `NVMOD_PROC_DIR`), which is made up here.
+// The game guard reads the run of this Instance from `.nvmod/lock`, written here with the pid of this test program:
+// a live process that is not called `nv-viewer`, standing in for a long-running game.
+fn hold(root: &std::path::Path, command: &str) {
+    write_file(
+        root,
+        ".nvmod/lock",
+        format!(
+            r#"{{"pid":{},"started":1,"command":"{command}"}}"#,
+            std::process::id()
+        )
+        .as_bytes(),
+    );
+}
+
 #[test]
-fn a_running_game_refuses_a_change_but_not_a_dry_run() {
+fn a_running_game_of_the_instance_refuses_a_change_but_not_a_dry_run() {
     let s = Scratch::new();
-    let procs = TempDir::new("ml-proc");
-    write_file(procs.path(), "4242/comm", b"FalloutNV.exe\n");
-    write_file(procs.path(), "4242/stat", b"4242 (FalloutNV.exe) S 1 1 1\n");
+    hold(&s.root(), "run raul --play-mode");
     let before = s.tree();
-    let env = [("NVMOD_PROC_DIR", procs.path().to_str().unwrap())];
-    let (code, _, err) = s.run_env(&["remove", "Plain"], &env);
+    let (code, _, err) = s.run_env(&["remove", "Plain"], &[]);
     assert_eq!(code, 2, "{err}");
-    assert!(err.contains("running"), "{err}");
-    let (code, _, err) = s.run_env(&["remove", "Plain", "--dry-run"], &env);
+    assert!(
+        err.contains("running") && err.contains("raul --play-mode"),
+        "{err}"
+    );
+    let (code, _, err) = s.run_env(&["remove", "Plain", "--dry-run"], &[]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(s.tree(), before);
+}
+
+#[test]
+fn a_game_of_another_instance_does_not_refuse_a_change() {
+    let s = Scratch::new();
+    // The game runs from another Instance (its lock is there), and a process named like the game is in the
+    // process list: neither concerns this Instance.
+    hold(&s.inst.path().join("other"), "run nv-rs");
+    let procs = TempDir::new("ml-proc");
+    write_file(procs.path(), "4242/comm", b"nv-viewer\n");
+    write_file(procs.path(), "4242/stat", b"4242 (nv-viewer) S 1 1 1\n");
+    let env = [("NVMOD_PROC_DIR", procs.path().to_str().unwrap())];
+    let (code, _, err) = s.run_env(&["remove", "Plain"], &env);
+    assert_eq!(code, 0, "{err}");
 }
 
 #[test]

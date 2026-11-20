@@ -14,16 +14,66 @@ pub mod lifecycle;
 mod lists;
 pub mod mods;
 pub mod profiles;
+pub mod saved;
+pub mod session;
 
-use fomod::{Answers, Env, FileState, Module, Outcome};
+use fomod::{Answers, Env, FileState};
+use nvmod_formats::{EntryKind, ModState, Modlist};
 use nvmod_instance::{NvmodInstance, find_ci};
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub use extract::{LimitOverrides, Limits};
+pub use fomod::{Decided, GroupEvent, OptionEvent, StepEvent};
 pub use fomod::{GroupKind, Inferred, PluginType, Question, QuestionOption};
 pub use journal::{RollbackError, RollbackReport, rollback};
+pub use saved::{ANSWERS_PATH, AnswersFile, ReinstallRequest, open_saved, reconfigure, reinstall};
+pub use session::{FomodEvent, PlanEvent, Session, answers_schema, events_schema};
+
+/// What to do when a Mod folder of the name already exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OnConflict {
+    /// Refuse (exit code 2); nothing is written.
+    #[default]
+    Refuse,
+    /// Replace the folder's content with the new Mod. The Mod keeps its place in `modlist.txt` (priority and
+    /// enabled state), its Plugin entries, and its `meta.ini` (notes, categories, anything else in it); the
+    /// old folder goes to the journal's trash, so a rollback brings it back.
+    Replace,
+    /// Put the new files into the existing folder, over files of the same path; other files stay. The Mod
+    /// keeps its place and state as with [`OnConflict::Replace`].
+    Merge,
+    /// Install under the first free name `<name> 2`, `<name> 3`, ...
+    Rename,
+}
+
+impl OnConflict {
+    /// The word used on the command line and in reports: `refuse`, `replace`, `merge` or `rename`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OnConflict::Refuse => "refuse",
+            OnConflict::Replace => "replace",
+            OnConflict::Merge => "merge",
+            OnConflict::Rename => "rename",
+        }
+    }
+
+    /// The reverse of [`OnConflict::as_str`].
+    #[must_use]
+    pub fn parse(word: &str) -> Option<OnConflict> {
+        [
+            OnConflict::Refuse,
+            OnConflict::Replace,
+            OnConflict::Merge,
+            OnConflict::Rename,
+        ]
+        .into_iter()
+        .find(|c| c.as_str() == word)
+    }
+}
 
 /// What to install.
 #[derive(Debug, Clone)]
@@ -40,8 +90,12 @@ pub struct Request<'a> {
     pub dry_run: bool,
     /// A JSON file with answers to the FOMOD's questions.
     pub answers: Option<&'a Path>,
+    /// Answers given in memory; they replace the file's answer for the same group.
+    pub answers_inline: Option<&'a Answers>,
     /// Size limits of the extraction.
     pub limits: Limits,
+    /// What to do when the Mod's folder already exists.
+    pub on_conflict: OnConflict,
 }
 
 /// Why nothing was installed.
@@ -72,6 +126,10 @@ pub struct Report {
     pub plugins: Vec<String>,
     /// FOMOD choices made without asking.
     pub inferred: Vec<Inferred>,
+    /// `replaced`, `merged` or `renamed` when a Mod of the name existed (`mod` is then the folder that was
+    /// written), else `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conflict: Option<&'static str>,
     /// Files in the Staging tree afterwards (`None` for a dry run).
     pub staged_files: Option<usize>,
     /// The journal entry `nvmod rollback` uses (`None` for a dry run).
@@ -90,6 +148,7 @@ fn has_extension(name: &str, ext: &str) -> bool {
 }
 
 /// A scratch folder, removed when dropped.
+#[derive(Debug)]
 struct Scratch(PathBuf);
 
 impl Scratch {
@@ -200,13 +259,15 @@ fn resolve_ci(base: &Path, relative: &str) -> Option<PathBuf> {
     Some(path)
 }
 
-fn plan_plain(root: &Path) -> Plan {
+fn plan_plain(root: &Path) -> Result<Plan, String> {
     let content = find_ci(root, "data")
         .filter(|d| d.is_dir())
         .unwrap_or_else(|| root.to_path_buf());
     let mut files = Vec::new();
     walk(&content, "", &mut files);
-    files.into_iter().map(|f| (content.join(&f), f)).collect()
+    let plan: Plan = files.into_iter().map(|f| (content.join(&f), f)).collect();
+    check_reserved(&plan)?;
+    Ok(plan)
 }
 
 fn plan_fomod(root: &Path, items: &[fomod::FileItem]) -> Result<Plan, String> {
@@ -260,6 +321,7 @@ fn plan_fomod(root: &Path, items: &[fomod::FileItem]) -> Result<Plan, String> {
             plan.push((source, clean(&to)?));
         }
     }
+    check_reserved(&plan)?;
     Ok(plan)
 }
 
@@ -311,6 +373,7 @@ fn final_paths(plan: &Plan) -> Vec<String> {
     paths
 }
 
+#[derive(Debug)]
 struct ListsEnv {
     active: Vec<String>,
     order: Vec<String>,
@@ -333,7 +396,11 @@ impl Env for ListsEnv {
     }
 }
 
-fn read_answers(path: &Path) -> Result<Answers, String> {
+/// Read an answers file: `{"answers": {"<question id>": ["<option>", ...]}}`, or the bare map.
+///
+/// # Errors
+/// The file cannot be read or has another shape.
+pub fn read_answers(path: &Path) -> Result<Answers, String> {
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let value: serde_json::Value = serde_json::from_str(&text)
         .map_err(|e| format!("{}: not valid JSON: {e}", path.display()))?;
@@ -344,6 +411,19 @@ fn read_answers(path: &Path) -> Result<Answers, String> {
             path.display()
         )
     })
+}
+
+/// The answers of a request: the file's, with the in-memory ones laid over them.
+fn gather_answers(request: &Request) -> Result<Answers, String> {
+    let mut answers = request
+        .answers
+        .map(read_answers)
+        .transpose()?
+        .unwrap_or_default();
+    for (id, picked) in request.answers_inline.into_iter().flatten() {
+        answers.insert(id.clone(), picked.clone());
+    }
+    Ok(answers)
 }
 
 /// Where a step may fail: an injected failure (`NVMOD_FAIL_AT`) or a termination request.
@@ -375,59 +455,79 @@ fn fail_point(step: &str) -> Result<(), String> {
     nvmod_core::cancel::step_point(step)
 }
 
-/// Extract the archive and work out what goes into the Mod.
-fn plan_archive(
-    request: &Request,
-    plugins: Option<&[u8]>,
-    order: Option<&[u8]>,
-) -> Result<(Scratch, Plan, Vec<Inferred>), InstallError> {
-    let answers = match request.answers {
-        Some(path) => read_answers(path).map_err(InstallError::Refused)?,
-        None => Answers::new(),
-    };
-    let scratch = Scratch::new().map_err(InstallError::Refused)?;
-    // A folder (such as the output of the TTW installer) is read in place; an archive is extracted first.
-    let root = if request.archive.is_dir() {
-        content_root(request.archive)
-    } else {
-        let extracted = scratch.0.join("x");
-        fs::create_dir_all(&extracted).map_err(|e| InstallError::Refused(e.to_string()))?;
-        extract::extract(request.archive, &extracted, request.limits)
-            .map_err(InstallError::Refused)?;
-        content_root(&extracted)
-    };
+/// Refuse a plan that writes into `.nvmod` at the top of the Mod: that folder holds nvmod's own records.
+fn check_reserved(plan: &Plan) -> Result<(), String> {
+    if plan.iter().any(|(_, relative)| {
+        let lower = relative.to_ascii_lowercase();
+        lower == ".nvmod" || lower.starts_with(".nvmod/")
+    }) {
+        return Err(
+            "the archive installs into `.nvmod`, which nvmod keeps for its own records of a Mod"
+                .to_owned(),
+        );
+    }
+    Ok(())
+}
 
-    let mut inferred = Vec::new();
-    let plan = if let Some(config) = resolve_ci(&root, "fomod/ModuleConfig.xml") {
-        let bytes = fs::read(&config).map_err(|e| InstallError::Refused(e.to_string()))?;
-        let module = Module::parse(&fomod::decode_xml(&bytes)).map_err(InstallError::Refused)?;
-        let env = ListsEnv {
-            active: nvmod_formats::plugins::parse_plugin_list(plugins.unwrap_or_default()),
-            order: nvmod_formats::plugins::parse_plugin_list(order.unwrap_or_default()),
-        };
-        match module
-            .resolve(&env, &answers)
-            .map_err(InstallError::Refused)?
-        {
-            Outcome::Questions(questions) => return Err(InstallError::Questions(questions)),
-            Outcome::Ready(selection) => {
-                inferred = selection.inferred;
-                plan_fomod(&root, &selection.files).map_err(InstallError::Refused)?
-            }
-        }
-    } else {
-        plan_plain(&root)
+/// The entry of `modlist.txt` named `name`, as the list spells it, and whether it is enabled.
+fn listed_entry(modlist: Option<&[u8]>, name: &str) -> Result<Option<(String, bool)>, String> {
+    let text = modlist.map_or_default(nvmod_formats::text::decode);
+    let parsed = Modlist::parse(&text);
+    let Some(entry) = parsed
+        .entries
+        .iter()
+        .find(|e| e.name.eq_ignore_ascii_case(name))
+    else {
+        return Ok(None);
     };
-    Ok((scratch, plan, inferred))
+    if entry.kind == EntryKind::Separator || entry.state == ModState::Foreign {
+        return Err(format!(
+            "`{}` in modlist.txt is not a Mod (a separator or an unmanaged entry)",
+            entry.name
+        ));
+    }
+    Ok(Some((entry.name.clone(), entry.state == ModState::Enabled)))
+}
+
+/// The first of `<name> 2`, `<name> 3`, ... that is neither a folder under `mods/` nor listed.
+fn free_name(mods: &Path, modlist: Option<&[u8]>, name: &str) -> String {
+    let text = modlist.map_or_default(nvmod_formats::text::decode);
+    let parsed = Modlist::parse(&text);
+    let mut n = 2_u32;
+    loop {
+        let candidate = format!("{name} {n}");
+        if find_ci(mods, &candidate).is_none()
+            && !parsed
+                .entries
+                .iter()
+                .any(|e| e.name.eq_ignore_ascii_case(&candidate))
+        {
+            return candidate;
+        }
+        n += 1;
+    }
+}
+
+/// The files of a Mod folder as `/` paths (without `meta.ini`, hidden markers' suffix kept, and `.nvmod`).
+fn existing_files(mod_dir: &Path) -> Vec<String> {
+    let mut files = Vec::new();
+    walk(mod_dir, "", &mut files);
+    files.retain(|f| !nvmod_stage::is_mod_metadata(f));
+    files
 }
 
 /// Install `request.archive`, or plan to.
 ///
+/// When a Mod folder of the name exists, `request.on_conflict` decides: refuse (the default), replace, merge or
+/// rename (see [`OnConflict`]).
+///
 /// # Errors
 /// See [`InstallError`].
+// One flat sequence: checks, plan, lists, then the journaled writes.
+#[allow(clippy::too_many_lines)]
 pub fn install(request: &Request) -> Result<Report, InstallError> {
     let instance = request.instance;
-    let name = mod_name(request).map_err(InstallError::Refused)?;
+    let mut name = mod_name(request).map_err(InstallError::Refused)?;
     let dir = instance.profile_dir(request.profile);
     let read = |file: &str| fs::read(dir.join(file)).ok();
     let (modlist, plugins, order) = (
@@ -435,23 +535,85 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
         read("plugins.txt"),
         read("loadorder.txt"),
     );
-    if instance.mod_dir(&name).exists() || find_ci(&instance.root.join("mods"), &name).is_some() {
+    let mods = instance.root.join("mods");
+    let folder = find_ci(&mods, &name)
+        .filter(|p| p.is_dir())
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()));
+    let listed = listed_entry(modlist.as_deref(), &name).map_err(InstallError::Refused)?;
+    if folder.is_none() && instance.mod_dir(&name).exists() {
         return refuse(format!(
-            "a Mod folder `{name}` already exists in the Instance (choose another name with --name)"
+            "`mods/{name}` exists and is not a folder; remove it or choose another name with --name"
         ));
     }
-    let new_modlist =
-        lists::add_to_modlist(modlist.as_deref(), &name).map_err(InstallError::Refused)?;
+    let (mut conflict, mut keep_line, mut enabled) = (None, false, true);
+    if folder.is_some() || listed.is_some() {
+        match request.on_conflict {
+            OnConflict::Refuse if folder.is_some() => {
+                return refuse(format!(
+                    "a Mod folder `{name}` already exists in the Instance (choose another name with --name, or --on-conflict replace|merge|rename)"
+                ));
+            }
+            OnConflict::Refuse => {}
+            OnConflict::Rename => {
+                name = free_name(&mods, modlist.as_deref(), &name);
+                conflict = Some("renamed");
+            }
+            OnConflict::Replace | OnConflict::Merge => {
+                conflict = Some(if request.on_conflict == OnConflict::Merge {
+                    "merged"
+                } else {
+                    "replaced"
+                });
+                if let Some((listed_name, on)) = &listed {
+                    keep_line = true;
+                    enabled = *on;
+                    name.clone_from(listed_name);
+                }
+                if let Some(on_disk) = &folder {
+                    name.clone_from(on_disk);
+                }
+            }
+        }
+    }
+    let existing_folder = folder.filter(|_| conflict.is_some() && conflict != Some("renamed"));
+    let new_modlist = if keep_line {
+        None
+    } else {
+        Some(lists::add_to_modlist(modlist.as_deref(), &name).map_err(InstallError::Refused)?)
+    };
 
-    let (_scratch, plan, inferred) = plan_archive(request, plugins.as_deref(), order.as_deref())?;
-    let files = final_paths(&plan);
+    let answers = gather_answers(request).map_err(InstallError::Refused)?;
+    let session = session::Session::open_with(
+        request.archive,
+        request.limits,
+        plugins.as_deref(),
+        order.as_deref(),
+    )
+    .map_err(InstallError::Refused)?;
+    let resolved = session.resolve(&answers)?;
+    let plan = resolved.plan;
+    let mut files = final_paths(&plan);
     if files.is_empty() {
         return refuse("the archive holds no files to install");
+    }
+    if conflict == Some("merged") {
+        // The Mod afterwards: what the folder holds with the new files laid over it.
+        let mut by_key: std::collections::BTreeMap<String, String> =
+            existing_files(&instance.mod_dir(&name))
+                .into_iter()
+                .map(|f| (f.to_ascii_lowercase(), f))
+                .collect();
+        for f in files {
+            by_key.insert(f.to_ascii_lowercase(), f);
+        }
+        files = by_key.into_values().collect();
+        files.sort();
     }
     let mut new_plugins: Vec<String> = files
         .iter()
         .filter(|f| !f.contains('/'))
         .filter(|f| has_extension(f, "esp") || has_extension(f, "esm"))
+        .filter(|_| enabled)
         .cloned()
         .collect();
     new_plugins.sort_by_key(|p| (!has_extension(p, "esm"), p.to_ascii_lowercase()));
@@ -481,7 +643,8 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
         profile: request.profile.to_owned(),
         files,
         plugins: activated,
-        inferred,
+        inferred: resolved.inferred,
+        conflict,
         staged_files: None,
         journal: None,
     };
@@ -489,15 +652,63 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
         return Ok(report);
     }
 
-    let entry = journal::begin(instance, request.profile, &name).map_err(InstallError::Refused)?;
+    let mut entry = if existing_folder.is_some() {
+        journal::begin_kind(instance, request.profile, &name, journal::KIND_LIFECYCLE)
+    } else {
+        journal::begin(instance, request.profile, &name)
+    }
+    .map_err(InstallError::Refused)?;
     let outcome = (|| -> Result<usize, String> {
         fail_point("mod")?;
         let mod_dir = instance.mod_dir(&name);
-        fs::create_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
+        let old_meta = existing_folder
+            .as_ref()
+            .and_then(|_| fs::read(mod_dir.join("meta.ini")).ok());
+        if let Some(on_disk) = &existing_folder {
+            // The old folder goes to the journal's trash, so a rollback puts it back whole.
+            let (from, to) = (
+                format!("mods/{on_disk}"),
+                format!(".nvmod/trash/{}/{on_disk}", entry.id),
+            );
+            entry.record_move(instance, &from, &to)?;
+            let trashed = instance.root.join(&to);
+            if let Some(parent) = trashed.parent() {
+                fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
+            }
+            fs::rename(instance.root.join(&from), &trashed)
+                .map_err(|e| format!("{}: {e}", trashed.display()))?;
+            entry.record_create(instance, &from)?;
+            fs::create_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
+            if conflict == Some("merged") {
+                lifecycle::copy_tree(&trashed, &mod_dir, false)?;
+            }
+        } else {
+            fs::create_dir_all(&mod_dir).map_err(|e| format!("{}: {e}", mod_dir.display()))?;
+        }
         build(&plan, &mod_dir)?;
+        if let Some(meta) = old_meta {
+            // Notes, categories and the rest of the Mod's meta.ini outlive the new archive's.
+            journal::write_atomic(&mod_dir.join("meta.ini"), &meta)?;
+        }
         write_meta(&mod_dir, request.archive)?;
+        match &resolved.fomod {
+            Some((used, module)) => saved::write(
+                &mod_dir,
+                &AnswersFile {
+                    schema_version: saved::ANSWERS_SCHEMA_VERSION,
+                    module: module.clone(),
+                    archive: saved::absolute(request.archive),
+                    answers: used.clone(),
+                },
+            )?,
+            None => {
+                let _ = fs::remove_file(mod_dir.join(ANSWERS_PATH));
+            }
+        }
         fail_point("lists")?;
-        journal::write_atomic(&dir.join("modlist.txt"), &new_modlist)?;
+        if let Some(new) = &new_modlist {
+            journal::write_atomic(&dir.join("modlist.txt"), new)?;
+        }
         if let Some((p, o)) = &new_lists {
             journal::write_atomic(&dir.join("plugins.txt"), p)?;
             journal::write_atomic(&dir.join("loadorder.txt"), o)?;

@@ -343,6 +343,8 @@ pub fn install(
         name: request.name.clone(),
         dry_run: request.dry_run,
         answers: request.answers.clone(),
+        fomod_answers: None,
+        on_conflict: crate::install::OnConflict::Refuse,
         max_extract_bytes: request.max_extract_bytes,
         extract_limits: crate::install::LimitOverrides::default(),
     };

@@ -140,7 +140,7 @@ pub fn list(
 /// through `nvmod run` holds it for as long as it runs). The lock this process holds itself does not count.
 fn refuse_when_in_use(instance: &NvmodInstance, job: &'static str) -> Result<(), JobError> {
     let refused = |why: String| Err(JobError::new(ErrorKind::Refused, job, why));
-    if let Some(name) = nvmod_backup::game_running()
+    if let Some(name) = nvmod_backup::game_running(&instance.root)
         .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
     {
         return refused(format!(

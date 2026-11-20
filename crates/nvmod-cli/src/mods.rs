@@ -87,6 +87,12 @@ fn place_of(args: &Args) -> Option<Place> {
 // One flat command with its list and change branches.
 #[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    if matches!(
+        args.first().map(String::as_str),
+        Some("reinstall" | "reconfigure")
+    ) {
+        return crate::install_mod::run_reinstall(args, out, err);
+    }
     if mods_life::handles(args.first().map(String::as_str)) {
         return mods_life::run(args, out, err);
     }

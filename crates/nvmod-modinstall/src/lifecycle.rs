@@ -822,7 +822,7 @@ pub fn list_categorised(
         .collect()
 }
 
-fn copy_tree(from: &Path, to: &Path, hardlink: bool) -> Result<(), String> {
+pub(crate) fn copy_tree(from: &Path, to: &Path, hardlink: bool) -> Result<(), String> {
     let io = |p: &Path, e: std::io::Error| format!("{}: {e}", p.display());
     fs::create_dir_all(to).map_err(|e| io(to, e))?;
     for entry in fs::read_dir(from).map_err(|e| io(from, e))? {

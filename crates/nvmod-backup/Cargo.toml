@@ -11,6 +11,7 @@ description = "Snapshots of a profile's lists and INIs: create, list, restore an
 [dependencies]
 nvmod-core = { workspace = true }
 nvmod-instance = { workspace = true }
+nvmod-run = { workspace = true }
 nvmod-stage = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

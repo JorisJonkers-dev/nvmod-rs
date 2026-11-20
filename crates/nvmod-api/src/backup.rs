@@ -248,7 +248,7 @@ pub fn restore(
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
-    if let Some(name) = nvmod_backup::game_running() {
+    if let Some(name) = nvmod_backup::game_running(&instance.root) {
         return Err(JobError::new(
             ErrorKind::Refused,
             RESTORE,

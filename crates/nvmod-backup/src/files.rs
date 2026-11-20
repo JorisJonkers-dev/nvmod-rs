@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! Which files a snapshot holds, copying with a hash, and finding the game process.
+//! Which files a snapshot holds, copying with a hash, and finding what runs in the Instance.
 
 use crate::{Snapshot, clock};
 use sha2::{Digest, Sha256};
@@ -194,29 +194,26 @@ pub(crate) fn mo2_backups(profile_dir: &Path) -> Vec<Snapshot> {
         .collect()
 }
 
-/// The name of a running game process, when one is found. Linux only (it reads `/proc`); elsewhere `None`.
-/// The names are `FalloutNV.exe`, `nvse_loader.exe` and `nv-viewer`, plus those in `NVMOD_GAME_PROCESSES`
-/// (comma separated), matched against the process name without regard to case. A zombie (a process that
-/// has exited and is waiting to be reaped) does not count. `NVMOD_PROC_DIR` replaces `/proc` as the process
-/// source, so a test can name processes without starting any (and without seeing the host's).
+/// What holds the Instance at `root` while it runs a program, when something does: `run nv-rs, pid 4242` (the
+/// command and pid in `.nvmod/lock`). The guard is about this Instance, not about process names: a run hands
+/// the lock to the program it started, whatever that is called (`nv-viewer`, `raul --play-mode`, a Windows
+/// program under Proton), so a game of another Instance or of none never counts, and a game of this one always
+/// does. A lock whose process is gone does not count, and neither does one this process holds itself (a
+/// writing command takes the lock around its own work).
 #[must_use]
-pub fn game_running() -> Option<String> {
-    process_running(&["FalloutNV.exe", "nvse_loader.exe", "nv-viewer"])
+pub fn game_running(root: &Path) -> Option<String> {
+    let holder = nvmod_run::InstanceLock::read(root)?;
+    if holder.pid == std::process::id() || !nvmod_run::pid_alive(holder.pid) {
+        return None;
+    }
+    Some(format!("{}, pid {}", holder.command, holder.pid))
 }
 
-/// The name of a running process among `wanted` (and those in `NVMOD_GAME_PROCESSES`), matched without regard to
-/// case; see [`game_running`]. Linux only; elsewhere `None`.
+/// The name of a running process among `wanted`, matched without regard to case, found in `/proc` (or in
+/// `NVMOD_PROC_DIR`, which replaces it for tests). A zombie does not count. Linux only; elsewhere `None`.
 #[must_use]
 pub fn process_running(wanted: &[&str]) -> Option<String> {
-    let mut names: Vec<String> = wanted.iter().map(|n| n.to_ascii_lowercase()).collect();
-    if let Ok(extra) = std::env::var("NVMOD_GAME_PROCESSES") {
-        names.extend(
-            extra
-                .split(',')
-                .map(|n| n.trim().to_ascii_lowercase())
-                .filter(|n| !n.is_empty()),
-        );
-    }
+    let names: Vec<String> = wanted.iter().map(|n| n.to_ascii_lowercase()).collect();
     let root = std::env::var_os("NVMOD_PROC_DIR").map_or_else(|| "/proc".into(), PathBuf::from);
     find_in(&root, &names)
 }
@@ -305,5 +302,41 @@ mod proc_tests {
             find_in(Path::new("/nonexistent-nvmod-proc"), &names()),
             None
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lock(root: &Path, pid: u32, command: &str) {
+        fs::create_dir_all(root.join(".nvmod")).unwrap();
+        fs::write(
+            root.join(".nvmod/lock"),
+            format!(r#"{{"pid":{pid},"started":1,"command":"{command}"}}"#),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn no_lock_means_no_game() {
+        let dir = nvmod_testkit::TempDir::new("gr-none");
+        assert_eq!(game_running(dir.path()), None);
+    }
+
+    #[test]
+    fn a_lock_held_by_this_process_does_not_count() {
+        let dir = nvmod_testkit::TempDir::new("gr-self");
+        lock(dir.path(), std::process::id(), "mods");
+        assert_eq!(game_running(dir.path()), None);
+    }
+
+    // On Windows `pid_alive` answers true for every pid, so a dead holder cannot be told apart there.
+    #[cfg(unix)]
+    #[test]
+    fn a_lock_of_a_process_that_has_ended_does_not_count() {
+        let dir = nvmod_testkit::TempDir::new("gr-dead");
+        lock(dir.path(), 4_294_967_290, "run nv-rs");
+        assert_eq!(game_running(dir.path()), None);
     }
 }
