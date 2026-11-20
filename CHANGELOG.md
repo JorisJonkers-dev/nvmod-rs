@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.15.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.14.0...v0.15.0) (2026-11-20)
+
+
+### Features
+
+* **fomod:** interactive question stream, saved answers, reinstall, reconfigure and name clash handling ([#228](https://github.com/JorisJonkers-dev/nvmod-rs/issues/228)) ([aeec260](https://github.com/JorisJonkers-dev/nvmod-rs/commit/aeec260447666cc0d669b4e7ba6454b19eb3351b))
+* **profile:** list, copy, rename, delete, select and per-Profile settings ([#229](https://github.com/JorisJonkers-dev/nvmod-rs/issues/229)) ([67a6eaf](https://github.com/JorisJonkers-dev/nvmod-rs/commit/67a6eaf2e8db265a03a7162078b22baddd064290)), closes [#73](https://github.com/JorisJonkers-dev/nvmod-rs/issues/73)
+
+
+### Bug Fixes
+
+* **run:** a game started through raul plays sound ([#236](https://github.com/JorisJonkers-dev/nvmod-rs/issues/236)) ([97a955f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/97a955f8216727150d94aacada050819e13accb9))
+* **sort:** one line per requirement and nv-rs built-in extenders are not missing ([#232](https://github.com/JorisJonkers-dev/nvmod-rs/issues/232)) ([db956e1](https://github.com/JorisJonkers-dev/nvmod-rs/commit/db956e1244a9caea24b350b8f2c639e82d9663b3))
+* **stage:** plugin file times follow loadorder.txt at every staging ([#230](https://github.com/JorisJonkers-dev/nvmod-rs/issues/230)) ([5996a02](https://github.com/JorisJonkers-dev/nvmod-rs/commit/5996a02bcb81ec139f5d20110410c446da6d0f34))
+
 ## [0.14.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.13.0...v0.14.0) (2026-11-20)
 
 
