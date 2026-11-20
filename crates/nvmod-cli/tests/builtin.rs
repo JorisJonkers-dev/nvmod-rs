@@ -622,7 +622,7 @@ fn a_ttw_profile_with_the_three_values_has_no_ini_finding_whatever_the_letter_ca
     s.fallout_ini(
         "[General]\r\nscharGenQuest=001fffF8\r\nSINTROMOVIE=\r\n[BackgroundLoad]\r\nbBackgroundLoadLipFiles=1\r\n",
     );
-    assert!(ttw_ini_codes(&s.doctor()).is_empty());
+    assert_eq!(ttw_ini_codes(&s.doctor()), Vec::<String>::new());
 }
 
 #[test]
@@ -648,8 +648,8 @@ fn a_missing_key_is_named_and_only_the_first_line_of_a_repeated_key_counts() {
 fn a_profile_without_the_master_or_without_an_ini_gets_no_ini_finding() {
     let s = Scratch::new("nv-rs");
     s.fallout_ini("[General]\r\nSCharGenQuest=00102037\r\n");
-    assert!(ttw_ini_codes(&s.doctor()).is_empty());
+    assert_eq!(ttw_ini_codes(&s.doctor()), Vec::<String>::new());
     let t = Scratch::new("nv-rs");
     t.with_ttw_master();
-    assert!(ttw_ini_codes(&t.doctor()).is_empty());
+    assert_eq!(ttw_ini_codes(&t.doctor()), Vec::<String>::new());
 }
