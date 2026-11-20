@@ -37,6 +37,13 @@ as documented.
 
 Licence: GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
+## Legal notice
+
+nvmod contains no game files, no mod files and no code of a game: you need your own legally obtained copy of Fallout:
+New Vegas, and the mods you use stay under their own licences. The licence above covers only the original work in this
+repository. Fallout and Fallout: New Vegas are trademarks of their respective owners; this project is not affiliated
+with or endorsed by them.
+
 ## Status: milestone M1, the read-only NVSE doctor
 
 Nothing in this repository writes to a Mod Organizer 2 instance or to a game folder. The doctor reads:
