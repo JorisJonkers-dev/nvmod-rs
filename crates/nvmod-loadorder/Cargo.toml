@@ -12,7 +12,7 @@ description = "The Load order of a Profile: sorted by loot-rs, written to plugin
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
-nvmod-modinstall = { workspace = true }
+nvmod-journal = { workspace = true }
 nvmod-stage = { workspace = true }
 # Linked as a library, pinned to a release tag (ADR-0003 of nv-linux). GPL-3.0-only, like this repository.
 loot-rs = { workspace = true }
