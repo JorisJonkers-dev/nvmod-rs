@@ -3,6 +3,9 @@
 //! fork's release and verifies its checksum and attestation, then runs the installation check, `nv-viewer <data> --check`. Every step is
 //! staged and rolled back on failure, and the game executable is never copied (see `docs/DECISIONS.md`).
 
+// `Curl` is deprecated for callers (nvmod-rs#188); nvmod still uses it until it is removed.
+#![allow(deprecated)]
+
 mod build;
 mod check;
 mod install;
