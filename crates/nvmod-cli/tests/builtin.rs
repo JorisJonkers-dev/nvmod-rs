@@ -556,3 +556,100 @@ fn readiness_without_capabilities_has_no_command_figure_and_text_prints_it() {
         "{text} / {err}"
     );
 }
+
+const INI_DIR: &str = "run/Default/userdata/Documents/My Games/FalloutNV";
+
+impl Scratch {
+    /// The Profile lists `TaleOfTwoWastelands.esm` as active.
+    fn with_ttw_master(&self) {
+        write_file(
+            &self.root(),
+            "profiles/Default/plugins.txt",
+            b"FalloutNV.esm\r\nTaleOfTwoWastelands.esm\r\nBase.esp\r\n",
+        );
+        write_file(
+            &self.root(),
+            "profiles/Default/loadorder.txt",
+            b"FalloutNV.esm\r\nTaleOfTwoWastelands.esm\r\nBase.esp\r\n",
+        );
+    }
+
+    fn fallout_ini(&self, text: &str) {
+        write_file(
+            &self.root(),
+            &format!("{INI_DIR}/Fallout.ini"),
+            text.as_bytes(),
+        );
+    }
+}
+
+fn ttw_ini_codes(report: &Value) -> Vec<String> {
+    codes(report)
+        .into_iter()
+        .filter(|c| c.starts_with("ttw-ini."))
+        .collect()
+}
+
+#[test]
+fn a_ttw_profile_with_the_game_default_ini_gets_one_finding_per_key() {
+    let s = Scratch::new("nv-rs");
+    s.with_ttw_master();
+    s.fallout_ini(
+        "[General]\r\nSCharGenQuest=00102037\r\nsIntroMovie=Fallout INTRO Vsk.bik\r\n[BackgroundLoad]\r\nbBackgroundLoadLipFiles=0\r\n",
+    );
+    let report = s.doctor();
+    assert_eq!(
+        ttw_ini_codes(&report),
+        [
+            "ttw-ini.start-quest",
+            "ttw-ini.lip-files",
+            "ttw-ini.intro-movie"
+        ]
+    );
+    let (severity, message) = finding(&report, "ttw-ini.start-quest", "Fallout.ini").unwrap();
+    assert_eq!(severity, "warning");
+    assert!(
+        message.contains("SCharGenQuest is 00102037") && message.contains("001FFFF8"),
+        "{message}"
+    );
+    assert!(!message.contains("nvmod"), "{message}");
+}
+
+#[test]
+fn a_ttw_profile_with_the_three_values_has_no_ini_finding_whatever_the_letter_case() {
+    let s = Scratch::new("nv-rs");
+    s.with_ttw_master();
+    s.fallout_ini(
+        "[General]\r\nscharGenQuest=001fffF8\r\nSINTROMOVIE=\r\n[BackgroundLoad]\r\nbBackgroundLoadLipFiles=1\r\n",
+    );
+    assert_eq!(ttw_ini_codes(&s.doctor()), Vec::<String>::new());
+}
+
+#[test]
+fn a_missing_key_is_named_and_only_the_first_line_of_a_repeated_key_counts() {
+    let s = Scratch::new("nv-rs");
+    s.with_ttw_master();
+    s.fallout_ini(
+        "[General]\r\nSCharGenQuest=00102037\r\nSCharGenQuest=001FFFF8\r\nsIntroMovie=\r\n",
+    );
+    let report = s.doctor();
+    assert_eq!(
+        ttw_ini_codes(&report),
+        ["ttw-ini.start-quest", "ttw-ini.lip-files"]
+    );
+    let (_, message) = finding(&report, "ttw-ini.lip-files", "Fallout.ini").unwrap();
+    assert!(
+        message.contains("has no bBackgroundLoadLipFiles line"),
+        "{message}"
+    );
+}
+
+#[test]
+fn a_profile_without_the_master_or_without_an_ini_gets_no_ini_finding() {
+    let s = Scratch::new("nv-rs");
+    s.fallout_ini("[General]\r\nSCharGenQuest=00102037\r\n");
+    assert_eq!(ttw_ini_codes(&s.doctor()), Vec::<String>::new());
+    let t = Scratch::new("nv-rs");
+    t.with_ttw_master();
+    assert_eq!(ttw_ini_codes(&t.doctor()), Vec::<String>::new());
+}
