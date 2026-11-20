@@ -655,6 +655,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-journal"
+version = "0.15.1"
+dependencies = [
+ "nvmod-instance",
+ "nvmod-stage",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nvmod-modinstall"
 version = "0.15.1"
 dependencies = [
@@ -664,6 +674,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-journal",
  "nvmod-stage",
  "roxmltree",
  "ruzstd",
