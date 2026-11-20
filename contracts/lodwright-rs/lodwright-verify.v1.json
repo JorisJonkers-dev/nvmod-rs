@@ -72,6 +72,17 @@
         "type": "string"
       }
     },
+    "terrain": {
+      "description": "With a reference: the terrain heights of every block present on both sides, compared with the reference's.\nOmitted without a reference.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TerrainReport"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "terrain_blocks": {
       "description": "Terrain block meshes checked.",
       "type": "integer",
@@ -222,6 +233,131 @@
       "required": [
         "blocks",
         "exact",
+        "per_block"
+      ]
+    },
+    "TerrainBlock": {
+      "description": "The height difference of one terrain block.",
+      "type": "object",
+      "properties": {
+        "max": {
+          "description": "The largest absolute height difference, in game units.",
+          "type": "number",
+          "format": "double"
+        },
+        "mean": {
+          "description": "The mean absolute height difference, in game units.",
+          "type": "number",
+          "format": "double"
+        },
+        "path": {
+          "description": "The block mesh, relative to the folder, lower case.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "max",
+        "mean"
+      ]
+    },
+    "TerrainLevel": {
+      "description": "The terrain heights of one level compared with the reference.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks of this level that were compared.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "max": {
+          "description": "The largest difference of the level, in game units.",
+          "type": "number",
+          "format": "double"
+        },
+        "mean": {
+          "description": "The mean of the blocks' mean differences, in game units.",
+          "type": "number",
+          "format": "double"
+        },
+        "over_tolerance": {
+          "description": "Of those, the blocks whose largest difference is over the tolerance.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "level",
+        "blocks",
+        "over_tolerance",
+        "max",
+        "mean"
+      ]
+    },
+    "TerrainReport": {
+      "description": "The terrain heights of the blocks compared with the reference: the ground of both meshes sampled on a 33 by 33\ngrid over the bounds of the block, at the points both cover, as the absolute difference of the heights in game\nunits. Numbers are rounded to three decimals.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Terrain blocks compared (present on both sides and sharing sampled ground).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "max": {
+          "description": "The largest difference of any block; omitted when no block was compared.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "mean": {
+          "description": "The mean of the blocks' mean differences; omitted when no block was compared.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "over_tolerance": {
+          "description": "Blocks whose largest difference is over `tolerance`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "per_block": {
+          "description": "Every compared block, sorted by path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TerrainBlock"
+          }
+        },
+        "per_level": {
+          "description": "The same numbers per terrain level, smallest level first. Omitted when no block was compared.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TerrainLevel"
+          }
+        },
+        "tolerance": {
+          "description": "The largest difference over which a block counts in `over_tolerance`: `--height-tolerance`, or 1 without it.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "blocks",
+        "tolerance",
+        "over_tolerance",
         "per_block"
       ]
     },

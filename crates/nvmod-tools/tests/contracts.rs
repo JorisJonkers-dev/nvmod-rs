@@ -281,7 +281,7 @@ fn a_document_above_the_negotiated_version_is_refused() {
     ));
 }
 
-/// The names and versions lodwright-rs v0.6.0 lists under `lodwright contracts --json`, in its order. `lodwright-api`
+/// The names and versions lodwright-rs v0.7.0 lists under `lodwright contracts --json`, in its order. `lodwright-api`
 /// is the in-process library API and has no schema file, so it is the one name nvmod does not vendor.
 const LODWRIGHT_HANDSHAKE: [&str; 9] = [
     "lodwright-plan",
@@ -345,7 +345,7 @@ fn a_mistyped_field_is_rejected_per_lodwright_contract() {
 
 #[test]
 fn the_plan_reads_the_bounds_the_released_tool_writes() {
-    // The first vendored plan wrote `min_x`..`max_y`; v0.6.0 writes the four compass names. A bounds object of the
+    // The first vendored plan wrote `min_x`..`max_y`; v0.7.0 writes the four compass names. A bounds object of the
     // old names no longer validates.
     let contract = builtin("lodwright-plan").unwrap();
     let mut doc = sample("lodwright-plan");
