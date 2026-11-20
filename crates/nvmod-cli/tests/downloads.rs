@@ -113,7 +113,7 @@ fn list_json_matches_its_schema_and_names_with_brackets_work() {
         .unwrap();
     assert_eq!(loose["state"], "hidden");
     assert_eq!(loose["nexus_file_id"], 6);
-    assert!(!value.to_string().contains("Users"));
+    assert!(!value["archives"].to_string().contains("Users"));
 
     let value = json(&[
         "downloads",

@@ -264,7 +264,8 @@ fn installation_file_is_a_bare_name_whatever_the_meta_ini_holds() {
     write_file(dl.path(), "Win Mod-12-1-0-1699999999.7z", b"x");
     let report = run_list(dl.path(), &mods, ListOptions::default());
     assert_eq!(report.archives[0].state, State::Installed);
-    let json = serde_json::to_string(&report).unwrap();
+    // The folder's own path is the caller's (a Windows temp folder has `Users` in it); the rows hold names only.
+    let json = serde_json::to_string(&report.archives).unwrap();
     assert!(!json.contains("Users") && !json.contains("D:/"), "{json}");
 }
 
