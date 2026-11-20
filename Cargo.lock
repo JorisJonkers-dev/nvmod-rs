@@ -257,6 +257,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
+name = "esplugin"
+version = "6.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea69d8e4b2b22ec62ac4a26ed8099be4eecd800e0e60b241c04a1ccaa181a287"
+dependencies = [
+ "encoding_rs",
+ "memchr",
+ "nom",
+ "unicase",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -517,10 +529,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
-name = "loot-rs"
-version = "0.7.0"
-source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.7.0#6b7e170e3548c81b2d76fb6c83d0e4822022a875"
+name = "loot-condition-interpreter"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "658c7e8070b5d723294fed720100537640ea9fc467a2b9e15a4b58a50a2cd960"
 dependencies = [
+ "crc32fast",
+ "esplugin",
+ "nom",
+ "regex",
+ "unicase",
+]
+
+[[package]]
+name = "loot-rs"
+version = "0.8.1"
+source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.8.1#4b22e6837b08a5d9edfbd6938761a1c5a77adf9e"
+dependencies = [
+ "loot-condition-interpreter",
  "regex",
  "yaml-rust2",
 ]
@@ -576,6 +602,15 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+]
+
+[[package]]
+name = "nom"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df9761775871bdef83bee530e60050f7e54b1105350d6884eb0fb4f46c2f9405"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -1560,6 +1595,12 @@ name = "unarray"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
+
+[[package]]
+name = "unicase"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357cc3acc6a036009fd6c973ed009037c732d60d0b4f6c673e9041497482a28f"
 
 [[package]]
 name = "unicode-general-category"

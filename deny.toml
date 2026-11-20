@@ -37,6 +37,9 @@ confidence-threshold = 0.8
 # reads 7z BZip2 blocks and tar.bz2 archives in process (nvmod-modinstall).
 exceptions = [
     { allow = ["bzip2-1.0.6"], crate = "libbz2-rs-sys" },
+    # esplugin reads plugin headers for loot-rs; it is GPL-3.0 (the deprecated SPDX id for GPL-3.0-only), the same
+    # licence as this project, so linking it is compatible. Only that crate is allowed, not the licence in general.
+    { allow = ["GPL-3.0"], crate = "esplugin" },
 ]
 
 # The workspace crates are publish = false; their own licence is checked by the SPDX guard instead.
