@@ -88,6 +88,10 @@ pub struct Instance {
     /// The programs `nvmod run` starts through the staged view (MO2's `customExecutables`). Absent when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub executables: Vec<Executable>,
+    /// The Profile that is active (`nvmod profile select`). Absent until one is chosen: the only Profile there is
+    /// is then the active one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_profile: Option<String>,
 }
 
 /// One entry of an Instance's executables registry.
@@ -122,6 +126,7 @@ impl Instance {
             storefront,
             target: Target::Vanilla,
             executables: Vec::new(),
+            selected_profile: None,
         }
     }
 }
