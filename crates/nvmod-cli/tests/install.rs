@@ -414,6 +414,50 @@ fn an_archive_larger_than_the_limit_is_refused() {
 }
 
 #[test]
+fn every_extraction_limit_refuses_with_exit_2_names_itself_and_leaves_the_instance_alone() {
+    let s = Scratch::new();
+    let zip = s.archive("Limits.zip");
+    ZipBuilder::new()
+        .file("a/b/one.txt", &[1; 40])
+        .file("two.txt", &[2; 40])
+        .write(&zip);
+    let before = s.state();
+    // (flag, a value that refuses, a value just at the limit that installs)
+    let cases = [
+        ("--max-extract-bytes", "79", "80"),
+        ("--max-extract-entries", "1", "2"),
+        ("--max-extract-entry-bytes", "39", "40"),
+        ("--max-extract-depth", "2", "3"),
+        ("--max-extract-operations", "1", "100"),
+        ("--max-extract-seconds", "0", "60"),
+    ];
+    for (flag, refuse, _) in cases {
+        let (code, _, err) = s.install(&zip, &[flag, refuse]);
+        assert_eq!(code, 2, "{flag} {refuse}: {err}");
+        assert!(err.contains(flag), "{flag} should be named in: {err}");
+        assert_eq!(s.state(), before, "{flag}");
+    }
+    for (flag, _, allow) in cases {
+        let name = format!("Limits {}", flag.trim_start_matches("--max-extract-"));
+        let (code, _, err) = s.install(&zip, &[flag, allow, "--name", &name]);
+        assert_eq!(code, 0, "{flag} {allow}: {err}");
+    }
+}
+
+#[test]
+fn an_extraction_limit_that_is_not_a_number_is_a_usage_error() {
+    let s = Scratch::new();
+    let zip = s.archive("Usage.zip");
+    ZipBuilder::new().file("x.txt", b"x").write(&zip);
+    let before = s.state();
+    let (code, _, err) = s.install(&zip, &["--max-extract-ratio", "ten"]);
+    assert_eq!(code, 5, "{err}");
+    assert!(err.contains("--max-extract-ratio wants a number"), "{err}");
+    assert_eq!(s.state(), before);
+    assert_eq!(s.install(&zip, &["--max-extract-ratio", "10"]).0, 0);
+}
+
+#[test]
 fn dry_run_lists_the_changes_and_writes_nothing() {
     let s = Scratch::new();
     let zip = s.archive("Dry.zip");
