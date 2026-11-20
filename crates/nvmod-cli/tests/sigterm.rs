@@ -62,7 +62,7 @@ fn without_journal(
     // The manifest of a built tree holds the file ids and times of what it linked: not byte-identical after the
     // tree is built again.
     state.retain(|k, _| {
-        !k.starts_with(".nvmod") && !(k.starts_with("staging/") && k.ends_with(".json"))
+        !(k.starts_with(".nvmod") || (k.starts_with("staging/") && k.contains(".json")))
     });
     state
 }

@@ -7,10 +7,11 @@ use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
 
-const USAGE_LINE: &str = "usage: nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]";
+const USAGE_LINE: &str =
+    "usage: nvmod stage --instance <dir> [--profile <name>] [--copy] [--full] [--json]";
 
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
-    let args = match Args::parse(args, &["copy", "json"], &["instance", "profile"]) {
+    let args = match Args::parse(args, &["copy", "full", "json"], &["instance", "profile"]) {
         Ok(args) if args.positional.is_empty() && args.option("instance").is_some() => args,
         Ok(_) => {
             let _ = writeln!(err, "{USAGE_LINE}");
@@ -25,6 +26,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         instance: PathBuf::from(args.option("instance").unwrap_or_default()),
         profile: args.option("profile").map(str::to_owned),
         copy: args.flag("copy"),
+        full: args.flag("full"),
     };
     match nvmod_api::stage::stage(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(staged)) => {
@@ -42,6 +44,13 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                     "nvmod stage: profile `{}`: {} files in {} ({} hard link(s), {} copied, {} replaced by a later Mod)",
                     m.profile, m.files, report.tree, m.linked, m.copied, m.overridden
                 );
+                if report.mode == "incremental" {
+                    let _ = writeln!(
+                        out,
+                        "  incremental: {} file operation(s)",
+                        report.operations
+                    );
+                }
                 for c in &report.collisions {
                     let _ = writeln!(
                         out,

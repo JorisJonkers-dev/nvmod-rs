@@ -186,7 +186,7 @@ fn prepare(
     plan.staging =
         nvmod_run::plan_staging(instance, profile, a.flag("restage"), a.flag("no-stage"));
     if plan.staging.builds() {
-        match nvmod_stage::stage(instance, profile, Options { copy_only: false }) {
+        match nvmod_stage::stage(instance, profile, Options::default()) {
             Ok(report) => {
                 if !a.flag("json") {
                     let _ = writeln!(
