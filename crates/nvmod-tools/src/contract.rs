@@ -328,7 +328,7 @@ impl Contract {
             Some(error) => Err(ContractError::Invalid {
                 contract: self.name.clone(),
                 version: found,
-                first_error: format!("{error} (at `{}`)", error.instance_path),
+                first_error: format!("{error} (at `{}`)", error.instance_path()),
             }),
         }
     }
