@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ListReport",
+  "description": "`nvmod profile list --json`.",
+  "type": "object",
+  "properties": {
+    "profiles": {
+      "description": "The Profiles, sorted by name.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProfileRow"
+      }
+    },
+    "schema_version": {
+      "description": "The version of this layout; see [`LIST_SCHEMA_VERSION`].",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "selected": {
+      "description": "The active Profile, `null` when there are several and none was selected.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "profiles"
+  ],
+  "$defs": {
+    "ProfileRow": {
+      "description": "One Profile of an Instance.",
+      "type": "object",
+      "properties": {
+        "archive_invalidation": {
+          "description": "`AutomaticArchiveInvalidation` of `settings.ini`.",
+          "type": "boolean"
+        },
+        "local_saves": {
+          "description": "`LocalSaves` of `settings.ini`: the Profile's `saves/` folder is the save target.",
+          "type": "boolean"
+        },
+        "local_settings": {
+          "description": "`LocalSettings` of `settings.ini`: the Profile holds its own game INIs.",
+          "type": "boolean"
+        },
+        "mods_enabled": {
+          "description": "Mods listed and enabled in `modlist.txt` (separators and foreign entries are not counted).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "mods_total": {
+          "description": "Mods listed in `modlist.txt`, enabled or not (separators and foreign entries are not counted).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "name": {
+          "description": "The Profile's name (its folder name).",
+          "type": "string"
+        },
+        "plugins_active": {
+          "description": "Plugins in `plugins.txt`: the active ones.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "plugins_total": {
+          "description": "Plugins in `loadorder.txt`: all of them.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "selected": {
+          "description": "Whether this is the active Profile.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "selected",
+        "mods_enabled",
+        "mods_total",
+        "plugins_active",
+        "plugins_total",
+        "local_settings",
+        "local_saves",
+        "archive_invalidation"
+      ]
+    }
+  }
+}
