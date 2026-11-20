@@ -140,7 +140,9 @@ mod tests {
     #[test]
     fn contract_calls_validate_the_output_and_name_the_tool_and_the_first_error() {
         let dir = TempDir::new("run-contract");
-        let good = json!({"worlds": []}).to_string();
+        let good: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/recorded/lodwright-plan.json")).unwrap();
+        let good = good.to_string();
         let p = script(&dir, "good", &format!("echo '{good}'"));
         assert_eq!(
             call_contract(&fast(), &Call::new("lodwright-rs", &p, &[]), &lodwright())

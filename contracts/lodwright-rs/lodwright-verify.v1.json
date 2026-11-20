@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerifyDoc",
+  "description": "Verify v1, the report of `lodwright verify --json`.",
+  "type": "object",
+  "properties": {
+    "contract": {
+      "description": "The contract name, `lodwright-verify`: a reader refuses a document that names another.",
+      "type": "string",
+      "const": "lodwright-verify"
+    },
+    "differences": {
+      "description": "Differences from the reference folder; empty when no reference was given.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/VerifyFinding"
+      }
+    },
+    "errors": {
+      "description": "What is wrong with the folder, sorted by path.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/VerifyFinding"
+      }
+    },
+    "known": {
+      "description": "With `--known-differences`: the differences the list names, with its reason and release. They are reported\nand do not make the run fail. Omitted when empty.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/KnownDifference"
+      }
+    },
+    "object_blocks": {
+      "description": "Object block meshes checked.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "objects": {
+      "description": "With a reference: every object block present on both sides, compared with the reference's. Omitted without\na reference.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectReport"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ok": {
+      "description": "True when the folder has no errors.",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "description": "The document version; 1.",
+      "type": "integer",
+      "format": "uint32",
+      "const": 1,
+      "minimum": 0
+    },
+    "settings": {
+      "description": "Settings files checked.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "stale": {
+      "description": "With `--known-differences`: listed paths that no longer differ, so the list can lose them. Omitted when\nempty.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "terrain_blocks": {
+      "description": "Terrain block meshes checked.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "textures": {
+      "description": "Textures checked.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "tree_blocks": {
+      "description": "Tree block files checked.",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "water": {
+      "description": "With a reference: the water of every terrain block that has water on either side, compared with the\nreference's. Omitted without a reference.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WaterReport"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract",
+    "ok",
+    "terrain_blocks",
+    "object_blocks",
+    "tree_blocks",
+    "textures",
+    "settings",
+    "errors"
+  ],
+  "$defs": {
+    "KnownDifference": {
+      "description": "A difference the known-differences list names.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "The file, relative to the folder, forward slashes.",
+          "type": "string"
+        },
+        "problem": {
+          "description": "What differs, as prose for people; never matched on.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why the difference is accepted, from the list.",
+          "type": "string"
+        },
+        "release": {
+          "description": "The release expected to remove it, from the list.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "problem",
+        "reason",
+        "release"
+      ]
+    },
+    "ObjectBlock": {
+      "description": "One object block compared with the reference's.",
+      "type": "object",
+      "properties": {
+        "exact": {
+          "description": "Equal counts and no unmatched vertex.",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "The block mesh, relative to the folder, lower case.",
+          "type": "string"
+        },
+        "reference_triangles": {
+          "description": "Triangles of the reference's block.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "reference_vertices": {
+          "description": "Vertices of the reference's block.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "triangles": {
+          "description": "Triangles of the block.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "unmatched_vertices": {
+          "description": "Vertices of the block with no vertex of the reference's block within 0.05 units.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "vertices": {
+          "description": "Vertices of the block (all its shapes).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "path",
+        "vertices",
+        "reference_vertices",
+        "triangles",
+        "reference_triangles",
+        "unmatched_vertices",
+        "exact"
+      ]
+    },
+    "ObjectReport": {
+      "description": "The object blocks compared with the reference. A block is exact when the vertex and triangle counts are equal and\nevery vertex lies within 0.05 units of a vertex of the reference's block, in any order. Not being exact is reported,\nnot a finding.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Object blocks present on both sides.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "exact": {
+          "description": "Of those, the exact ones.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "per_block": {
+          "description": "Every block present on both sides, sorted by path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ObjectBlock"
+          }
+        }
+      },
+      "required": [
+        "blocks",
+        "exact",
+        "per_block"
+      ]
+    },
+    "VerifyFinding": {
+      "description": "One finding: a file and what is wrong with it, or how it differs from the reference.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "The file, relative to the folder, forward slashes.",
+          "type": "string"
+        },
+        "problem": {
+          "description": "What is wrong, as prose for people; never matched on.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "problem"
+      ]
+    },
+    "WaterBlock": {
+      "description": "The water `IoU` of one terrain block.",
+      "type": "object",
+      "properties": {
+        "iou": {
+          "description": "1 for the same covered ground, 0 for none in common.",
+          "type": "number",
+          "format": "double"
+        },
+        "path": {
+          "description": "The block mesh, relative to the folder, lower case.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "iou"
+      ]
+    },
+    "WaterLevel": {
+      "description": "The water of one terrain level compared with the reference.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks of this level with water on either side.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "lowest": {
+          "description": "The lowest `IoU` of the level.",
+          "type": "number",
+          "format": "double"
+        },
+        "mean": {
+          "description": "The mean `IoU` of the level.",
+          "type": "number",
+          "format": "double"
+        },
+        "under_threshold": {
+          "description": "Of those, the blocks under the threshold.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "level",
+        "blocks",
+        "under_threshold",
+        "lowest",
+        "mean"
+      ]
+    },
+    "WaterReport": {
+      "description": "The water of the terrain blocks compared with the reference: the `IoU` (intersection over union) of the ground the\ntwo water planes cover, seen from above, sampled at the centres of a 400 by 400 grid over the bounds of both\nplanes. Numbers are rounded to three decimals.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Terrain blocks with water on either side (and present on both sides).",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "lowest": {
+          "description": "The lowest `IoU`; omitted when no block has water.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "mean": {
+          "description": "The mean `IoU`; omitted when no block has water.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "per_block": {
+          "description": "Every block with water, sorted by path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WaterBlock"
+          }
+        },
+        "per_level": {
+          "description": "The same numbers per terrain level, smallest level first: what the release notes list. Omitted when no\nblock has water.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WaterLevel"
+          }
+        },
+        "threshold": {
+          "description": "The `IoU` under which a block counts in `under_threshold`: `--water-iou`, or 0.95 without it.",
+          "type": "number",
+          "format": "double"
+        },
+        "under_threshold": {
+          "description": "Blocks whose `IoU` is under `threshold`.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "blocks",
+        "threshold",
+        "under_threshold",
+        "per_block"
+      ]
+    }
+  }
+}

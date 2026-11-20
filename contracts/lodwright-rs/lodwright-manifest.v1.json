@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Manifest",
+  "description": "The manifest, `manifest.json` in the output folder.",
+  "type": "object",
+  "properties": {
+    "blocks": {
+      "description": "Terrain blocks, sorted by key; a later run keeps a block whose inputs did not change. Empty in manifests\nof earlier versions, which then rebuild every block.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ManifestBlock"
+      }
+    },
+    "contract": {
+      "description": "The contract name, `lodwright-manifest`.",
+      "type": "string",
+      "const": "lodwright-manifest"
+    },
+    "files": {
+      "description": "Files, sorted by path.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ManifestFile"
+      }
+    },
+    "inputs_digest": {
+      "description": "Digest of the plugins' contents.",
+      "type": "string"
+    },
+    "request_digest": {
+      "description": "Digest of the request.",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "The document version; 1.",
+      "type": "integer",
+      "format": "uint32",
+      "const": 1,
+      "minimum": 0
+    },
+    "tool": {
+      "description": "The tool that wrote it.",
+      "$ref": "#/$defs/ToolInfo"
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract",
+    "tool",
+    "request_digest",
+    "inputs_digest",
+    "files"
+  ],
+  "$defs": {
+    "ManifestBlock": {
+      "description": "One terrain block of the output: what its files were built from.",
+      "type": "object",
+      "properties": {
+        "files": {
+          "description": "The block's files (paths in [`Manifest::files`]).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "inputs": {
+          "description": "`sha256:` over everything the block's files depend on.",
+          "type": "string"
+        },
+        "key": {
+          "description": "`terrain:<world>:<level>:<x>:<y>`, the world in lower case.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "inputs",
+        "files"
+      ]
+    },
+    "ManifestFile": {
+      "description": "One file of the output.",
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "description": "Size in bytes.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "digest": {
+          "description": "`sha256:` of the contents.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path relative to the output folder, forward slashes.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "digest"
+      ]
+    },
+    "ToolInfo": {
+      "description": "The tool that produced a document.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Always `lodwright`.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The tool version (`SemVer`, see `VERSIONING.md`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    }
+  }
+}
