@@ -10,7 +10,7 @@ use std::io::Write;
 use std::path::Path;
 
 const USAGE_TEXT: &str = "usage: nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist)
-                 [--apply] [--json]
+                 [--mode full|minimal] [--apply] [--json]
        nvmod sort --instance <dir> [--profile <name>] --keep-order [--json]   (keep the order, write only the plugin file times)
        masterlist source options: [--lock <file>] [--store <dir>] [--gh <path>] [--curl <path>]";
 
@@ -115,6 +115,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
         .collect();
     serde_json::json!({
         "profile": proposal.profile,
+        "mode": proposal.output.mode.label(),
         "reordered": proposal.reordered(),
         "times_stale": nvmod_loadorder::times_stale(&proposal.data, &proposal.current),
         "positions": { "changed": proposal.positions_changed(), "total": proposal.proposed.len() },
@@ -150,9 +151,10 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
     );
     let _ = writeln!(
         out,
-        "{} of {} position(s) would change",
+        "{} of {} position(s) would change ({} sort)",
         proposal.positions_changed(),
-        proposal.proposed.len()
+        proposal.proposed.len(),
+        proposal.output.mode.label()
     );
     let output = &proposal.output;
     for (index, slot) in proposal.proposed.iter().enumerate() {
@@ -273,6 +275,23 @@ fn keep_order(
     OK
 }
 
+/// The sort mode of `--mode`; `None` after saying why on `err` when it is not one.
+fn parse_mode(value: Option<&str>, err: &mut dyn Write) -> Option<nvmod_api::loadorder::SortMode> {
+    match value {
+        None | Some("full") => Some(nvmod_api::loadorder::SortMode::Full),
+        Some("minimal") => Some(nvmod_api::loadorder::SortMode::Minimal),
+        Some(other) => {
+            let _ = writeln!(
+                err,
+                "nvmod sort: --mode wants `full` or `minimal`, not `{other}`\n{USAGE_TEXT}"
+            );
+            None
+        }
+    }
+}
+
+// One flat sequence of checks reads better than helpers.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(
         args,
@@ -286,6 +305,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
             "gh",
             "curl",
             "retry-delay-ms",
+            "mode",
         ],
     ) {
         Ok(a)
@@ -293,6 +313,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
                 && a.option("instance").is_some()
                 && if a.flag("keep-order") {
                     a.option("masterlist").is_none()
+                        && a.option("mode").is_none()
                         && !a.flag("fetch-masterlist")
                         && !a.flag("apply")
                 } else {
@@ -343,11 +364,15 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     } else {
         std::path::PathBuf::from(args.option("masterlist").unwrap_or_default())
     };
+    let Some(mode) = parse_mode(args.option("mode"), err) else {
+        return USAGE;
+    };
     let request = nvmod_api::loadorder::SortRequest {
         instance: root.to_path_buf(),
         profile: Some(profile),
         masterlist: masterlist_path,
         apply: args.flag("apply"),
+        mode,
     };
     let (proposal, applied) = match nvmod_api::loadorder::sort(
         &request,
