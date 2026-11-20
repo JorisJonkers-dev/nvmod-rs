@@ -280,6 +280,19 @@ pub(crate) fn job_failure(command: &str, e: &nvmod_api::JobError, err: &mut dyn 
     }
 }
 
+/// `nvmod run`, with the program started by `launcher` instead of by `nvmod-runner`. `args` are the words after
+/// `run` (the target, `--instance`, and so on), exactly as the command takes them. Planning, the Instance lock,
+/// the Staging tree and the log header are the command's own; only the start of the program is the caller's, so a
+/// program that links nvmod can start the game as a child of its own binary and still get everything else.
+pub fn run_with_launcher(
+    args: &[String],
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    launcher: &dyn nvmod_run::Launcher,
+) -> u8 {
+    run::run_with(args, out, err, launcher)
+}
+
 /// Run the command line `args` (without the program name), writing normal output to `out` and errors to `err`.
 /// Returns the process exit code.
 pub fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {

@@ -652,3 +652,53 @@ fn the_profile_is_placed_in_the_prefix_before_the_start_and_collected_after() {
     assert_eq!(code, 0);
     assert!(!out.contains("profile: `Default`"), "{out}");
 }
+
+/// A launcher that records what it was asked to start and starts nothing.
+struct Recording(std::sync::Mutex<Vec<nvmod_run::LaunchSpec>>);
+
+struct Idle;
+
+impl nvmod_run::Running for Idle {
+    fn pid(&self) -> u32 {
+        0
+    }
+    fn wait(self: Box<Self>) -> Result<i32, String> {
+        Ok(0)
+    }
+}
+
+impl nvmod_run::Launcher for Recording {
+    fn start(
+        &self,
+        spec: &nvmod_run::LaunchSpec,
+        _attached: bool,
+    ) -> Result<Box<dyn nvmod_run::Running>, String> {
+        self.0.lock().unwrap().push(spec.clone());
+        Ok(Box::new(Idle))
+    }
+}
+
+#[test]
+fn a_launcher_of_the_callers_starts_the_program_and_nothing_else_does() {
+    let s = Scratch::new();
+    let r = s.r();
+    let launcher = Recording(std::sync::Mutex::new(Vec::new()));
+    let args: Vec<String> = [
+        "game",
+        "--instance",
+        &r,
+        "--proton",
+        s.proton.to_str().unwrap(),
+        "--wait",
+    ]
+    .iter()
+    .map(|a| (*a).to_owned())
+    .collect();
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let code = nvmod_cli::run_with_launcher(&args, &mut out, &mut err, &launcher);
+    assert_eq!(code, 0, "{}", String::from_utf8_lossy(&err));
+    let started = launcher.0.lock().unwrap();
+    assert_eq!(started.len(), 1, "one program is started");
+    assert_eq!(started[0].program, s.proton.to_str().unwrap());
+    assert!(!s.record.exists(), "the fake Proton itself never ran");
+}
