@@ -94,7 +94,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         }
     };
     let catalog = match args.option("catalog") {
-        None => Catalog::builtin(),
+        None => Catalog::user(),
         Some(file) => match std::fs::read_to_string(file)
             .map_err(|e| format!("{file}: {e}"))
             .and_then(|text| Catalog::parse(&text).map_err(|e| e.to_string()))

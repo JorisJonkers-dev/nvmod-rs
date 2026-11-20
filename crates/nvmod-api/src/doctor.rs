@@ -189,7 +189,7 @@ pub fn check(
                 &instance,
                 &loaded,
                 game.as_deref(),
-                &Catalog::builtin(),
+                &Catalog::user(),
             ))
         }
     };
@@ -218,7 +218,7 @@ fn open(folder: &Path) -> Result<NvmodInstance, JobError> {
 /// The catalogue to check against: the one at `file`, or the one shipped with nvmod.
 fn load_catalog(file: Option<&Path>) -> Result<Catalog, JobError> {
     let Some(file) = file else {
-        return Ok(Catalog::builtin());
+        return Ok(Catalog::user());
     };
     let text =
         std::fs::read_to_string(file).map_err(|e| refused(format!("{}: {e}", file.display())))?;

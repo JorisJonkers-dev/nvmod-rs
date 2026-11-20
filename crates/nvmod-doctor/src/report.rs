@@ -45,6 +45,9 @@ pub struct PluginReport {
     pub shadowed: Vec<String>,
     /// Catalogue id, when the catalogue knows the DLL.
     pub catalog_id: Option<String>,
+    /// `user` when the entry comes from the player's overlay; left out for a shipped entry or an unknown DLL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub catalog_source: Option<&'static str>,
     /// What provides it on nv-rs (`external` when the catalogue does not say, which on nv-rs means unknown).
     pub nv_rs: Kind,
     /// What the PE inspector found, `None` when the file could not be read as a PE file.

@@ -505,3 +505,38 @@ fn an_unusable_game_path_is_a_warning_not_a_failure() {
     assert_eq!(json["schema_version"], 1);
     assert!(json["findings"].is_array() && json["summary"]["errors"].is_number());
 }
+
+#[test]
+fn a_dll_from_the_players_overlay_is_recognised_and_its_source_shown() {
+    let game = healthy_game();
+    let b = builder(&game)
+        .mod_dir(ModSpec::new("Mine").file("NVSE/Plugins/my_own.dll", &plugin()))
+        .profile("Default", &["+Mine"], &["FalloutNV.esm"]);
+    let overlay = "schema = 1\n[[plugin]]\nid = \"my-own\"\nname = \"Mine\"\ndll = \"my_own.dll\"\n[plugin.provenance]\nsource = \"my notes\"\nverified_on = \"2026-11-21\"\nverified = true\n".to_owned();
+    let catalog = Catalog::builtin().with_overlay(&[("mine.toml".to_owned(), overlay)]);
+    let report = diagnose(&b, None, &catalog);
+    assert_eq!(report.plugins[0].catalog_id.as_deref(), Some("my-own"));
+    assert_eq!(report.plugins[0].catalog_source, Some("user"));
+    assert!(!codes(&report).contains(&"catalog.unknown-plugin"));
+    let f = find(&report, "catalog.user-entry");
+    assert_eq!(
+        (f.subject.as_str(), f.severity),
+        ("my_own.dll", Severity::Info)
+    );
+    let json = serde_json::to_string(&report).unwrap();
+    assert!(json.contains("\"catalog_source\":\"user\""));
+}
+
+#[test]
+fn an_ignored_overlay_file_is_a_warning_in_the_report() {
+    let game = healthy_game();
+    let b = builder(&game).profile("Default", &[], &["FalloutNV.esm"]);
+    let catalog =
+        Catalog::builtin().with_overlay(&[("broken.toml".to_owned(), "schema = 9".to_owned())]);
+    let report = diagnose(&b, None, &catalog);
+    let f = find(&report, "catalog.overlay-invalid");
+    assert_eq!(
+        (f.subject.as_str(), f.severity),
+        ("broken.toml", Severity::Warning)
+    );
+}
