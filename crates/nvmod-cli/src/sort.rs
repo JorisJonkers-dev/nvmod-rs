@@ -275,6 +275,23 @@ fn keep_order(
     OK
 }
 
+/// The sort mode of `--mode`; `None` after saying why on `err` when it is not one.
+fn parse_mode(value: Option<&str>, err: &mut dyn Write) -> Option<nvmod_api::loadorder::SortMode> {
+    match value {
+        None | Some("full") => Some(nvmod_api::loadorder::SortMode::Full),
+        Some("minimal") => Some(nvmod_api::loadorder::SortMode::Minimal),
+        Some(other) => {
+            let _ = writeln!(
+                err,
+                "nvmod sort: --mode wants `full` or `minimal`, not `{other}`\n{USAGE_TEXT}"
+            );
+            None
+        }
+    }
+}
+
+// One flat sequence of checks reads better than helpers.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let args = match Args::parse(
         args,
@@ -347,16 +364,8 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     } else {
         std::path::PathBuf::from(args.option("masterlist").unwrap_or_default())
     };
-    let mode = match args.option("mode") {
-        None | Some("full") => nvmod_api::loadorder::SortMode::Full,
-        Some("minimal") => nvmod_api::loadorder::SortMode::Minimal,
-        Some(other) => {
-            let _ = writeln!(
-                err,
-                "nvmod sort: --mode wants `full` or `minimal`, not `{other}`\n{USAGE_TEXT}"
-            );
-            return USAGE;
-        }
+    let Some(mode) = parse_mode(args.option("mode"), err) else {
+        return USAGE;
     };
     let request = nvmod_api::loadorder::SortRequest {
         instance: root.to_path_buf(),
