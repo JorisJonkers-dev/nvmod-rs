@@ -3,7 +3,7 @@
 //! read.
 
 use crate::{OK, REFUSED, USAGE, args::Args};
-use nvmod_api::{CancelToken, NoProgress, Outcome, conflicts as job, tree as tree_job};
+use nvmod_api::{NoProgress, Outcome, conflicts as job, tree as tree_job};
 use nvmod_conflicts::{Report, Tree};
 use std::io::Write;
 use std::path::PathBuf;
@@ -30,7 +30,7 @@ pub(crate) fn run_conflicts(args: &[String], out: &mut dyn Write, err: &mut dyn 
         mod_name: args.option("mod").map(str::to_owned),
         archives: args.flag("archives"),
     };
-    match job::report(&request, &mut NoProgress, &CancelToken::new()) {
+    match job::report(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(done)) => print_report(&done.report, args.flag("json"), out),
         Ok(Outcome::Cancelled) => {
             let _ = writeln!(err, "nvmod conflicts: cancelled");
@@ -160,7 +160,7 @@ pub(crate) fn run_tree(args: &[String], out: &mut dyn Write, err: &mut dyn Write
         profile: args.option("profile").map(str::to_owned),
         path: args.option("path").map(str::to_owned),
     };
-    match tree_job::show(&request, &mut NoProgress, &CancelToken::new()) {
+    match tree_job::show(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(done)) => print_tree(&done.tree, args.flag("json"), out),
         Ok(Outcome::Cancelled) => {
             let _ = writeln!(err, "nvmod tree: cancelled");

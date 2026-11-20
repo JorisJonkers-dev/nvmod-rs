@@ -53,6 +53,7 @@ pub fn report(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<ReportOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

@@ -226,7 +226,7 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         max_extract_bytes: None,
         extract_limits: limits,
     };
-    match nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::install::install(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(InstallOutput::Installed(report))) => {
             print_report(out, &report, args.flag("json"));
             OK
@@ -372,7 +372,7 @@ pub(crate) fn run_rollback(args: &[String], out: &mut dyn Write, err: &mut dyn W
     let request = RollbackRequest {
         instance: instance.root.clone(),
     };
-    match nvmod_api::install::rollback(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::install::rollback(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(report)) => {
             if args.flag("json") {
                 print_json(out, &report);

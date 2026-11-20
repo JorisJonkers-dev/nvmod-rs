@@ -44,6 +44,7 @@ pub fn stage(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<StageOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

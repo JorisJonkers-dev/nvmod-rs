@@ -4,7 +4,7 @@
 
 use crate::{OK, REFUSED, USAGE, args::Args};
 use nvmod_api::plugins::{Change, ChangeRequest, EditReport, ListReport, ListRequest, Place};
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -184,7 +184,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let root = PathBuf::from(args.option("instance").unwrap_or_default());
     let profile = args.option("profile").map(str::to_owned);
     let json = args.flag("json");
-    let cancel = CancelToken::new();
+    let cancel = crate::process_token();
     let Some(edit) = edit else {
         let request = ListRequest {
             instance: root,

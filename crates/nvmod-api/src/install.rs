@@ -184,6 +184,7 @@ pub fn install(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<InstallOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -231,6 +232,7 @@ pub fn rollback(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<RollbackReport>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

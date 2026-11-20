@@ -16,7 +16,7 @@
 //! * [`JobError`] has a stable [`ErrorKind`], a plain summary and [`JobError::copy_text`]. It never holds a command
 //!   line.
 //! * Nothing here prints or ends the process. The `nvmod` subcommands `mods list|enable|disable|reorder`, `sort`,
-//!   `saves list`, `doctor`, `conflicts`, `tree`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
+//!   `saves list`, `downloads list|show|install|hide|unhide|forget`, `doctor`, `conflicts`, `tree`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
 //!
 //! The jobs:
 //!
@@ -46,6 +46,10 @@
 //! | [`install::reconfigure`] | [`install::ReinstallRequest`] | [`install::InstallOutput`] |
 //! | [`fomod::next`] | [`fomod::NextRequest`] | [`fomod::FomodEvent`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
+//! | [`downloads::list`] | [`downloads::ListRequest`] | [`downloads::ListOutput`] |
+//! | [`downloads::show`] | [`downloads::ShowRequest`] | [`downloads::ShowOutput`] |
+//! | [`downloads::install`] | [`downloads::InstallRequest`] | [`downloads::InstallOutput`] |
+//! | [`downloads::change`] | [`downloads::ChangeRequest`] | [`downloads::ChangeOutput`] |
 //! | [`install_nvrs::install`] | [`install_nvrs::InstallRequest`] | [`install_nvrs::InstallOutput`] |
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
@@ -61,6 +65,7 @@
 pub mod backup;
 pub mod conflicts;
 pub mod doctor;
+pub mod downloads;
 pub mod fomod;
 pub mod import_mo2;
 pub mod init;

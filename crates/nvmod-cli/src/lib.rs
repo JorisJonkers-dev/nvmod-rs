@@ -7,6 +7,7 @@ mod backup;
 mod catalog;
 mod conflicts;
 mod doctor;
+mod downloads;
 mod exec;
 mod fomod_prompt;
 mod import;
@@ -95,6 +96,18 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               the life of a Mod folder and of separators (run `nvmod mods remove` for the
                               forms): journaled and undone by `nvmod rollback`; a removed Mod goes to
                               .nvmod/trash; refused while the game or Mod Organizer runs
+  nvmod downloads list --instance <dir> [--downloads <dir>] [--unmatched] [--hash] [--json]
+  nvmod downloads show <archive> --instance <dir> [--downloads <dir>] [--hash] [--json]
+  nvmod downloads install <archive> --instance <dir> [--downloads <dir>] [--profile <name>] [--name <mod name>]
+                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]
+  nvmod downloads hide|unhide|forget <archive> --instance <dir> [--downloads <dir>] [--dry-run] [--json]
+                              the downloads library (default <instance>/downloads): each archive with the state
+                              MO2 keeps in its .meta file (installed, uninstalled, hidden, paused), its Nexus mod
+                              and file ids (from the .meta or the Nexus file name), the Mod it matches and, with
+                              --hash, SHA-256 and MD5 (cached by size and time); --unmatched lists the archives
+                              with no Mod and the Mods with no archive; install is `nvmod install` on the archive
+                              plus the .meta marked installed; hide and unhide edit only the .meta; forget moves
+                              the archive and its .meta to .nvmod/trash/downloads (nothing is deleted); no network
   nvmod conflicts --instance <dir> [--profile <name>] [--mod <name>] [--archives] [--json]
                               the file-level conflicts of a profile (read only): who wins each contested path,
                               and per Mod whether it overwrites, is overwritten, is mixed or redundant;
@@ -206,6 +219,7 @@ and exits 4 with a `finished` record.\n";
 fn writes_instance(args: &[String]) -> bool {
     match args.first().map(String::as_str) {
         Some("install" | "import-mo2") => true,
+        Some("downloads") => matches!(args.get(1).map(String::as_str), Some("install")),
         Some("mods") => matches!(
             args.get(1).map(String::as_str),
             Some(
@@ -240,6 +254,16 @@ fn writes_instance(args: &[String]) -> bool {
     }
 }
 
+static PROCESS_TOKEN: std::sync::OnceLock<nvmod_api::CancelToken> = std::sync::OnceLock::new();
+
+/// The token every job of this process runs with: what SIGINT and SIGTERM (Ctrl+C on Windows) cancel. A job that is
+/// given a token obeys that token only (nvmod-rs#212), so the command line hands its jobs this one.
+pub(crate) fn process_token() -> nvmod_api::CancelToken {
+    PROCESS_TOKEN
+        .get_or_init(nvmod_api::CancelToken::new)
+        .clone()
+}
+
 /// [`run`] for the binary. For a writing command (see [`writes_instance`]) SIGTERM and SIGINT (Ctrl+C on
 /// Windows) do not kill the process: they ask the step in flight to stop, which the journal machinery rolls
 /// back. The run then ends with exit code 4 and a `finished` record: `{"event":"finished",...,"interrupted":true,
@@ -247,7 +271,10 @@ fn writes_instance(args: &[String]) -> bool {
 pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     if writes_instance(args) {
         // Best effort: without a handler the default action (end the process) stays.
-        let _ = ctrlc::set_handler(nvmod_core::cancel::request);
+        let _ = ctrlc::set_handler(|| {
+            nvmod_core::cancel::request();
+            process_token().cancel();
+        });
     }
     let code = run(args, out, err);
     if code == ROLLED_BACK && nvmod_core::cancel::requested() {
@@ -325,6 +352,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("pe") => pe::run(&args[1..], out, err),
         Some("catalog") => catalog::run(&args[1..], out, err),
         Some("doctor") => doctor::run(&args[1..], out, err),
+        Some("downloads") => downloads::run(&args[1..], out, err),
         Some("conflicts") => conflicts::run_conflicts(&args[1..], out, err),
         Some("plugins") => plugins::run(&args[1..], out, err),
         Some("tree") => conflicts::run_tree(&args[1..], out, err),

@@ -48,6 +48,7 @@ pub fn show(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<TreeOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

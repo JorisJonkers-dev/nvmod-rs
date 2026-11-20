@@ -3,7 +3,7 @@
 
 use crate::{OK, REFUSED, USAGE, args::Args};
 use nvmod_api::stage::StageRequest;
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -26,7 +26,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         profile: args.option("profile").map(str::to_owned),
         copy: args.flag("copy"),
     };
-    match nvmod_api::stage::stage(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::stage::stage(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(staged)) => {
             let report = &staged.report;
             if args.flag("json") {
