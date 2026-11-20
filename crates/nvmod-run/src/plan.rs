@@ -364,6 +364,8 @@ fn plan_nv_rs(req: &Request) -> Result<RunPlan, String> {
     // The game window and the log are what a person playing needs; a caller's own values win.
     let defaults = [
         ("NV_D3D9", "wgpu"),
+        // The engine plays sound only when asked: without this `DirectSoundCreate8` answers "no driver".
+        ("NV_SOUND", "out"),
         ("RUST_BACKTRACE", "1"),
         ("RUST_LOG", "info"),
     ];
