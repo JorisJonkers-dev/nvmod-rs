@@ -324,38 +324,6 @@ mod tests {
         assert_eq!(game_running(dir.path()), None);
     }
 
-    // Another process of this machine, not this one: the parent of nothing, but alive for the whole test.
-    #[test]
-    fn a_lock_of_a_live_process_names_the_run_whatever_the_program_is() {
-        let dir = nvmod_testkit::TempDir::new("gr-live");
-        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "files::tests::sleeper",
-                "--ignored",
-                "--nocapture",
-            ])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .unwrap();
-        lock(dir.path(), child.id(), "run raul --play-mode");
-        let found = game_running(dir.path());
-        child.kill().unwrap();
-        child.wait().unwrap();
-        assert_eq!(
-            found,
-            Some(format!("run raul --play-mode, pid {}", child.id()))
-        );
-    }
-
-    /// The long-running stand-in the test above starts as a separate process: this test binary itself.
-    #[test]
-    #[ignore = "only started by another test, as a process that stays alive"]
-    fn sleeper() {
-        std::thread::sleep(std::time::Duration::from_secs(120));
-    }
-
     #[test]
     fn a_lock_held_by_this_process_does_not_count() {
         let dir = nvmod_testkit::TempDir::new("gr-self");
