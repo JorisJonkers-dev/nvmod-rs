@@ -3,7 +3,7 @@
 
 use crate::{OK, REFUSED, USAGE, args::Args};
 use nvmod_api::profile::CreateRequest;
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::Path;
 
@@ -28,7 +28,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         instance: Path::new(args.option("instance").unwrap_or_default()).to_path_buf(),
         name: args.option("name").map(str::to_owned),
     };
-    match nvmod_api::profile::create(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::profile::create(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(made)) => {
             let _ = writeln!(out, "nvmod profile: made the profile `{}`", made.profile);
             OK

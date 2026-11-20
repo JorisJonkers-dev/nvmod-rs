@@ -216,6 +216,7 @@ pub fn list(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<ListOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -259,6 +260,7 @@ pub fn check(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<CheckOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -316,6 +318,7 @@ pub fn checksum(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<ChecksumOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -359,6 +362,7 @@ pub fn backup(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<BackupOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -426,6 +430,7 @@ pub fn restore(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<RestoreOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -493,6 +498,7 @@ pub fn transfer(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<TransferOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

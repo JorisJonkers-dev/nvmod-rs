@@ -51,6 +51,7 @@ pub fn keep_order(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<KeepOrderOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

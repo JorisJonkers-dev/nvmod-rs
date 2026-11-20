@@ -75,7 +75,7 @@ fn list(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let listed = match nvmod_api::saves::list(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(listed)) => listed,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -117,7 +117,7 @@ fn check(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let checked = match nvmod_api::saves::check(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(checked)) => checked,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -170,7 +170,7 @@ fn checksum(args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let summed = match nvmod_api::saves::checksum(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(summed)) => summed,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -207,7 +207,7 @@ fn backup(cx: &Cx, args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8 
     let backed = match nvmod_api::saves::backup(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(backed)) => backed,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -241,7 +241,7 @@ fn restore(cx: &Cx, args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u8
     let restored = match nvmod_api::saves::restore(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(restored)) => restored,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -285,7 +285,7 @@ fn transfer(cx: &Cx, args: &Args, out: &mut dyn Write, err: &mut dyn Write) -> u
     let transferred = match nvmod_api::saves::transfer(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(transferred)) => transferred,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,

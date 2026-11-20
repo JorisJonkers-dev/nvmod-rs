@@ -65,6 +65,7 @@ pub fn plan(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<RunPlan>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

@@ -4,7 +4,7 @@
 
 use crate::{OK, REFUSED, USAGE, args::Args};
 use nvmod_api::backup::{CreateRequest, ListRequest, PruneRequest, RestoreRequest};
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use nvmod_backup::{Error, Snapshot, clock};
 use nvmod_instance::NvmodInstance;
 use std::io::Write;
@@ -74,7 +74,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let instance = Path::new(args.option("instance").unwrap_or_default()).to_path_buf();
     let profile = args.option("profile").map(str::to_owned);
     let json = args.flag("json");
-    let cancel = CancelToken::new();
+    let cancel = crate::process_token();
     match sub {
         "create" => {
             let request = CreateRequest {
