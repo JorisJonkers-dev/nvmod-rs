@@ -127,6 +127,7 @@ impl Scratch {
             profile: None,
             masterlist: self.inst.path().join("masterlist.yaml"),
             apply,
+            mode: nvmod_api::loadorder::SortMode::Full,
         }
     }
 
@@ -530,6 +531,7 @@ fn every_request_round_trips_through_json() {
         profile: Some("Default".into()),
         masterlist: PathBuf::from("/x/masterlist.yaml"),
         apply: true,
+        mode: nvmod_api::loadorder::SortMode::Minimal,
     };
     let text = serde_json::to_string(&sort_request).unwrap();
     assert_eq!(

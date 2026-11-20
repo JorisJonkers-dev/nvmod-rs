@@ -77,12 +77,14 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod rollback --instance <dir> [--json]
                               undo the last install, sort or mods change: restore the profile files (an install also
                               removes the Mod)
-  nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist) [--apply] [--json]
+  nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist) [--mode full|minimal]
+                [--apply] [--json]
                               compute the Load order with loot-rs from the Staging tree and print it; with
                               --apply write plugins.txt and loadorder.txt and set the plugin file times
                               (needs `nvmod stage` first); --fetch-masterlist takes the masterlist pinned in tools.lock.toml
                               (checksum verified, kept in the tool store) instead of a file; locked plugins
-                              (`nvmod plugins lock`) keep their position
+                              (`nvmod plugins lock`) keep their position; --mode minimal keeps the given order and
+                              moves only the plugins a hard rule forces (default: full)
   nvmod mods list --instance <dir> [--profile <name>] [--category <id>] [--json]
   nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
