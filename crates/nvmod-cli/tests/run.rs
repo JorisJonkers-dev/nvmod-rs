@@ -417,6 +417,7 @@ fn fake_viewer(path: &Path) {
 printf 'args=%s\n' "$*"
 printf 'pwd=%s\n' "$(pwd)"
 printf 'd3d9=%s\n' "$NV_D3D9"
+printf 'sound=%s\n' "$NV_SOUND"
 printf 'profile_file=%s\n' "$NV_LINUX_PROFILE"
 printf 'userdata_line=%s\n' "$(cat "$NV_LINUX_PROFILE")"
 printf 'sees_tex=%s\n' "$(test -f "$1/Data/textures/a.dds" && echo yes || echo no)"
@@ -453,6 +454,8 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
         .expect("a userdata line");
     assert_eq!(real(userdata), run.join("userdata"));
     assert_eq!(rec["d3d9"], "wgpu");
+    // A game started through raul plays sound (#234); a value in the caller's environment wins.
+    assert_eq!(rec["sound"], "out");
     assert_eq!(
         (rec["sees_tex"].as_str(), rec["sees_base"].as_str()),
         ("yes", "yes")
