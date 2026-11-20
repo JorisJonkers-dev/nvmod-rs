@@ -44,7 +44,6 @@ ctrlc = { version = "3.5.2", features = ["termination"] }
 
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
-nvmod-install = { workspace = true }
 nvmod-plugins = { workspace = true }
 jsonschema = { version = "0.61.0", default-features = false }
 
