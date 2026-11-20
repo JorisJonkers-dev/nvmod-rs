@@ -1207,6 +1207,7 @@ fn install_dry_run_writes_nothing() {
         dry_run: true,
         answers: None,
         max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
     let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
         .expect("installs")
@@ -1235,6 +1236,7 @@ fn install_for_real_then_rollback_removes_it() {
         dry_run: false,
         answers: None,
         max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
     let _ = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
         .expect("installs")
@@ -1268,6 +1270,7 @@ fn install_cancelled_before_changes_nothing() {
         dry_run: false,
         answers: None,
         max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
     let outcome =
         nvmod_api::install::install(&request, &mut NoProgress, &cancel).expect("no error");
@@ -1295,6 +1298,7 @@ fn an_install_that_needs_fomod_answers_returns_the_questions() {
         dry_run: false,
         answers: None,
         max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
     let output = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new())
         .expect("no error")
@@ -1333,6 +1337,7 @@ fn an_install_over_the_extraction_limit_is_refused() {
         dry_run: false,
         answers: None,
         max_extract_bytes: Some(50),
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
     let outcome = nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new());
     let error = outcome.expect_err("refused");

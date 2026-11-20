@@ -20,7 +20,7 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub use extract::Limits;
+pub use extract::{LimitOverrides, Limits};
 pub use fomod::{GroupKind, Inferred, PluginType, Question, QuestionOption};
 pub use journal::{RollbackError, RollbackReport, rollback};
 

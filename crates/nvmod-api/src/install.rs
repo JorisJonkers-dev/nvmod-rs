@@ -2,6 +2,7 @@
 //! Installing a Mod from an archive into a profile, and taking the last install back.
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
+pub use nvmod_modinstall::LimitOverrides;
 pub use nvmod_modinstall::Question;
 pub use nvmod_modinstall::Report;
 pub use nvmod_modinstall::RollbackReport;
@@ -33,6 +34,10 @@ pub struct InstallRequest {
     /// The most bytes the extraction may write; `None` for the default limit.
     #[serde(default)]
     pub max_extract_bytes: Option<u64>,
+    /// The other limits of the extraction (entries, bytes per entry, expansion ratio, folder depth, steps of work,
+    /// seconds); a value left `None` keeps its default. `max_extract_bytes`, when set, wins over `max_bytes` here.
+    #[serde(default)]
+    pub extract_limits: LimitOverrides,
 }
 
 /// The result of [`install`].
@@ -77,10 +82,11 @@ pub fn install(
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
-    let mut limits = nvmod_modinstall::Limits::default();
-    if let Some(max_bytes) = request.max_extract_bytes {
-        limits.max_bytes = max_bytes;
+    let mut overrides = request.extract_limits;
+    if request.max_extract_bytes.is_some() {
+        overrides.max_bytes = request.max_extract_bytes;
     }
+    let limits = nvmod_modinstall::Limits::with_overrides(&overrides);
     let mod_request = ModInstallRequest {
         instance: &instance,
         profile: &profile,

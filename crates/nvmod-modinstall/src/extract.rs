@@ -3,33 +3,130 @@
 //! in process; any other format (rar, for one) is refused with a message that says to unpack it and install the
 //! folder. Nothing is run as a process.
 //!
-//! Nothing leaves the destination: a path that is absolute or climbs out with `..`, a symbolic link, a device or
-//! any other special entry, more entries than [`Limits::max_entries`] or more bytes than [`Limits::max_bytes`]
-//! refuses the whole archive. Everything is checked while reading, before it is written.
+//! Nothing leaves the destination, and the work is bounded. A path that is absolute or climbs out with `..`, a
+//! symbolic link, a hard link, a device or any other special entry, two entries that differ only in letter case,
+//! a path nested deeper than [`Limits::max_path_depth`], more entries than [`Limits::max_entries`], a file larger
+//! than [`Limits::max_entry_bytes`], more bytes than [`Limits::max_bytes`], an expansion past
+//! [`Limits::max_ratio`] times the archive's size, or more work than [`Limits::max_operations`] or
+//! [`Limits::max_duration`] refuses the whole archive with a message that names the limit. Everything is checked
+//! while reading, before it is written, and every write is checked to land inside the destination.
+//!
+//! An archive found inside an archive is never opened: it is written as an ordinary file (counted against the
+//! byte, ratio and time limits), so nesting depth is zero by construction and a nested bomb stays packed.
 
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
-/// How much an archive may hold.
+use serde::{Deserialize, Serialize};
+
+/// How much an archive may hold, and how much work reading it may take. The defaults are documented in
+/// `docs/DECISIONS.md`; each is overridable per command through [`LimitOverrides`].
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     /// Total uncompressed bytes.
     pub max_bytes: u64,
     /// Number of entries.
     pub max_entries: usize,
+    /// Uncompressed bytes of one file.
+    pub max_entry_bytes: u64,
+    /// How many times the archive's own size the extracted bytes may reach, checked once more than
+    /// [`Limits::ratio_floor_bytes`] has been extracted.
+    pub max_ratio: u64,
+    /// Below this many extracted bytes the ratio is not checked (a small, highly repetitive file is harmless).
+    pub ratio_floor_bytes: u64,
+    /// Folders a path may be nested in (components of the relative path, the file name included).
+    pub max_path_depth: usize,
+    /// Steps of work: one per entry, one per chunk of file data copied and one per read of tar metadata.
+    pub max_operations: u64,
+    /// Wall-clock time the extraction may take.
+    pub max_duration: Duration,
 }
+
+/// The default of [`Limits::max_bytes`]: 32 GiB.
+pub const DEFAULT_MAX_BYTES: u64 = 32 * 1024 * 1024 * 1024;
+/// The default of [`Limits::max_entries`].
+pub const DEFAULT_MAX_ENTRIES: usize = 500_000;
+/// The default of [`Limits::max_entry_bytes`]: 8 GiB.
+pub const DEFAULT_MAX_ENTRY_BYTES: u64 = 8 * 1024 * 1024 * 1024;
+/// The default of [`Limits::max_ratio`].
+pub const DEFAULT_MAX_RATIO: u64 = 500;
+/// The default of [`Limits::ratio_floor_bytes`]: 64 MiB.
+pub const DEFAULT_RATIO_FLOOR_BYTES: u64 = 64 * 1024 * 1024;
+/// The default of [`Limits::max_path_depth`].
+pub const DEFAULT_MAX_PATH_DEPTH: usize = 64;
+/// The default of [`Limits::max_operations`].
+pub const DEFAULT_MAX_OPERATIONS: u64 = 4_000_000;
+/// The default of [`Limits::max_duration`], in seconds: 30 minutes.
+pub const DEFAULT_MAX_SECONDS: u64 = 30 * 60;
 
 impl Default for Limits {
     fn default() -> Limits {
         Limits {
-            max_bytes: 32 * 1024 * 1024 * 1024,
-            max_entries: 500_000,
+            max_bytes: DEFAULT_MAX_BYTES,
+            max_entries: DEFAULT_MAX_ENTRIES,
+            max_entry_bytes: DEFAULT_MAX_ENTRY_BYTES,
+            max_ratio: DEFAULT_MAX_RATIO,
+            ratio_floor_bytes: DEFAULT_RATIO_FLOOR_BYTES,
+            max_path_depth: DEFAULT_MAX_PATH_DEPTH,
+            max_operations: DEFAULT_MAX_OPERATIONS,
+            max_duration: Duration::from_secs(DEFAULT_MAX_SECONDS),
         }
     }
 }
+
+/// Limits a caller (a command line flag, a library request) sets; `None` keeps the default.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LimitOverrides {
+    /// [`Limits::max_bytes`] (`--max-extract-bytes`).
+    #[serde(default)]
+    pub max_bytes: Option<u64>,
+    /// [`Limits::max_entries`] (`--max-extract-entries`).
+    #[serde(default)]
+    pub max_entries: Option<usize>,
+    /// [`Limits::max_entry_bytes`] (`--max-extract-entry-bytes`).
+    #[serde(default)]
+    pub max_entry_bytes: Option<u64>,
+    /// [`Limits::max_ratio`] (`--max-extract-ratio`).
+    #[serde(default)]
+    pub max_ratio: Option<u64>,
+    /// [`Limits::max_path_depth`] (`--max-extract-depth`).
+    #[serde(default)]
+    pub max_path_depth: Option<usize>,
+    /// [`Limits::max_operations`] (`--max-extract-operations`).
+    #[serde(default)]
+    pub max_operations: Option<u64>,
+    /// [`Limits::max_duration`], in seconds (`--max-extract-seconds`).
+    #[serde(default)]
+    pub max_seconds: Option<u64>,
+}
+
+impl Limits {
+    /// The defaults with every value `overrides` sets replaced.
+    #[must_use]
+    pub fn with_overrides(overrides: &LimitOverrides) -> Limits {
+        let base = Limits::default();
+        Limits {
+            max_bytes: overrides.max_bytes.unwrap_or(base.max_bytes),
+            max_entries: overrides.max_entries.unwrap_or(base.max_entries),
+            max_entry_bytes: overrides.max_entry_bytes.unwrap_or(base.max_entry_bytes),
+            max_ratio: overrides.max_ratio.unwrap_or(base.max_ratio),
+            max_path_depth: overrides.max_path_depth.unwrap_or(base.max_path_depth),
+            max_operations: overrides.max_operations.unwrap_or(base.max_operations),
+            max_duration: overrides
+                .max_seconds
+                .map_or(base.max_duration, Duration::from_secs),
+            ..base
+        }
+    }
+}
+
+/// Bytes copied from an entry per step of work.
+const CHUNK: usize = 64 * 1024;
 
 /// Decoder dictionary memory allowed for a 7z archive, in KiB (512 MiB).
 const SEVENZ_MEMORY_LIMIT_KB: usize = 512 * 1024;
@@ -109,11 +206,19 @@ pub fn extract(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String
         .and_then(|mut f| f.read(&mut magic))
         .map_err(|e| format!("{}: {e}", archive.display()))?;
     let magic = &magic[..n];
-    match detect(magic) {
-        Format::Zip => extract_zip(archive, dest, limits),
-        Format::SevenZ => extract_7z(archive, dest, limits),
-        Format::CompressedTar(codec) => extract_compressed_tar(archive, dest, limits, codec),
-        Format::Tar => extract_tar(archive, dest, limits),
+    let format = detect(magic);
+    if format == Format::Unsupported {
+        return refuse_unsupported(archive);
+    }
+    let archive_len = fs::metadata(archive)
+        .map_err(|e| format!("{}: {e}", archive.display()))?
+        .len();
+    let mut budget = Budget::new(limits, archive_len, dest)?;
+    match format {
+        Format::Zip => extract_zip(archive, dest, &mut budget),
+        Format::SevenZ => extract_7z(archive, dest, &mut budget),
+        Format::CompressedTar(codec) => extract_compressed_tar(archive, dest, &mut budget, codec),
+        Format::Tar => extract_tar(archive, dest, &mut budget),
         Format::Unsupported => refuse_unsupported(archive),
     }
 }
@@ -157,99 +262,317 @@ fn detect(magic: &[u8]) -> Format {
     }
 }
 
-struct Budget {
+/// Counters shared between the walker and the tar stream guard.
+struct Meter {
     limits: Limits,
-    bytes: u64,
-    entries: usize,
-    /// Shared copy of `bytes`, read by [`GuardedReader`]; `None` when no tar stream is being walked.
-    mirror: Option<Rc<Cell<u64>>>,
-    /// Shared copy of `entries`, read by [`GuardedReader`].
-    entries_mirror: Option<Rc<Cell<usize>>>,
+    started: Instant,
+    bytes: Cell<u64>,
+    entries: Cell<usize>,
+    operations: Cell<u64>,
     /// Set while a file body is being copied, so its bytes are not counted as metadata.
-    in_body: Option<Rc<Cell<bool>>>,
+    in_body: Cell<bool>,
+}
+
+impl Meter {
+    /// Count `n` steps of work and refuse when the step or time budget is spent.
+    fn step(&self, n: u64) -> Result<(), String> {
+        let done = self.operations.get().saturating_add(n);
+        self.operations.set(done);
+        if done > self.limits.max_operations {
+            return Err(format!(
+                "the extraction needs more than {} steps of work (limit --max-extract-operations)",
+                self.limits.max_operations
+            ));
+        }
+        if self.started.elapsed() >= self.limits.max_duration {
+            return Err(format!(
+                "the extraction took longer than {} seconds (limit --max-extract-seconds)",
+                self.limits.max_duration.as_secs()
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Windows drops trailing dots and spaces from a name and compares names without regard to case, so two file paths
+/// that differ only that way are the same file there. Each folder and file seen is kept under its folded name;
+/// folders that differ only in case are allowed, files (and a file against a folder) are not.
+#[derive(Default)]
+struct Names {
+    seen: HashMap<String, (String, bool)>,
+}
+
+impl Names {
+    /// Admit the relative path `rel` (a folder when `dir`), or say why it collides with an earlier entry.
+    fn admit(&mut self, name: &str, rel: &Path, dir: bool) -> Result<(), String> {
+        let parts: Vec<String> = rel
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .collect();
+        if parts.iter().any(|p| p.ends_with('.') || p.ends_with(' ')) {
+            return Err(format!(
+                "path `{name}` has a name that ends with a dot or a space, which Windows drops"
+            ));
+        }
+        let mut prefix = String::new();
+        for (i, part) in parts.iter().enumerate() {
+            if i > 0 {
+                prefix.push('/');
+            }
+            prefix.push_str(part);
+            let is_dir = dir || i + 1 < parts.len();
+            let folded = prefix.to_lowercase();
+            if let Some((spelling, was_dir)) = self.seen.get(&folded) {
+                if *was_dir && is_dir {
+                    // Folders that differ only in case are fine: real archives hold `Textures` and `textures`,
+                    // and what matters is that no two files collide.
+                    continue;
+                }
+                if *was_dir != is_dir {
+                    return Err(format!("path `{name}` is both a file and a folder"));
+                }
+                if *spelling != prefix {
+                    return Err(format!(
+                        "path `{name}` differs only in letter case from the file `{spelling}`, which would overwrite it on a case-insensitive file system"
+                    ));
+                }
+                return Err(format!("path `{name}` appears twice in the archive"));
+            }
+            self.seen.insert(folded, (prefix.clone(), is_dir));
+        }
+        Ok(())
+    }
+}
+
+struct Budget {
+    meter: Rc<Meter>,
+    /// Size of the archive file, the base of the expansion ratio.
+    archive_len: u64,
+    /// The canonical destination: every write must resolve inside it.
+    root: PathBuf,
+    /// The folder last verified to resolve inside `root`.
+    verified: Option<PathBuf>,
+    names: Names,
+    buf: Vec<u8>,
 }
 
 impl Budget {
-    fn new(limits: Limits) -> Budget {
-        Budget {
-            limits,
-            bytes: 0,
-            entries: 0,
-            mirror: None,
-            entries_mirror: None,
-            in_body: None,
-        }
+    fn new(limits: Limits, archive_len: u64, dest: &Path) -> Result<Budget, String> {
+        let root = dest
+            .canonicalize()
+            .map_err(|e| format!("{}: {e}", dest.display()))?;
+        Ok(Budget {
+            meter: Rc::new(Meter {
+                limits,
+                started: Instant::now(),
+                bytes: Cell::new(0),
+                entries: Cell::new(0),
+                operations: Cell::new(0),
+                in_body: Cell::new(false),
+            }),
+            archive_len,
+            root,
+            verified: None,
+            names: Names::default(),
+            buf: Vec::new(),
+        })
     }
 
+    fn limits(&self) -> &Limits {
+        &self.meter.limits
+    }
+
+    /// Count one more entry.
     fn entry(&mut self) -> Result<(), String> {
-        self.entries += 1;
-        if let Some(mirror) = &self.entries_mirror {
-            mirror.set(self.entries);
+        let entries = self.meter.entries.get() + 1;
+        self.meter.entries.set(entries);
+        if entries > self.limits().max_entries {
+            return Err(too_many(self.limits().max_entries));
         }
-        if self.entries > self.limits.max_entries {
+        self.meter.step(1)
+    }
+
+    /// The relative path of an entry named `name`: safe, not too deep and not colliding with an earlier entry.
+    fn path(&mut self, name: &str, dir: bool) -> Result<PathBuf, String> {
+        let rel = safe_relative(name)?;
+        let depth = rel.components().count();
+        if depth > self.limits().max_path_depth {
             return Err(format!(
-                "the archive has more than {} entries",
-                self.limits.max_entries
+                "path `{name}` is nested {depth} folders deep, more than {} (limit --max-extract-depth)",
+                self.limits().max_path_depth
+            ));
+        }
+        self.names.admit(name, &rel, dir)?;
+        Ok(rel)
+    }
+
+    fn remaining(&self) -> u64 {
+        self.limits()
+            .max_bytes
+            .saturating_sub(self.meter.bytes.get())
+    }
+
+    /// Refuse a file whose declared size already breaks a limit.
+    fn check_declared(&self, name: &str, size: u64) -> Result<(), String> {
+        if size > self.limits().max_entry_bytes {
+            return Err(too_big_entry(name, self.limits().max_entry_bytes));
+        }
+        if size > self.remaining() {
+            return Err(too_big(self.limits().max_bytes));
+        }
+        Ok(())
+    }
+
+    /// Refuse sizes that, taken together, are already past the byte and ratio limits.
+    fn check_total(&self, declared: u64) -> Result<(), String> {
+        if declared > self.limits().max_bytes {
+            return Err(too_big(self.limits().max_bytes));
+        }
+        self.check_ratio(declared)
+    }
+
+    fn check_ratio(&self, total: u64) -> Result<(), String> {
+        let limits = self.limits();
+        let allowed = self.archive_len.max(1).saturating_mul(limits.max_ratio);
+        if total > limits.ratio_floor_bytes && total > allowed {
+            return Err(format!(
+                "the archive expands to more than {} times its size (limit --max-extract-ratio)",
+                limits.max_ratio
             ));
         }
         Ok(())
     }
 
-    fn remaining(&self) -> u64 {
-        self.limits.max_bytes.saturating_sub(self.bytes)
+    /// Check that the folder `dir` resolves inside the destination (no link on the way leads out).
+    fn verify_inside(&mut self, dir: &Path) -> Result<(), String> {
+        if self.verified.as_deref() == Some(dir) {
+            return Ok(());
+        }
+        let resolved = dir
+            .canonicalize()
+            .map_err(|e| format!("{}: {e}", dir.display()))?;
+        if !resolved.starts_with(&self.root) {
+            return Err(format!(
+                "`{}` would be written outside the Mod folder",
+                dir.display()
+            ));
+        }
+        self.verified = Some(dir.to_path_buf());
+        Ok(())
     }
 
-    /// Copy at most the remaining budget from `from` into a new file at `to`.
-    fn write(&mut self, from: &mut dyn Read, to: &Path) -> Result<(), String> {
+    /// Create the folder `target`, checked to lie inside the destination.
+    fn make_dir(&mut self, target: &Path) -> Result<(), String> {
+        fs::create_dir_all(target).map_err(|e| format!("{}: {e}", target.display()))?;
+        self.verify_inside(target)
+    }
+
+    /// Copy the body of the file `name` (declared `declared` bytes) from `from` into a new file at `to`.
+    fn write(
+        &mut self,
+        from: &mut dyn Read,
+        to: &Path,
+        name: &str,
+        declared: u64,
+    ) -> Result<(), String> {
+        self.check_declared(name, declared)?;
         let io = |e: io::Error| format!("{}: {e}", to.display());
         if let Some(parent) = to.parent() {
             fs::create_dir_all(parent).map_err(io)?;
+            self.verify_inside(parent)?;
         }
-        let mut out = fs::File::create(to).map_err(io)?;
-        let allowed = self.remaining();
-        if let Some(flag) = &self.in_body {
-            flag.set(true);
+        // `create_new` neither follows a link at `to` nor replaces an existing file.
+        let mut out = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(to)
+            .map_err(io)?;
+        self.meter.in_body.set(true);
+        let copied = self.copy(from, &mut out, name);
+        self.meter.in_body.set(false);
+        let copied =
+            copied.and_then(|()| out.flush().map_err(|e| format!("{}: {e}", to.display())));
+        drop(out);
+        if copied.is_err() {
+            let _ = fs::remove_file(to);
         }
-        let copied = io::copy(&mut from.take(allowed.saturating_add(1)), &mut out);
-        if let Some(flag) = &self.in_body {
-            flag.set(false);
+        copied
+    }
+
+    /// Copy `from` into `out` a chunk at a time, checking every limit before each chunk is written.
+    fn copy(&mut self, from: &mut dyn Read, out: &mut fs::File, name: &str) -> Result<(), String> {
+        let mut buf = std::mem::take(&mut self.buf);
+        buf.resize(CHUNK, 0);
+        let result = self.copy_chunks(from, out, name, &mut buf);
+        self.buf = buf;
+        result
+    }
+
+    fn copy_chunks(
+        &self,
+        from: &mut dyn Read,
+        out: &mut fs::File,
+        name: &str,
+        buf: &mut [u8],
+    ) -> Result<(), String> {
+        let limits = self.limits();
+        let mut entry_bytes = 0_u64;
+        loop {
+            let n = match from.read(buf) {
+                Ok(0) => return Ok(()),
+                Ok(n) => n,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(format!("`{name}`: {e}")),
+            };
+            let n64 = u64::try_from(n).unwrap_or(u64::MAX);
+            entry_bytes = entry_bytes.saturating_add(n64);
+            let total = self.meter.bytes.get().saturating_add(n64);
+            if entry_bytes > limits.max_entry_bytes {
+                return Err(too_big_entry(name, limits.max_entry_bytes));
+            }
+            if total > limits.max_bytes {
+                return Err(too_big(limits.max_bytes));
+            }
+            self.check_ratio(total)?;
+            self.meter.step(1)?;
+            out.write_all(&buf[..n])
+                .map_err(|e| format!("`{name}`: {e}"))?;
+            self.meter.bytes.set(total);
         }
-        let copied = copied.map_err(io)?;
-        out.flush().map_err(io)?;
-        if copied > allowed {
-            return Err(too_big(self.limits.max_bytes));
-        }
-        self.bytes += copied;
-        if let Some(mirror) = &self.mirror {
-            mirror.set(self.bytes);
-        }
-        Ok(())
     }
 }
 
 fn too_big(max: u64) -> String {
-    format!("the archive holds more than {max} bytes once extracted")
+    format!("the archive holds more than {max} bytes once extracted (limit --max-extract-bytes)")
 }
 
-fn extract_zip(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
+fn too_big_entry(name: &str, max: u64) -> String {
+    format!("`{name}` is larger than {max} bytes (limit --max-extract-entry-bytes)")
+}
+
+fn too_many(max: usize) -> String {
+    format!("the archive has more than {max} entries (limit --max-extract-entries)")
+}
+
+fn extract_zip(archive: &Path, dest: &Path, budget: &mut Budget) -> Result<(), String> {
     let file = fs::File::open(archive).map_err(|e| format!("{}: {e}", archive.display()))?;
     let mut zip = zip::ZipArchive::new(io::BufReader::new(file))
         .map_err(|e| format!("{}: not a readable zip: {e}", archive.display()))?;
-    if zip.len() > limits.max_entries {
-        return Err(format!(
-            "the archive has more than {} entries",
-            limits.max_entries
-        ));
+    if zip.len() > budget.limits().max_entries {
+        return Err(too_many(budget.limits().max_entries));
     }
     let mut declared = 0_u64;
     for i in 0..zip.len() {
         let entry = zip.by_index_raw(i).map_err(|e| e.to_string())?;
+        if entry.size() > budget.limits().max_entry_bytes {
+            return Err(too_big_entry(
+                &entry.name_raw().escape_ascii().to_string(),
+                budget.limits().max_entry_bytes,
+            ));
+        }
         declared = declared.saturating_add(entry.size());
     }
-    if declared > limits.max_bytes {
-        return Err(too_big(limits.max_bytes));
-    }
-    let mut budget = Budget::new(limits);
+    budget.check_total(declared)?;
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(|e| format!("entry {i}: {e}"))?;
         budget.entry()?;
@@ -266,27 +589,28 @@ fn extract_zip(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String
                 "`{name}` is a link or special file, which is refused"
             ));
         }
-        let rel = safe_relative(&name)?;
+        let rel = budget.path(&name, entry.is_dir())?;
         let target = dest.join(rel);
         if entry.is_dir() {
-            fs::create_dir_all(&target).map_err(|e| format!("{}: {e}", target.display()))?;
+            budget.make_dir(&target)?;
         } else {
-            budget.write(&mut entry, &target)?;
+            let size = entry.size();
+            budget.write(&mut entry, &target, &name, size)?;
         }
     }
     Ok(())
 }
 
-fn extract_tar(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
+fn extract_tar(archive: &Path, dest: &Path, budget: &mut Budget) -> Result<(), String> {
     let file = fs::File::open(archive).map_err(|e| format!("{}: {e}", archive.display()))?;
-    extract_tar_reader(io::BufReader::new(file), archive, dest, limits)
+    extract_tar_reader(io::BufReader::new(file), archive, dest, budget)
 }
 
 /// Extract a compressed tar: the file is decoded on the fly and fed to the same walker as a plain tar.
 fn extract_compressed_tar(
     archive: &Path,
     dest: &Path,
-    limits: Limits,
+    budget: &mut Budget,
     codec: Codec,
 ) -> Result<(), String> {
     let file = fs::File::open(archive).map_err(|e| format!("{}: {e}", archive.display()))?;
@@ -305,19 +629,17 @@ fn extract_compressed_tar(
             Box::new(ruzstd::decoding::StreamingDecoder::new(input).map_err(|e| unreadable(&e))?)
         }
     };
-    extract_tar_reader(reader, archive, dest, limits)
+    extract_tar_reader(reader, archive, dest, budget)
 }
 
 /// The stream a tar walk reads through. It counts every byte the tar crate pulls from the decoder: once the bytes
 /// that are not file bodies (headers, padding, GNU long names, pax records, skipped bodies) pass a bound that grows
-/// only with the entries seen, the archive is refused. The whole stream is also capped at the byte limit plus that bound.
+/// only with the entries seen, the archive is refused. The whole stream is also capped at the byte limit plus that
+/// bound, and each read that is not a file body is a step of work.
 struct GuardedReader<R: Read> {
     inner: R,
     read: u64,
-    max_bytes: u64,
-    written: Rc<Cell<u64>>,
-    entries: Rc<Cell<usize>>,
-    in_body: Rc<Cell<bool>>,
+    meter: Rc<Meter>,
 }
 
 /// How many non-body bytes an archive with `entries` entries may hold.
@@ -332,16 +654,19 @@ impl<R: Read> Read for GuardedReader<R> {
         self.read = self
             .read
             .saturating_add(u64::try_from(n).unwrap_or(u64::MAX));
-        let allowance = metadata_allowance(self.entries.get());
-        if self.read > self.max_bytes.saturating_add(allowance) {
+        let allowance = metadata_allowance(self.meter.entries.get());
+        if self.read > self.meter.limits.max_bytes.saturating_add(allowance) {
             return Err(io::Error::other(
                 "the archive stream is larger than expected",
             ));
         }
-        if !self.in_body.get() && self.read.saturating_sub(self.written.get()) > allowance {
-            return Err(io::Error::other(
-                "the archive metadata is larger than expected",
-            ));
+        if !self.meter.in_body.get() {
+            if self.read.saturating_sub(self.meter.bytes.get()) > allowance {
+                return Err(io::Error::other(
+                    "the archive metadata is larger than expected",
+                ));
+            }
+            self.meter.step(1).map_err(io::Error::other)?;
         }
         Ok(n)
     }
@@ -352,29 +677,17 @@ fn extract_tar_reader<R: Read>(
     reader: R,
     archive: &Path,
     dest: &Path,
-    limits: Limits,
+    budget: &mut Budget,
 ) -> Result<(), String> {
     let unreadable = |e: io::Error| format!("{}: not a readable archive: {e}", archive.display());
     // The tar crate reads long names, pax records and skipped bodies through the stream, so the guard sees all of
     // it: whatever is not a file body (counted by `Budget`) is metadata, and is capped.
-    let written = Rc::new(Cell::new(0_u64));
-    let entries = Rc::new(Cell::new(0_usize));
-    let in_body = Rc::new(Cell::new(false));
     let guarded = GuardedReader {
         inner: reader,
         read: 0,
-        max_bytes: limits.max_bytes,
-        written: Rc::clone(&written),
-        entries: Rc::clone(&entries),
-        in_body: Rc::clone(&in_body),
+        meter: Rc::clone(&budget.meter),
     };
     let mut tar = tar::Archive::new(guarded);
-    let mut budget = Budget {
-        mirror: Some(written),
-        entries_mirror: Some(entries),
-        in_body: Some(in_body),
-        ..Budget::new(limits)
-    };
     for entry in tar.entries().map_err(unreadable)? {
         let mut entry = entry.map_err(unreadable)?;
         budget.entry()?;
@@ -387,15 +700,13 @@ fn extract_tar_reader<R: Read>(
             .map_err(unreadable)?
             .to_string_lossy()
             .into_owned();
-        let rel = safe_relative(&name)?;
+        let rel = budget.path(&name, kind.is_dir())?;
         let target = dest.join(rel);
         if kind.is_dir() {
-            fs::create_dir_all(&target).map_err(|e| format!("{}: {e}", target.display()))?;
+            budget.make_dir(&target)?;
         } else if kind.is_file() {
-            if entry.size() > budget.remaining() {
-                return Err(too_big(limits.max_bytes));
-            }
-            budget.write(&mut entry, &target)?;
+            let size = entry.size();
+            budget.write(&mut entry, &target, &name, size)?;
         } else {
             return Err(format!(
                 "`{name}` is a link or special file, which is refused"
@@ -405,7 +716,7 @@ fn extract_tar_reader<R: Read>(
     Ok(())
 }
 
-fn extract_7z(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String> {
+fn extract_7z(archive: &Path, dest: &Path, budget: &mut Budget) -> Result<(), String> {
     let file = fs::File::open(archive).map_err(|e| format!("{}: {e}", archive.display()))?;
     let mut reader = sevenz_rust2::ArchiveReader::new_with_memory_limit(
         file,
@@ -414,23 +725,21 @@ fn extract_7z(archive: &Path, dest: &Path, limits: Limits) -> Result<(), String>
     )
     .map_err(|e| sevenz_error(archive, &e))?;
     let files = &reader.archive().files;
-    if files.len() > limits.max_entries {
-        return Err(format!(
-            "the archive has more than {} entries",
-            limits.max_entries
-        ));
+    if files.len() > budget.limits().max_entries {
+        return Err(too_many(budget.limits().max_entries));
     }
-    let declared = files
-        .iter()
-        .fold(0_u64, |sum, entry| sum.saturating_add(entry.size));
-    if declared > limits.max_bytes {
-        return Err(too_big(limits.max_bytes));
+    let mut declared = 0_u64;
+    for entry in files {
+        if entry.size > budget.limits().max_entry_bytes {
+            return Err(too_big_entry(&entry.name, budget.limits().max_entry_bytes));
+        }
+        declared = declared.saturating_add(entry.size);
     }
-    let mut budget = Budget::new(limits);
+    budget.check_total(declared)?;
     // The callback stops the walk with a placeholder error; the refusal it found is returned instead.
     let mut refused: Option<String> = None;
     let walked = reader.for_each_entries(|entry, stream| {
-        match extract_7z_entry(entry, stream, dest, &mut budget) {
+        match extract_7z_entry(entry, stream, dest, budget) {
             Ok(()) => Ok(true),
             Err(why) => {
                 refused = Some(why);
@@ -452,7 +761,7 @@ fn extract_7z_entry(
 ) -> Result<(), String> {
     budget.entry()?;
     let name = entry.name.as_str();
-    let rel = safe_relative(name)?;
+    let rel = budget.path(name, entry.is_directory)?;
     if entry.is_anti_item {
         return Err(format!("`{name}` is a deletion marker, which is refused"));
     }
@@ -463,10 +772,10 @@ fn extract_7z_entry(
     }
     let target = dest.join(rel);
     if entry.is_directory {
-        fs::create_dir_all(&target).map_err(|e| format!("{}: {e}", target.display()))
+        budget.make_dir(&target)
     } else {
         // An entry without a stream is visited with an empty reader, so this creates it empty.
-        budget.write(stream, &target)
+        budget.write(stream, &target, name, entry.size)
     }
 }
 
