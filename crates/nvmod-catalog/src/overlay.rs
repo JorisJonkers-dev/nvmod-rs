@@ -231,6 +231,7 @@ fn unknown_reference(p: &Plugin, known: &HashSet<&str>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Write as _;
 
     const PROV: &str =
         "[plugin.provenance]\nsource = \"s\"\nverified_on = \"2026-11-14\"\nverified = false\n";
@@ -323,11 +324,14 @@ mod tests {
 
     #[test]
     fn the_entry_cap_is_enforced() {
-        let many: String = (0..MAX_ENTRIES + 3)
-            .map(|i| {
-                format!("[[plugin]]\nid = \"p{i}\"\nname = \"N\"\ndll = \"p{i}.dll\"\n{PROV}\n")
-            })
-            .collect::<String>();
+        let mut many = String::new();
+        for i in 0..MAX_ENTRIES + 3 {
+            writeln!(
+                many,
+                "[[plugin]]\nid = \"p{i}\"\nname = \"N\"\ndll = \"p{i}.dll\"\n{PROV}"
+            )
+            .unwrap();
+        }
         let c = with(&[("big.toml", format!("schema = 1\n{many}"))]);
         let added = c.plugins.len() - Catalog::builtin().plugins.len();
         assert_eq!(added, MAX_ENTRIES);
@@ -361,6 +365,6 @@ mod tests {
         assert!(c.notes.iter().any(|n| n.code == "catalog.overlay-too-many"));
         let _ = fs::remove_dir_all(&tmp);
         let none = Catalog::builtin().with_overlay_dir(&tmp);
-        assert!(none.notes.is_empty());
+        assert_eq!(none.notes, []);
     }
 }
