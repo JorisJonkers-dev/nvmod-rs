@@ -527,7 +527,21 @@ fn contracts_lists_what_this_nvmod_accepts() {
         out.contains("loot-sort (loot-rs) current v1 accepts v1"),
         "{out}"
     );
-    assert!(out.contains("lodwright-plan (lodwright-rs)"), "{out}");
+    for name in [
+        "lodwright-plan",
+        "lodwright-request",
+        "lodwright-result",
+        "lodwright-manifest",
+        "lodwright-events",
+        "lodwright-verify",
+        "lodwright-defaults",
+        "lodwright-bands",
+    ] {
+        assert!(
+            out.contains(&format!("{name} (lodwright-rs) current v1 accepts v1")),
+            "{name}: {out}"
+        );
+    }
     let (code, out, _) = nvmod(&["tools", "contracts", "--json"]);
     assert_eq!(code, 0);
     let json: Value = serde_json::from_str(&out).unwrap();
