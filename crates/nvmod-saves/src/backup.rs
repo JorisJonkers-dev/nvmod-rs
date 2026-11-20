@@ -242,7 +242,7 @@ pub fn restore(
             )));
         }
     }
-    if let Some(name) = nvmod_backup::game_running() {
+    if let Some(name) = nvmod_backup::game_running(&instance.root) {
         return Err(Error::Refused(format!(
             "the game is running (`{name}`); close it first"
         )));

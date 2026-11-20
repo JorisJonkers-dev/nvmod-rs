@@ -218,7 +218,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     };
     let dry_run = args.flag("dry-run");
     if !dry_run
-        && let Some(name) = nvmod_backup::game_running()
+        && let Some(name) = nvmod_backup::game_running(&instance.root)
             .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
     {
         return refused(

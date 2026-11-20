@@ -2211,12 +2211,9 @@ fn a_mods_remove_of_an_unknown_mod_is_a_refusal_and_a_cancelled_token_stops_it_f
 
 #[test]
 fn a_mods_remove_takes_the_mod_out_and_rollback_brings_it_back() {
-    // The job refuses while a game or Mod Organizer 2 runs on the host (a process source cannot be set in process:
-    // this crate forbids unsafe code), so the test has nothing to do on such a host.
-    if nvmod_backup::game_running()
-        .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
-        .is_some()
-    {
+    // The job refuses while Mod Organizer 2 runs on the host (a process source cannot be set in process: this
+    // crate forbids unsafe code), so the test has nothing to do on such a host.
+    if nvmod_backup::process_running(&["ModOrganizer.exe"]).is_some() {
         return;
     }
     let s = Scratch::new();

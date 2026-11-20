@@ -234,7 +234,7 @@ pub fn remove(
         return Ok(Outcome::Cancelled);
     }
     if !request.dry_run
-        && let Some(name) = nvmod_backup::game_running()
+        && let Some(name) = nvmod_backup::game_running(&instance.root)
             .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
     {
         return Err(JobError::new(

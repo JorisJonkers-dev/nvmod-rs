@@ -691,6 +691,7 @@ version = "0.15.0"
 dependencies = [
  "nvmod-core",
  "nvmod-instance",
+ "nvmod-run",
  "nvmod-stage",
  "nvmod-testkit",
  "serde",

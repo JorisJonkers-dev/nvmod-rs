@@ -302,8 +302,12 @@ fn a_running_game_or_a_held_lock_refuses_a_change_but_not_a_dry_run() {
     let s = Scratch::new();
     s.ok(&["profile", "select", "Beta"]);
     let procs = TempDir::new("po-proc");
-    write_file(procs.path(), "4242/comm", b"FalloutNV.exe\n");
-    write_file(procs.path(), "4242/stat", b"4242 (FalloutNV.exe) S 1 1 1\n");
+    write_file(procs.path(), "4242/comm", b"ModOrganizer.exe\n");
+    write_file(
+        procs.path(),
+        "4242/stat",
+        b"4242 (ModOrganizer.exe) S 1 1 1\n",
+    );
     let env = [("NVMOD_PROC_DIR", procs.path().to_str().unwrap())];
     let before = s.tree();
     for args in [

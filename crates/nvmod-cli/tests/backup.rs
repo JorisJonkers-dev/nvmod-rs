@@ -271,16 +271,12 @@ fn a_failed_restore_puts_the_profile_back_and_exits_4() {
     );
 }
 
-// Finding a running game reads the process list (`/proc`, or `NVMOD_PROC_DIR`), which is made up here: starting a
-// real process named like the game would make every other test running at that moment refuse.
+// The game guard reads the run of this Instance from `.nvmod/lock`, which is written here with the pid of this
+// test program: a live process that is not called like any game, standing in for a long-running one.
 #[test]
-fn restore_refuses_while_the_game_runs() {
+fn restore_refuses_while_a_run_of_the_instance_is_alive_and_ignores_other_games() {
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
-    let procs = TempDir::new("bk-proc");
-    write_file(procs.path(), "4242/comm", b"FalloutNV.exe\n");
-    write_file(procs.path(), "4242/stat", b"4242 (FalloutNV.exe) S 1 1 1\n");
-    let before = snapshot(&s.root());
     let root = s.root();
     let args = [
         "backup",
@@ -289,9 +285,37 @@ fn restore_refuses_while_the_game_runs() {
         "--instance",
         root.to_str().unwrap(),
     ];
-    let (code, _, err) = nvmod_at_proc(T0 + 5, &args, procs.path());
+    // A game of another Instance holds the lock of that Instance, not of this one.
+    let other = s.inst.path().join("other");
+    write_file(
+        &other,
+        ".nvmod/lock",
+        format!(
+            r#"{{"pid":{},"started":1,"command":"run nv-rs"}}"#,
+            std::process::id()
+        )
+        .as_bytes(),
+    );
+    let (code, _, err) = nvmod_at(T0 + 5, &args);
+    assert_eq!(code, 0, "{err}");
+    // The run of this Instance, whatever the program is called, refuses.
+    write_file(
+        &root,
+        ".nvmod/lock",
+        format!(
+            r#"{{"pid":{},"started":1,"command":"run raul --play-mode"}}"#,
+            std::process::id()
+        )
+        .as_bytes(),
+    );
+    let before = snapshot(&s.root());
+    let (code, _, err) = nvmod_at(T0 + 10, &args);
     assert_eq!(code, 2, "{err}");
-    assert!(err.contains("game is running"), "{err}");
+    // The command's own Instance lock refuses first here; the game guard behind it is the same lock file.
+    assert!(
+        err.contains(&format!("pid {}", std::process::id())) && err.contains("raul --play-mode"),
+        "{err}"
+    );
     assert_eq!(snapshot(&s.root()), before);
 }
 
