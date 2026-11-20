@@ -59,6 +59,16 @@ impl Ini {
             .map(|(_, v)| v.as_str())
     }
 
+    /// The raw value of the first `key` in `section`: the line a game reading its own INI uses when the key
+    /// is repeated.
+    #[must_use]
+    pub fn get_first(&self, section: &str, key: &str) -> Option<&str> {
+        let (_, keys) = &self.sections[self.section_index(section)?];
+        keys.iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(key))
+            .map(|(_, v)| v.as_str())
+    }
+
     /// The value of `key` in `section` as a string with Qt's wrappers removed (see [`qt_string`]).
     #[must_use]
     pub fn get_string(&self, section: &str, key: &str) -> Option<String> {

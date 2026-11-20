@@ -127,8 +127,6 @@ pub struct Request<'a> {
     pub via_proton: bool,
     /// The nv-viewer to start, instead of the one found.
     pub viewer: Option<PathBuf>,
-    /// The folder of shared nv-rs builds (`~/.local/opt/nv-rs`), searched when the Instance has none of its own.
-    pub shared_root: Option<PathBuf>,
 }
 
 /// `path` as Wine names it: `Z:` and backslashes.
@@ -327,13 +325,7 @@ fn plan_game(req: &Request) -> Result<RunPlan, String> {
 fn plan_nv_rs(req: &Request) -> Result<RunPlan, String> {
     let data = data_dir(req.instance, req.profile);
     let windows = req.platform == Platform::Windows;
-    let suffix = if windows { ".exe" } else { "" };
-    let viewer = native::find_viewer(
-        req.instance,
-        req.viewer.as_deref(),
-        req.shared_root.as_deref(),
-        suffix,
-    )?;
+    let viewer = native::find_viewer(req.viewer.as_deref())?;
     let mut env = base_env(req, &data);
     if windows {
         // No run folder off Linux: the viewer reads the staged Data folder and the executable beside it.

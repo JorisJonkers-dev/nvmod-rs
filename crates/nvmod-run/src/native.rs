@@ -18,8 +18,6 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Where the shared nv-rs builds live under the user's home (`~/.local/opt/nv-rs/<version>/bin/nv-viewer`).
-pub const SHARED_ROOT: &str = ".local/opt/nv-rs";
 /// The base copy's own default settings, which nv-rs seeds `Fallout.ini` from.
 const DEFAULT_INI: &str = "Fallout_default.ini";
 
@@ -57,68 +55,22 @@ pub fn app_data(userdata: &Path) -> PathBuf {
     userdata.join("AppData").join("Local").join("FalloutNV")
 }
 
-/// Version-aware order of two build folder names (`2026-11-15.9` before `2026-11-15.10`).
-fn natural(a: &str, b: &str) -> std::cmp::Ordering {
-    let key = |s: &str| -> Vec<(u64, String)> {
-        s.split(|c: char| !c.is_ascii_alphanumeric())
-            .map(|p| (p.parse::<u64>().unwrap_or(0), p.to_owned()))
-            .collect()
-    };
-    key(a).cmp(&key(b))
-}
-
-/// The newest `<root>/<version>/bin/nv-viewer` that exists.
-#[must_use]
-pub fn newest_viewer(root: &Path, suffix: &str) -> Option<PathBuf> {
-    let mut names: Vec<String> = std::fs::read_dir(root)
-        .ok()?
-        .flatten()
-        .filter(|e| e.path().is_dir())
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .collect();
-    names.sort_by(|a, b| natural(a, b));
-    names
-        .iter()
-        .rev()
-        .map(|n| root.join(n).join("bin").join(format!("nv-viewer{suffix}")))
-        .find(|p| p.is_file())
-}
-
-/// The nv-viewer to start: the one named, else the Instance's own install, else the newest shared build.
+/// The program to start: the one named with `--viewer` (or `NV_VIEWER`). raul links the engine and names its own
+/// program; nothing is searched for.
 ///
 /// # Errors
-/// Nothing is installed (the message names the places looked at and the way forward).
-pub fn find_viewer(
-    instance: &NvmodInstance,
-    named: Option<&Path>,
-    shared_root: Option<&Path>,
-    suffix: &str,
-) -> Result<PathBuf, String> {
-    if let Some(p) = named {
-        return if p.is_file() {
-            Ok(p.to_path_buf())
-        } else {
-            Err(format!("the nv-viewer {} is not a file", p.display()))
-        };
+/// No program is named, or the one named is not a file.
+pub fn find_viewer(named: Option<&Path>) -> Result<PathBuf, String> {
+    match named {
+        Some(p) if p.is_file() => Ok(p.to_path_buf()),
+        Some(p) => Err(format!(
+            "the program to start, {}, is not a file",
+            p.display()
+        )),
+        None => Err(
+            "no program to start is named: nv-rs starts the program given with --viewer".to_owned(),
+        ),
     }
-    let own = instance
-        .nv_rs_dir()
-        .join("bin")
-        .join(format!("nv-viewer{suffix}"));
-    if own.is_file() {
-        return Ok(own);
-    }
-    if let Some(found) = shared_root.and_then(|r| newest_viewer(r, suffix)) {
-        return Ok(found);
-    }
-    Err(format!(
-        "nv-rs is not installed ({} is missing{}); run `nvmod install-nv-rs` first, or name a build with --viewer",
-        own.display(),
-        shared_root.map_or_else(String::new, |r| format!(
-            ", and there is no build under {}",
-            r.display()
-        ))
-    ))
 }
 
 /// The state folder logs go to: `$XDG_STATE_HOME/nv-rs/logs`, else `~/.local/state/nv-rs/logs`.
@@ -242,9 +194,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn builds_sort_by_version_not_by_text() {
-        assert!(natural("nv-rs-2026-11-15.9-x", "nv-rs-2026-11-15.10-x").is_lt());
-        assert!(natural("nv-rs-2026-11-16.1-x", "nv-rs-2026-11-15.10-x").is_gt());
+    fn only_a_named_program_is_found_and_the_refusals_name_no_command() {
+        let file = std::env::temp_dir().join(format!("nvmod-viewer-{}", std::process::id()));
+        std::fs::write(&file, b"x").unwrap();
+        assert_eq!(find_viewer(Some(&file)).unwrap(), file);
+        std::fs::remove_file(&file).unwrap();
+        let gone = find_viewer(Some(&file)).unwrap_err();
+        assert!(
+            gone.contains("is not a file") && !gone.contains("nvmod "),
+            "{gone}"
+        );
+        let none = find_viewer(None).unwrap_err();
+        assert!(
+            none.contains("--viewer") && !none.contains("install"),
+            "{none}"
+        );
     }
 
     #[test]

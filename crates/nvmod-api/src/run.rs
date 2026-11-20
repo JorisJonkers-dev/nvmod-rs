@@ -33,9 +33,6 @@ pub struct PlanRequest {
     /// The nv-viewer to start, instead of the one found.
     #[serde(default)]
     pub viewer: Option<PathBuf>,
-    /// The folder of shared nv-rs builds, searched when the Instance has none of its own.
-    #[serde(default)]
-    pub shared_root: Option<PathBuf>,
     /// Build the Staging tree again even when it is current.
     #[serde(default)]
     pub restage: bool,
@@ -82,7 +79,6 @@ pub fn plan(
         steam_client: request.steam_client.clone(),
         via_proton: request.via_proton,
         viewer: request.viewer.clone(),
-        shared_root: request.shared_root.clone(),
     };
     let mut plan = nvmod_run::plan(&inner)
         .map_err(|why| JobError::new(ErrorKind::Refused, PLAN, refusal(&why)))?;
