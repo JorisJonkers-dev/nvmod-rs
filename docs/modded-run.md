@@ -14,7 +14,7 @@ only read.
 2. Install or import your mods and make a profile (`nvmod import-mo2`, `nvmod install`, `nvmod profile create`).
 3. Order the plugins: `nvmod sort --instance <dir> --masterlist <file> --apply`. nv-rs orders by file time and this
    sets the times.
-4. Install nv-rs: `nvmod install-nv-rs --instance <dir> --release`, or use a build under `~/.local/opt/nv-rs`.
+4. Name the program to start with `--viewer` (raul does).
 5. See the plan: `nvmod run nv-rs --instance <dir> --dry-run`. It names the viewer, the run folder, the user data, the
    environment and the log, and writes nothing.
 6. Start: `nvmod run nv-rs --instance <dir> --wait` (without `--wait` the Instance stays locked until the game ends).
@@ -31,8 +31,8 @@ it is done for you). A profile without a `fallout.ini` gets one from `Fallout_de
 
 ## Options and environment
 
-- `--viewer <path>` or `NV_VIEWER`: use this `nv-viewer`. Otherwise the Instance's own install, then the newest build
-  under `NVMOD_NV_RS_ROOT` (default `~/.local/opt/nv-rs`).
+- `--viewer <path>` or `NV_VIEWER`: the program to start. Nothing is searched for: without it the run is refused
+  (raul always names its own program).
 - `NV_D3D9`, `RUST_LOG` and `RUST_BACKTRACE` default to `wgpu`, `info` and `1`; set them to override.
 - Output goes to `~/.local/state/nv-rs/logs/run-<UTC time>.log` (`$XDG_STATE_HOME` is honoured). The first lines say
   which build, profile and folder were used. Follow it with `tail -f`.

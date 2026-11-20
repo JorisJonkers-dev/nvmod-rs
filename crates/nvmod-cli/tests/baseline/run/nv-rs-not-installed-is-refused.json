@@ -10,7 +10,7 @@
   "exit_code": 2,
   "release": "0.8.1",
   "stderr": [
-    "nvmod run: refused: nv-rs is not installed (<TMP>/fnv/nv-rs/bin/nv-viewer is missing, and there is no build under <TMP>/home/.local/opt/nv-rs); run `nvmod install-nv-rs` first, or name a build with --viewer"
+    "nvmod run: refused: no program to start is named: nv-rs starts the program given with --viewer"
   ],
   "stdout": []
 }

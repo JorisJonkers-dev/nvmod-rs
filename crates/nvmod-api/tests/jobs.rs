@@ -486,7 +486,6 @@ fn run_plan_plans_the_game_without_starting_it() {
         steam_client: None,
         via_proton: false,
         viewer: None,
-        shared_root: None,
         restage: false,
         no_stage: true,
     };
@@ -569,7 +568,6 @@ fn every_request_round_trips_through_json() {
         steam_client: Some(PathBuf::from("/s")),
         via_proton: true,
         viewer: Some(PathBuf::from("/v")),
-        shared_root: Some(PathBuf::from("/n")),
         restage: true,
         no_stage: false,
     };
@@ -681,7 +679,6 @@ fn a_cancel_token_already_used_stops_every_job_before_it_touches_the_instance() 
         steam_client: None,
         via_proton: false,
         viewer: None,
-        shared_root: None,
         restage: false,
         no_stage: false,
     };
@@ -775,7 +772,6 @@ fn a_run_plan_for_an_unknown_target_is_a_refusal() {
         steam_client: None,
         via_proton: false,
         viewer: None,
-        shared_root: None,
         restage: false,
         no_stage: true,
     };
