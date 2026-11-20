@@ -25,7 +25,7 @@ fn run(args: &[&str], env: &[(&str, &str)]) -> (i32, String, String) {
 }
 
 struct Scratch {
-    _base: TempDir,
+    base_copy: TempDir,
     inst: TempDir,
 }
 
@@ -41,13 +41,16 @@ impl Scratch {
             &PluginBuilder::master().build(),
         );
         let inst = TempDir::new("po-inst");
-        let s = Scratch { _base: base, inst };
+        let s = Scratch {
+            base_copy: base,
+            inst,
+        };
         let root = s.root();
         let (code, _, err) = run(
             &[
                 "init",
                 "--base",
-                s._base.path().to_str().unwrap(),
+                s.base_copy.path().to_str().unwrap(),
                 "--instance",
                 root.to_str().unwrap(),
             ],
