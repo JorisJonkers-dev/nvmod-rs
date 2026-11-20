@@ -15,6 +15,10 @@ nvmod-instance = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# The link count of a file on Windows (GetFileInformationByHandle), which std gives only on nightly.
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1.11"
+
 [dev-dependencies]
 nvmod-testkit = { workspace = true }
 

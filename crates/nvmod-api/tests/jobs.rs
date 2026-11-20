@@ -362,6 +362,15 @@ fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
         fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
         fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap(),
     );
+    // Something rewrote the staged plugins: all three have the same time now.
+    for name in ["falloutnv.esm", "patch.esp", "base.esp"] {
+        fs::OpenOptions::new()
+            .write(true)
+            .open(s.root().join("staging/Default/data").join(name))
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000))
+            .unwrap();
+    }
     let request = s.keep_order_request();
     let done = keep_order(&request, &mut NoProgress, &CancelToken::new())
         .expect("keeps the order")
@@ -371,7 +380,8 @@ fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
     assert_eq!(done.plugins, 3);
     assert!(!done.applied.lists_written, "{done:?}");
     assert_eq!(done.applied.stamped, 3);
-    assert_eq!(done.applied.detached, 3);
+    // Staging made the plugins copies already, so there is no link left to replace.
+    assert_eq!(done.applied.detached, 0);
     assert!(done.applied.journal.is_some());
     assert_eq!(
         fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),

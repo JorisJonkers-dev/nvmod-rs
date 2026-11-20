@@ -116,6 +116,7 @@ fn proposal_json(proposal: &Proposal, applied: Option<&Applied>) -> serde_json::
     serde_json::json!({
         "profile": proposal.profile,
         "reordered": proposal.reordered(),
+        "times_stale": nvmod_loadorder::times_stale(&proposal.data, &proposal.current),
         "positions": { "changed": proposal.positions_changed(), "total": proposal.proposed.len() },
         "order": order,
         "general_messages": output.general_messages.iter()
@@ -141,6 +142,8 @@ fn print_text(out: &mut dyn Write, proposal: &Proposal, applied: Option<&Applied
         proposal.proposed.len(),
         if proposal.reordered() {
             "the Load order changes"
+        } else if nvmod_loadorder::times_stale(&proposal.data, &proposal.current) {
+            "the Load order is sorted, but the plugin file times do not follow it"
         } else {
             "the Load order is already sorted"
         }
