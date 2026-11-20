@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnswersFile",
+  "description": "The content of `.nvmod/fomod-answers.json`. `nvmod install --answers` reads the same file (it only looks at\n`answers`), so a saved file can be edited and given back.",
+  "type": "object",
+  "properties": {
+    "answers": {
+      "description": "Question id (`step name/group name`) to the names of the options chosen. Only the groups that were\nanswered are here; a group the installer decided is decided again the same way.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "archive": {
+      "description": "The archive (or folder) the Mod was installed from, as an absolute path. `nvmod mods reinstall` reads\nit again from there unless it is given another.",
+      "type": "string"
+    },
+    "module": {
+      "description": "The FOMOD's `moduleName` (empty when it has none).",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "The version of this file's layout, `1`.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "module",
+    "archive",
+    "answers"
+  ]
+}

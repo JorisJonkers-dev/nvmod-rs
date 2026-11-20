@@ -48,10 +48,12 @@ fn walk(dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) {
 }
 
 /// Whether a file at `relative` in a Mod folder is not a game file: the `meta.ini` at the top is MO2's metadata,
-/// and a file ending in `.mohidden` is one MO2 hid (it is not a provider, so the next Mod's file shows).
+/// a file ending in `.mohidden` is one MO2 hid (it is not a provider, so the next Mod's file shows), and the
+/// `.nvmod` folder at the top holds nvmod's own records of the Mod (the saved FOMOD answers).
 #[must_use]
 pub fn is_mod_metadata(relative: &str) -> bool {
-    relative.eq_ignore_ascii_case("meta.ini") || relative.to_lowercase().ends_with(".mohidden")
+    let lower = relative.to_lowercase();
+    lower == "meta.ini" || lower.ends_with(".mohidden") || lower.starts_with(".nvmod/")
 }
 
 /// The game files of a Mod (or Overwrite) folder as (path with `/` as the Mod spells it, full path), sorted,

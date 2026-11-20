@@ -56,14 +56,20 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
                               import one MO2 profile into a new Instance (the MO2 instance is only read)
   nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run]
-                [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>]
+                [--answers <file>] [--on-conflict replace|merge|rename] [--max-extract-bytes <n>] [--max-extract-entries <n>]
                 [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>]
                 [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]
                               install a Mod from a zip, 7z, tar or compressed tar archive (rar is refused); a FOMOD is
                               answered where its XML is unambiguous and otherwise exits 1 with the questions
                               (--json), which --answers completes; then stage the profile. The --max-extract-*
                               flags raise or lower the extraction limits (defaults in docs/DECISIONS.md); an archive
-                              past one is refused (exit 2) and the Instance is left as it was
+                              past one is refused (exit 2) and the Instance is left as it was. A FOMOD's answers are
+                              saved as mods/<name>/.nvmod/fomod-answers.json. When a Mod of that name exists the
+                              install is refused unless --on-conflict says: replace (keeps priority, enabled state,
+                              Plugin states and meta.ini), merge (new files over the folder) or rename (<name> 2, ...)
+  nvmod mods reinstall|reconfigure <mod> --instance <dir> [--profile <name>] [--archive <file>] [--dry-run] [--json]
+                              install a Mod again from its archive with its saved FOMOD answers, replacing it;
+                              reconfigure also takes --answers <file> whose answers replace the saved ones
   nvmod rollback --instance <dir> [--json]
                               undo the last install, sort or mods change: restore the profile files (an install also
                               removes the Mod)
@@ -212,6 +218,8 @@ fn writes_instance(args: &[String]) -> bool {
                     | "note"
                     | "separator"
                     | "category"
+                    | "reinstall"
+                    | "reconfigure"
             )
         ),
         Some("plugins") => matches!(
