@@ -20,6 +20,10 @@ use serde::Serialize;
 use std::fs;
 use std::path::Path;
 
+mod overwrite;
+
+pub use overwrite::{OverwriteFile, OverwriteList, list as overwrite_list};
+
 /// What to do. The Mod (or separator label, or new name) is named separately.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
@@ -74,6 +78,28 @@ pub enum Action {
     },
     /// Remove a separator (the target is its label).
     SeparatorRemove,
+    /// Move files of Overwrite (all of them when `globs` is empty) into a new Mod at the top of the list; the target
+    /// is the new Mod's name. The plugins it carries are listed as inactive.
+    OverwriteCreateMod {
+        /// Patterns (`*`, `?`, `**`, ignoring case) of the paths to move; a pattern that names a folder takes
+        /// everything under it.
+        globs: Vec<String>,
+    },
+    /// Move one file or folder of Overwrite into a Mod; the target is the path inside Overwrite.
+    OverwriteMove {
+        /// The Mod it goes to.
+        to: String,
+    },
+    /// Move files or folders of Overwrite to the trash; the target is the first path.
+    OverwriteDelete {
+        /// More paths inside Overwrite.
+        more: Vec<String>,
+    },
+    /// Move the files of Overwrite that a Mod provides into that Mod, replacing its copy (kept in the trash).
+    OverwriteSync {
+        /// Only this Mod's files; needed when a file has several providers.
+        to: Option<String>,
+    },
     /// Set the categories of a Mod (the first is the primary one); empty clears them.
     Categories {
         /// The category ids.
@@ -97,6 +123,10 @@ impl Action {
             Action::SeparatorRename { .. } => "separator-rename",
             Action::SeparatorRemove => "separator-remove",
             Action::Categories { .. } => "category-set",
+            Action::OverwriteCreateMod { .. } => "overwrite-create-mod",
+            Action::OverwriteMove { .. } => "overwrite-move",
+            Action::OverwriteDelete { .. } => "overwrite-delete",
+            Action::OverwriteSync { .. } => "overwrite-sync",
         }
     }
 }
@@ -125,6 +155,9 @@ pub struct Report {
     pub dependants: Vec<String>,
     /// The file hidden or unhidden, or the categories set, as text.
     pub detail: Option<String>,
+    /// The paths inside Overwrite an overwrite action moves (or would), `/` separated.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<String>,
     /// Files in the Staging tree after the change; `None` when it was not staged again.
     pub staged_files: Option<usize>,
     /// The journal `nvmod rollback` uses; `None` for a dry run or when nothing changed.
@@ -215,6 +248,13 @@ enum Step {
         path: String,
         bytes: Vec<u8>,
     },
+    /// Move a file or folder into the journal's trash, under `keep` (relative to the trash folder of the journal).
+    TrashPath {
+        from: String,
+        keep: String,
+    },
+    /// Remove these folders (relative to the Instance folder) when they are empty, deepest first.
+    Prune(Vec<String>),
 }
 
 #[derive(Default)]
@@ -228,6 +268,7 @@ struct Plan {
     plugins_dropped: Vec<String>,
     dependants: Vec<String>,
     detail: Option<String>,
+    files: Vec<String>,
     name: String,
 }
 
@@ -409,6 +450,12 @@ impl Ctx<'_> {
             Action::SeparatorAdd { place } => self.separator_add(&mut plan, target, place)?,
             Action::SeparatorRename { to } => self.separator_rename(&mut plan, target, to)?,
             Action::SeparatorRemove => self.separator_remove(&mut plan, target)?,
+            Action::OverwriteCreateMod { globs } => {
+                self.overwrite_create_mod(&mut plan, target, globs)?;
+            }
+            Action::OverwriteMove { to } => self.overwrite_move(&mut plan, target, to)?,
+            Action::OverwriteDelete { more } => self.overwrite_delete(&mut plan, target, more)?,
+            Action::OverwriteSync { to } => self.overwrite_sync(&mut plan, to.as_deref())?,
         }
         Ok(plan)
     }
@@ -865,8 +912,39 @@ fn do_step(
             fs::rename(at(&from), &target).map_err(|e| io(&target, e))
         }
         Step::Move { from, to } => {
+            // Folders the move makes are recorded first, so a rollback (which undoes in reverse) removes them
+            // after the file went back.
+            let mut missing = Vec::new();
+            let mut up = Path::new(to).parent();
+            while let Some(dir) = up.filter(|d| !d.as_os_str().is_empty()) {
+                if at(&dir.to_string_lossy()).exists() {
+                    break;
+                }
+                missing.push(dir.to_string_lossy().into_owned());
+                up = dir.parent();
+            }
+            for dir in missing.iter().rev() {
+                entry.record_create(instance, dir)?;
+                fs::create_dir(at(dir)).map_err(|e| io(&at(dir), e))?;
+            }
             entry.record_move(instance, from, to)?;
             fs::rename(at(from), at(to)).map_err(|e| io(&at(to), e))
+        }
+        Step::TrashPath { from, keep } => {
+            let to = format!(".nvmod/trash/{}/{keep}", entry.id);
+            entry.record_move(instance, from, &to)?;
+            let target = at(&to);
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent).map_err(|e| io(parent, e))?;
+            }
+            fs::rename(at(from), &target).map_err(|e| io(&target, e))
+        }
+        Step::Prune(dirs) => {
+            // Not recorded: undoing the moves makes the folders again (a move's undo creates its parents).
+            for dir in dirs {
+                let _ = fs::remove_dir(at(dir));
+            }
+            Ok(())
         }
         Step::MakeDir { path, files } => {
             entry.record_create(instance, path)?;
@@ -932,6 +1010,7 @@ pub fn apply(
         plugins_dropped: plan.plugins_dropped.clone(),
         dependants: plan.dependants.clone(),
         detail: plan.detail.clone(),
+        files: plan.files.clone(),
         staged_files: None,
         journal: None,
     };
