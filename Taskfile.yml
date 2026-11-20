@@ -27,7 +27,12 @@ tasks:
 
   fuzz:check:
     desc: The fuzz harnesses compile (stable, type-check only; running them needs nightly and cargo-fuzz)
-    cmd: cargo check --locked --manifest-path fuzz/Cargo.toml
+    cmd: |
+      cargo check --locked --manifest-path fuzz/Cargo.toml || {
+        echo "If the error says the lock file needs updating, fuzz/Cargo.lock is stale (a dependency moved in the root manifest)." >&2
+        echo "Regenerate it with: cargo metadata --manifest-path fuzz/Cargo.toml > /dev/null   then commit fuzz/Cargo.lock" >&2
+        exit 1
+      }
 
   deny:
     desc: Licences, bans, sources and advisories (deny.toml), for the workspace and the fuzz workspace
