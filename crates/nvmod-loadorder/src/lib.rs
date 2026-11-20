@@ -540,6 +540,17 @@ mod tests {
     }
 
     #[test]
+    fn the_ttw_list_keeps_the_base_masters_in_the_order_a_new_profile_lists_them() {
+        let ttw: Vec<&str> = TTW_PRIMARY
+            .iter()
+            .copied()
+            .filter(|n| nvmod_instance::BASE_MASTERS.contains(n))
+            .collect();
+        assert_eq!(ttw, nvmod_instance::BASE_MASTERS);
+        assert_eq!(FNV_PRIMARY[0], nvmod_instance::BASE_MASTERS[0]);
+    }
+
+    #[test]
     fn a_locked_plugin_goes_back_to_its_position_after_a_sort() {
         let mut order = vec![
             slot("FalloutNV.esm", true),

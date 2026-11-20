@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! Making an empty profile in an Instance: the three list files of MO2's format, with the base game's master as
-//! the only plugin.
+//! Making an empty profile in an Instance: the three list files of MO2's format, with the base copy's masters as
+//! the only plugins.
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
 use nvmod_instance::InstanceError;
@@ -34,7 +34,9 @@ pub struct CreateOutput {
 /// Make the empty profile `request.name` in the Instance at `request.instance`.
 ///
 /// The profile's `modlist.txt` holds only the comment header, and its `plugins.txt` and `loadorder.txt` hold the
-/// base game's master `FalloutNV.esm`, so that `install`, `sort` and the Doctor have a profile to work on.
+/// masters of the base copy that the game loads: `FalloutNV.esm`, then the DLC and pack masters its `Data` folder
+/// holds, in the game's order, all active. So `install`, `sort`, LOD planning and the Doctor have a profile to work
+/// on that matches what the game runs.
 ///
 /// # Errors
 /// [`ErrorKind::Refused`] when the folder is not an Instance, the name is not usable or the Instance already has
