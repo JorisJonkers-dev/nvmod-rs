@@ -9,7 +9,7 @@
 
 pub mod extract;
 pub mod fomod;
-pub mod journal;
+pub use nvmod_journal as journal;
 pub mod lifecycle;
 mod lists;
 pub mod mods;

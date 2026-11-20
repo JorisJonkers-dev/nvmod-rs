@@ -18,6 +18,7 @@ nvmod-downloads = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-import = { workspace = true }
 nvmod-instance = { workspace = true }
+nvmod-journal = { workspace = true }
 nvmod-loadorder = { workspace = true }
 nvmod-modinstall = { workspace = true }
 nvmod-plugins = { workspace = true }

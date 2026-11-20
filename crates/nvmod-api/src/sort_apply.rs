@@ -76,7 +76,7 @@ pub fn keep_order(
         Some(&data),
         &order,
         None,
-        nvmod_modinstall::journal::KIND_SORT,
+        nvmod_journal::KIND_SORT,
     )
     .map_err(failure)?;
     Ok(Outcome::Done(KeepOrderOutput {

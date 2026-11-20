@@ -174,7 +174,9 @@ fn save(root: &Path, journal: &Journal) -> Result<(), String> {
     write_atomic(&root.join("journal.json"), text.as_bytes())
 }
 
-pub(crate) fn staging_exists(instance: &NvmodInstance, profile: &str) -> bool {
+/// Whether the Staging tree of `profile` exists (what an undo of a stage must put back).
+#[must_use]
+pub fn staging_exists(instance: &NvmodInstance, profile: &str) -> bool {
     instance.staging_dir(profile).exists()
         || instance
             .root

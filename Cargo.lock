@@ -705,6 +705,7 @@ dependencies = [
  "nvmod-formats",
  "nvmod-import",
  "nvmod-instance",
+ "nvmod-journal",
  "nvmod-loadorder",
  "nvmod-modinstall",
  "nvmod-plugins",
@@ -871,6 +872,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvmod-journal"
+version = "0.15.1"
+dependencies = [
+ "nvmod-instance",
+ "nvmod-stage",
+ "nvmod-testkit",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nvmod-loadorder"
 version = "0.15.1"
 dependencies = [
@@ -878,7 +890,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
- "nvmod-modinstall",
+ "nvmod-journal",
  "nvmod-stage",
  "nvmod-testkit",
 ]
@@ -893,6 +905,7 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-journal",
  "nvmod-stage",
  "nvmod-testkit",
  "roxmltree",
@@ -923,8 +936,8 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
+ "nvmod-journal",
  "nvmod-loadorder",
- "nvmod-modinstall",
  "nvmod-testkit",
  "schemars",
  "serde",

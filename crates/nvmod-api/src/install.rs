@@ -2,11 +2,11 @@
 //! Installing a Mod from an archive into a profile, and taking the last install back.
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
+pub use nvmod_journal::RollbackReport;
 pub use nvmod_modinstall::LimitOverrides;
 pub use nvmod_modinstall::OnConflict;
 pub use nvmod_modinstall::Question;
 pub use nvmod_modinstall::Report;
-pub use nvmod_modinstall::RollbackReport;
 use nvmod_modinstall::{InstallError, Request as ModInstallRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -244,12 +244,12 @@ pub fn rollback(
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
-    match nvmod_modinstall::rollback(&instance) {
+    match nvmod_journal::rollback(&instance) {
         Ok(report) => Ok(Outcome::Done(report)),
-        Err(nvmod_modinstall::RollbackError::Refused(why)) => {
+        Err(nvmod_journal::RollbackError::Refused(why)) => {
             Err(JobError::new(ErrorKind::Refused, ROLLBACK, why))
         }
-        Err(nvmod_modinstall::RollbackError::Failed(why)) => {
+        Err(nvmod_journal::RollbackError::Failed(why)) => {
             Err(JobError::new(ErrorKind::Failed, ROLLBACK, why))
         }
     }

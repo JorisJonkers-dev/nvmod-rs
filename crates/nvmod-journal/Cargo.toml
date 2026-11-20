@@ -1,0 +1,21 @@
+[package]
+name = "nvmod-journal"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "The rollback journal of an nvmod Instance: entries, backups, undo and rollback."
+
+[dependencies]
+nvmod-instance = { workspace = true }
+nvmod-stage = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+nvmod-testkit = { workspace = true }
+
+[lints]
+workspace = true
