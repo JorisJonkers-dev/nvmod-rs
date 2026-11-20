@@ -273,6 +273,7 @@ fn reinstall_replays_and_reconfigure_with_one_changed_answer_changes_only_those_
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn replace_keeps_priority_state_and_notes_and_merge_and_rename_leave_the_other_files_alone() {
     let s = Scratch::new();
     let zip = s.archive("Multi.zip");

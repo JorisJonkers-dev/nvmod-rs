@@ -1066,8 +1066,9 @@ mod tests {
 
     impl Env for Plugins {
         fn file_state(&self, file: &str) -> Option<FileState> {
-            let lower = file.to_ascii_lowercase();
-            if !(lower.ends_with(".esp") || lower.ends_with(".esm")) {
+            let ext = std::path::Path::new(file).extension();
+            if !ext.is_some_and(|e| e.eq_ignore_ascii_case("esp") || e.eq_ignore_ascii_case("esm"))
+            {
                 return None;
             }
             Some(
@@ -1355,6 +1356,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::items_after_statements)]
     fn an_option_type_follows_the_active_plugins_and_esm_states() {
         let m = Module::parse(TWO_STEPS).unwrap();
         let red = ans(&[("Look/Style", &["Red"])]);
@@ -1425,6 +1427,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::items_after_statements)]
     fn nested_conditions_and_pattern_order_decide_types_and_conditional_files() {
         let xml = r#"<config><installSteps order="Explicit"><installStep name="S"><optionalFileGroups order="Explicit">
           <group name="Pick" type="SelectAny"><plugins order="Explicit">
