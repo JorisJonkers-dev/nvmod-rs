@@ -26,7 +26,7 @@ nvmod-rs keeps mod management:
 
 These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and planned in its `docs/REORG.md`:
 
-- setup (removed in #164; raul composes it from the mod-management jobs), `ttw` (removed in #165; raul runs TTW through ttwright), `lod` (removed in #166; raul runs LOD), the engine install (`install-nv-rs`), `run`,
+- setup (removed in #164; raul composes it from the mod-management jobs), `ttw` (removed in #165; raul runs TTW through ttwright), `lod` (removed in #166; raul runs LOD), the engine install (`install-nv-rs`, removed in #168), `run`,
   `tools`, `verify` and `contracts`;
 - the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`).
 
@@ -74,4 +74,4 @@ Every command prints JSON with `--json`, so scripts and the headless harness nev
 `mise install`, then `task check` runs what the pipeline runs. On NixOS without a linker:
 `nix shell nixpkgs#gcc nixpkgs#lld -c cargo test` with `RUSTFLAGS="-Clink-self-contained=-linker"`. Heavy commands
 go through `capped` (see [`docs/PRACTICES.md`](docs/PRACTICES.md)). Decisions and the questions the owner should
-revisit are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+revisit are one file each in [`docs/decisions/`](docs/decisions/README.md); earlier ones are in [`docs/DECISIONS.md`](docs/DECISIONS.md).

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Replays the recorded baseline of the commands that rauls-trusty-toolbox ADR-0019 moves out of nvmod (`tools
-//! contracts`, `verify`, `tools`, `run`, `install-nv-rs`, `lod`). Each transcript in
+//! contracts`, `verify`, `tools`, `run`, `lod`). Each transcript in
 //! `tests/baseline/<command>/<case>.json` (those of removed commands are in `tests/baseline/removed/`, not replayed) holds the arguments, the exit code, standard output (parsed as JSON when it
 //! is JSON) and standard error, as the built `nvmod` printed them on synthetic fixtures. The normalisation rules are in
 //! `tests/baseline/README.md`; they are applied to every run, recorded or replayed, so a transcript is only ever compared
@@ -12,8 +12,8 @@
 #![cfg(unix)]
 
 use nvmod_testkit::{
-    BaseBuilder, FAKE_ASSET, FakeNvRs, FakeRelease, FakeServer, PeBuilder, PluginBuilder, Reply,
-    TempDir, nv_viewer_name, write_file, write_script,
+    BaseBuilder, FAKE_ASSET, FakeServer, PeBuilder, PluginBuilder, Reply, TempDir, nv_viewer_name,
+    write_file, write_script,
 };
 use nvmod_tools::{platform, sha256_hex};
 use serde_json::{Value, json};
@@ -255,98 +255,6 @@ fn instance_with_proton_failing(root: &Path) -> Vec<FakeServer> {
     instance_with_proton(7)(root)
 }
 
-/// `instance`, plus a nv-rs source (a tiny cargo workspace) and a `cargo` that finds the toolchain that built the
-/// tests. The source is at `<TMP>/src`.
-fn instance_with_source(root: &Path) -> Vec<FakeServer> {
-    instance(root);
-    FakeNvRs::new().write(&root.join("src"));
-    write_toolchain(root);
-    Vec::new()
-}
-
-/// `instance_with_source`, with a nv-rs source whose build fails.
-fn instance_with_failing_build(root: &Path) -> Vec<FakeServer> {
-    instance(root);
-    FakeNvRs::new().failing_build().write(&root.join("src"));
-    write_toolchain(root);
-    Vec::new()
-}
-
-/// `instance_with_source`, with a nv-rs source whose `--check` refuses.
-fn instance_with_failing_check(root: &Path) -> Vec<FakeServer> {
-    instance(root);
-    FakeNvRs::new().failing_check().write(&root.join("src"));
-    write_toolchain(root);
-    Vec::new()
-}
-
-/// The folder of `cc` on the test's own `PATH`: a source build needs a linker, and the scratch `PATH` has none.
-fn linker_dir() -> Option<PathBuf> {
-    std::env::split_paths(&std::env::var_os("PATH")?).find(|d| d.join("cc").is_file())
-}
-
-/// A `cargo` in `<TMP>/bin` that runs the cargo of the test build with an explicit environment: the toolchain folder,
-/// the folder of `cc`, the system folders, a `CARGO_HOME` and a `CARGO_TARGET_DIR` under the case's scratch root, the
-/// toolchain's own `rustc`, and no network. The scratch root is removed with the case, so nothing is left behind.
-fn write_toolchain(root: &Path) {
-    let cargo = Path::new(env!("CARGO"));
-    let toolchain = cargo.parent().expect("the cargo folder");
-    let mut dirs = vec![toolchain.to_path_buf()];
-    dirs.extend(linker_dir());
-    dirs.extend(["/usr/bin", "/bin"].map(PathBuf::from));
-    let path = std::env::join_paths(dirs).expect("a PATH");
-    let cargo_home = root.join("cargo-home");
-    fs::create_dir_all(&cargo_home).expect("cargo home");
-    write_script(
-        &root.join("bin"),
-        "cargo",
-        &format!(
-            "PATH='{}'\nexport PATH\nCARGO_HOME='{}'\nexport CARGO_HOME\nCARGO_TARGET_DIR='{}'\nexport CARGO_TARGET_DIR\n\
-             RUSTC='{}'\nexport RUSTC\nCARGO_NET_OFFLINE=true\nexport CARGO_NET_OFFLINE\nexec '{}' \"$@\"\n",
-            path.to_string_lossy(),
-            cargo_home.display(),
-            root.join("target").display(),
-            toolchain.join("rustc").display(),
-            cargo.display()
-        ),
-    );
-}
-
-/// `instance`, and the fake release at `<TMP>/release` (served as `file://<TMP>/release`) with a `gh` that accepts
-/// every attestation.
-fn install_release(root: &Path, release: &FakeRelease) {
-    instance(root);
-    release.write(&root.join("release"), sha256_hex);
-    write_script(&root.join("bin"), "gh", "exit 0");
-}
-
-fn with_release(root: &Path) -> Vec<FakeServer> {
-    install_release(root, &FakeRelease::new());
-    Vec::new()
-}
-
-fn with_wrong_checksum_release(root: &Path) -> Vec<FakeServer> {
-    install_release(root, &FakeRelease::new().wrong_checksum());
-    Vec::new()
-}
-
-fn with_failing_check_release(root: &Path) -> Vec<FakeServer> {
-    install_release(root, &FakeRelease::new().failing_check());
-    Vec::new()
-}
-
-fn with_unlisted_asset_release(root: &Path) -> Vec<FakeServer> {
-    install_release(root, &FakeRelease::new().asset_not_listed());
-    Vec::new()
-}
-
-/// `instance`, with a folder that is not an Instance at `<TMP>/plain`.
-fn instance_and_plain_folder(root: &Path) -> Vec<FakeServer> {
-    instance(root);
-    fs::create_dir_all(root.join("plain")).expect("plain folder");
-    Vec::new()
-}
-
 /// Every transcript of the baseline: one literal per case, so the list reads as the record of what is covered.
 #[allow(clippy::too_many_lines)]
 fn cases() -> Vec<Case> {
@@ -485,156 +393,6 @@ fn cases() -> Vec<Case> {
                 "<TMP>/fnv",
             ],
             setup: tools_lock_and_instance,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "source-build-installs-and-checks",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--source",
-                "<TMP>/src",
-                "--cargo",
-                "<TMP>/bin/cargo",
-            ],
-            setup: instance_with_source,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "source-build-failing-build-is-refused-and-rolled-back",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--source",
-                "<TMP>/src",
-                "--cargo",
-                "<TMP>/bin/cargo",
-            ],
-            setup: instance_with_failing_build,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "source-build-failing-check-is-refused-and-rolled-back",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--source",
-                "<TMP>/src",
-                "--cargo",
-                "<TMP>/bin/cargo",
-            ],
-            setup: instance_with_failing_check,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "release-fetched-verified-and-installed",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--cargo",
-                "<TMP>/bin/no-cargo",
-                "--release-url",
-                "file://<TMP>/release",
-                "--gh",
-                "<TMP>/bin/gh",
-            ],
-            setup: with_release,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "release-wrong-checksum-installs-nothing",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--cargo",
-                "<TMP>/bin/no-cargo",
-                "--release-url",
-                "file://<TMP>/release",
-                "--gh",
-                "<TMP>/bin/gh",
-            ],
-            setup: with_wrong_checksum_release,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "release-failing-check-rolled-back",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--cargo",
-                "<TMP>/bin/no-cargo",
-                "--release-url",
-                "file://<TMP>/release",
-                "--gh",
-                "<TMP>/bin/gh",
-            ],
-            setup: with_failing_check_release,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "release-asset-not-listed",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--cargo",
-                "<TMP>/bin/no-cargo",
-                "--release-url",
-                "file://<TMP>/release",
-                "--gh",
-                "<TMP>/bin/gh",
-            ],
-            setup: with_unlisted_asset_release,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "refused-without-source-or-release",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/fnv",
-                "--cargo",
-                "<TMP>/bin/cargo",
-            ],
-            setup: instance_with_source,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "refused-not-an-instance",
-            args: &[
-                "install-nv-rs",
-                "--instance",
-                "<TMP>/plain",
-                "--cargo",
-                "<TMP>/bin/cargo",
-                "--source",
-                "<TMP>/src",
-            ],
-            setup: instance_and_plain_folder,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "usage-play-patch-option-is-gone",
-            args: &["install-nv-rs", "--instance", "<TMP>/fnv", "--play-patch"],
-            setup: instance,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "usage-unknown-option",
-            args: &["install-nv-rs", "--instance", "<TMP>/fnv", "--nope"],
-            setup: instance,
-        },
-        Case {
-            command: "install-nv-rs",
-            name: "usage-missing-instance-option",
-            args: &["install-nv-rs"],
-            setup: nothing,
         },
         Case {
             command: "run",

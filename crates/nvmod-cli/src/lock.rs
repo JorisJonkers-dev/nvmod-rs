@@ -26,7 +26,7 @@ fn writes(args: &[String]) -> bool {
     let word = |i: usize| args.get(i).map(String::as_str);
     let has = |flag: &str| args.iter().any(|a| a == flag);
     match word(0) {
-        Some("stage" | "target" | "install-nv-rs" | "rollback") => true,
+        Some("stage" | "target" | "rollback") => true,
         Some("install") => !has("--dry-run"),
         Some("downloads") => {
             matches!(word(1), Some("install" | "hide" | "unhide" | "forget")) && !has("--dry-run")

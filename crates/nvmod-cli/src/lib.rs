@@ -13,7 +13,6 @@ mod fomod_prompt;
 mod import;
 mod init;
 mod install_mod;
-mod install_nvrs;
 mod lock;
 mod logging;
 mod mods;
@@ -151,10 +150,6 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               check an nvmod Instance (its Staging tree, missing masters, the Load order against
                               loot-rs, NVSE plugins against the catalogue), or the NVSE plugins of an MO2
                               profile (read only)
-  nvmod install-nv-rs --instance <dir> [--source <dir>] [--release] [--release-url <url>] [--cargo <path>]
-                              [--gh <path>] [--curl <path>] [--asset <name>] [--repo <o/r>]
-                              build nv-rs from source (a Rust toolchain is found through --cargo, NVMOD_CARGO
-                              or PATH) or fetch and verify the fork's release; then run `nv-viewer <data> --check`
   nvmod profile create --instance <dir> [--name <name>]
                               make an empty profile (default name `Default`)
   nvmod profile list --instance <dir> [--json]
@@ -401,7 +396,6 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("nvse-usage") => nvse_usage::run(&args[1..], out, err),
         Some("backup") => backup::run(&args[1..], out, err),
         Some("tools") => tools::run(&args[1..], out, err),
-        Some("install-nv-rs") => install_nvrs::run(&args[1..], out, err),
         Some("--version" | "-V") => {
             let _ = writeln!(out, "nvmod {}", env!("CARGO_PKG_VERSION"));
             OK

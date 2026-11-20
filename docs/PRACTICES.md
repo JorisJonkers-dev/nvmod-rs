@@ -27,7 +27,7 @@ Anything the repository states as a fact about the outside world (a plugin's DLL
 format field) carries where it came from: in `data/nvse-plugins.toml` each entry has a `[provenance]` table with
 `source`, `verified_on` and `verified`. An entry that nobody checked says `verified = false`; the doctor then
 reports what it infers from it as less certain. Format facts in code carry a comment naming their source, and
-anything from memory says so (see `docs/DECISIONS.md`, "Unverified assumptions").
+anything from memory says so (see `docs/DECISIONS.md`, "Unverified assumptions"; new decisions are files in `docs/decisions/`).
 
 ## Heavy local commands
 

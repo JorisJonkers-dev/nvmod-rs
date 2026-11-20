@@ -65,6 +65,16 @@ class Guards(unittest.TestCase):
         root = make_repo({".gitignore": "*.dll\n"})
         self.assertEqual(len(repo_guards.run(root, "gitignore")), len(repo_guards.FORBIDDEN_EXTS) - 1)
 
+    def test_decisions_table_may_not_grow_but_the_folder_may(self):
+        frozen = "\n".join("x" for _ in range(repo_guards.DECISIONS_FROZEN_LINES)) + "\n"
+        root = make_repo({"docs/DECISIONS.md": frozen, "docs/decisions/2026-11-21-a.md": "# a\n"})
+        self.assertEqual(repo_guards.run(root, "decisions"), [])
+        root = make_repo({"docs/DECISIONS.md": frozen + "| new row |\n"})
+        bad = repo_guards.run(root, "decisions")
+        self.assertEqual(len(bad), 1)
+        self.assertIn("docs/decisions/", bad[0])
+        self.assertEqual(repo_guards.run(make_repo({"a.txt": "x"}), "decisions"), [])
+
     def test_a_workspace_covered_by_release_handling_passes(self):
         self.assertEqual(repo_guards.run(make_repo(workspace(["a", "b"])), "release"), [])
 

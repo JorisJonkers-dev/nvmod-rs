@@ -704,7 +704,6 @@ dependencies = [
  "nvmod-downloads",
  "nvmod-formats",
  "nvmod-import",
- "nvmod-install",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
@@ -768,7 +767,6 @@ dependencies = [
  "nvmod-doctor",
  "nvmod-formats",
  "nvmod-import",
- "nvmod-install",
  "nvmod-instance",
  "nvmod-loadorder",
  "nvmod-modinstall",
@@ -867,19 +865,6 @@ dependencies = [
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "nvmod-install"
-version = "0.15.1"
-dependencies = [
- "nvmod-core",
- "nvmod-instance",
- "nvmod-runner",
- "nvmod-testkit",
- "nvmod-tools",
  "serde",
  "serde_json",
 ]
