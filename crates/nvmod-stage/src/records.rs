@@ -22,6 +22,18 @@ pub struct Record {
     pub mtime_ns: u64,
     /// Names the file had (hard links); more than 1 means the provider's file and the tree's are one file.
     pub links: u64,
+    /// Built as a hard link (a plugin detached for its file time still counts: it was linked first).
+    #[serde(default)]
+    pub linked: bool,
+    /// The provider's file when the tree was built: identity, size and time, to tell a changed Mod file later.
+    #[serde(default)]
+    pub from_id: u64,
+    /// Size of the provider's file.
+    #[serde(default)]
+    pub from_size: u64,
+    /// Modification time of the provider's file in nanoseconds since the epoch.
+    #[serde(default)]
+    pub from_mtime_ns: u64,
 }
 
 /// The identity and the number of names of the file at `path`.
@@ -54,10 +66,18 @@ pub(crate) fn mtime_ns(meta: &fs::Metadata) -> u64 {
 }
 
 impl Record {
-    /// The record of the file at `path` that `provider` provides as `source`.
-    pub(crate) fn of(path: &Path, provider: &str, source: &str) -> Option<Record> {
+    /// The record of the tree file at `path`, made from `from` (the provider's file) as `source` of `provider`.
+    pub(crate) fn of(
+        path: &Path,
+        from: &Path,
+        provider: &str,
+        source: &str,
+        linked: bool,
+    ) -> Option<Record> {
         let meta = fs::metadata(path).ok()?;
         let (id, links) = identity(path, &meta);
+        let origin = fs::metadata(from).ok()?;
+        let (from_id, _) = identity(from, &origin);
         Some(Record {
             provider: provider.to_owned(),
             source: source.to_owned(),
@@ -65,6 +85,26 @@ impl Record {
             size: meta.len(),
             mtime_ns: mtime_ns(&meta),
             links,
+            linked,
+            from_id,
+            from_size: origin.len(),
+            from_mtime_ns: mtime_ns(&origin),
         })
+    }
+
+    /// Whether the provider's file at `from` is still the file the tree was built from.
+    pub(crate) fn source_unchanged(&self, from: &Path) -> bool {
+        fs::metadata(from).is_ok_and(|m| {
+            identity(from, &m).0 == self.from_id
+                && m.len() == self.from_size
+                && mtime_ns(&m) == self.from_mtime_ns
+        })
+    }
+
+    /// Whether the tree file with `meta` at `path` is still the file this record made.
+    pub(crate) fn tree_unchanged(&self, path: &Path, meta: &fs::Metadata) -> bool {
+        identity(path, meta).0 == self.id
+            && meta.len() == self.size
+            && mtime_ns(meta) == self.mtime_ns
     }
 }

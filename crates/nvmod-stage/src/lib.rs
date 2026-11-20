@@ -6,6 +6,7 @@
 //! Layout: `staging/<profile>/data/...` is the tree, `staging/<profile>.json` its manifest.
 
 pub mod glob;
+mod incremental;
 mod plan;
 mod records;
 pub mod stamp;
@@ -103,6 +104,9 @@ pub fn times_stale(instance: &NvmodInstance, profile: &str) -> bool {
 pub struct Options {
     /// Never try a hard link; copy every file.
     pub copy_only: bool,
+    /// Build the whole tree again. Without it a run changes only what differs from the last one, when the
+    /// manifest of the last run allows it (same layout, same way of building, a record for every file).
+    pub full: bool,
 }
 
 /// Why staging did not produce a tree.
@@ -133,6 +137,12 @@ pub struct Manifest {
     /// it: the [`Report`] of a run leaves it empty.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub records: BTreeMap<String, Record>,
+    /// Built with `copy_only`.
+    #[serde(default)]
+    pub copy_only: bool,
+    /// The protected globs the tree was built with.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub protect: Vec<String>,
 }
 
 /// The result of one staging run.
@@ -147,6 +157,11 @@ pub struct Report {
     pub collisions: Vec<Collision>,
     /// Things worth knowing, such as a listed Mod without a folder.
     pub findings: Vec<Finding>,
+    /// `full` (the whole tree was built) or `incremental` (only what differed was changed).
+    pub mode: &'static str,
+    /// File operations done: every file for a full build, the links, unlinks and replacements of an
+    /// incremental run.
+    pub operations: usize,
 }
 
 const SCHEMA: u32 = 2;
@@ -217,6 +232,14 @@ pub fn collisions(instance: &NvmodInstance, profile: &str) -> Result<Vec<Collisi
 #[must_use]
 pub fn doctor_findings(instance: &NvmodInstance, profile: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
+    if incremental::journal_path(instance, profile).is_file() {
+        findings.push(Finding::new(
+            "stage.interrupted",
+            Severity::Warning,
+            profile,
+            "a staging run stopped half way, so the Staging tree may be part old and part new; run `nvmod stage`, which puts it right",
+        ));
+    }
     match read_manifest(instance, profile) {
         None => findings.push(Finding::new(
             "stage.missing",
@@ -279,87 +302,134 @@ pub fn stage(
         )));
     }
     let plan = plan_of(instance, profile)?;
-    let final_dir = instance.staging_dir(profile);
-    let partial = final_dir.with_extension("partial");
     let failed = |why: String| {
         StageError::Failed(format!(
             "{why}; rolled back, the old Staging tree is untouched"
         ))
     };
-    let _ = fs::remove_dir_all(&partial);
+    // A run that was killed half way left a journal: put the tree back first.
+    incremental::recover(instance, profile).map_err(|why| {
+        StageError::Failed(format!(
+            "the last run did not finish and could not be undone: {why}"
+        ))
+    })?;
     let protect = sweep::protected_globs(instance, profile);
-    let (linked, copied) = match build(&plan, &partial.join("data"), options, &protect) {
-        Ok(counts) => counts,
-        Err(why) => {
-            let _ = fs::remove_dir_all(&partial);
-            return Err(failed(why));
+    let old = (!options.full)
+        .then(|| {
+            incremental::usable(
+                instance,
+                profile,
+                read_manifest(instance, profile),
+                options.copy_only,
+                &protect,
+            )
+        })
+        .flatten();
+    let order = load_order(instance, profile)?;
+    let (copied, operations, mode) = match old {
+        Some(old) => {
+            let applied = incremental::run(instance, profile, &plan, &old, &order, &protect)
+                .map_err(failed)?;
+            (applied.copied, applied.operations, "incremental")
         }
+        None => (
+            build_full(instance, profile, &plan, options, &protect, &order).map_err(
+                |e| match e {
+                    StageError::Failed(why) => failed(why),
+                    refused @ StageError::Refused(_) => refused,
+                },
+            )?,
+            plan.files.len(),
+            "full",
+        ),
     };
-    // The game orders plugins by file time: the new tree gets the times of the Load order, as `sort --apply`
-    // gives them, so building the tree again never undoes a sort.
-    let stamped = load_order(instance, profile).and_then(|order| {
-        stamp::apply(&stamp::plan(&partial.join("data"), &order)).map_err(StageError::Failed)
-    });
-    if let Err(e) = stamped {
-        let _ = fs::remove_dir_all(&partial);
-        return Err(match e {
-            StageError::Failed(why) => failed(why),
-            refused @ StageError::Refused(_) => refused,
-        });
-    }
+    let final_dir = instance.staging_dir(profile);
     let records = plan
         .owners
         .iter()
         .filter_map(|(key, (provider, source))| {
-            Record::of(&partial.join("data").join(key), provider, source)
-                .map(|record| (key.clone(), record))
+            let from = plan.files.get(key)?;
+            Record::of(
+                &final_dir.join("data").join(key),
+                from,
+                provider,
+                source,
+                !copied.contains(key),
+            )
+            .map(|record| (key.clone(), record))
         })
         .collect();
     let mut manifest = Manifest {
         schema: SCHEMA,
         profile: profile.to_owned(),
         files: plan.files.len(),
-        linked,
-        copied,
+        linked: plan.files.len() - copied.len(),
+        copied: copied.len(),
         overridden: plan.overridden,
         records,
+        copy_only: options.copy_only,
+        protect,
     };
     let text = serde_json::to_string_pretty(&manifest).map_err(|e| failed(e.to_string()))?;
-    if let Err(why) = swap(
-        &partial,
-        &final_dir,
-        &manifest_path(instance, profile),
-        &text,
-    ) {
-        let _ = fs::remove_dir_all(&partial);
-        return Err(failed(why));
-    }
+    write_atomic(&manifest_path(instance, profile), &(text + "\n")).map_err(failed)?;
     manifest.records.clear();
     Ok(Report {
         manifest,
         tree: final_dir.join("data").display().to_string(),
         collisions: plan.collisions,
         findings: plan.findings,
+        mode,
+        operations,
     })
 }
 
-fn swap(partial: &Path, final_dir: &Path, manifest: &Path, text: &str) -> Result<(), String> {
+/// Build the whole tree beside the old one and swap it in. Returns the keys that are copies.
+fn build_full(
+    instance: &NvmodInstance,
+    profile: &str,
+    plan: &Plan,
+    options: Options,
+    protect: &[String],
+    order: &[Slot],
+) -> Result<std::collections::BTreeSet<String>, StageError> {
+    let final_dir = instance.staging_dir(profile);
+    let partial = final_dir.with_extension("partial");
+    let _ = fs::remove_dir_all(&partial);
+    let cleanup = |why: String| {
+        let _ = fs::remove_dir_all(&partial);
+        StageError::Failed(why)
+    };
+    let copied = build(plan, &partial.join("data"), options, protect).map_err(cleanup)?;
+    // The game orders plugins by file time: the new tree gets the times of the Load order, as `sort --apply`
+    // gives them, so building the tree again never undoes a sort.
+    stamp::apply(&stamp::plan(&partial.join("data"), order)).map_err(cleanup)?;
+    swap(&partial, &final_dir).map_err(cleanup)?;
+    Ok(copied)
+}
+
+fn write_atomic(path: &Path, text: &str) -> Result<(), String> {
+    let io = |p: &Path, e: std::io::Error| format!("{}: {e}", p.display());
+    let tmp = path.with_extension("json.tmp");
+    fs::write(&tmp, text).map_err(|e| io(&tmp, e))?;
+    fs::rename(&tmp, path).map_err(|e| io(path, e))
+}
+
+fn swap(partial: &Path, final_dir: &Path) -> Result<(), String> {
     let io = |p: &Path, e: std::io::Error| format!("{}: {e}", p.display());
     if final_dir.exists() {
         fs::remove_dir_all(final_dir).map_err(|e| io(final_dir, e))?;
     }
-    fs::rename(partial, final_dir).map_err(|e| io(final_dir, e))?;
-    fs::write(manifest, text.to_owned() + "\n").map_err(|e| io(manifest, e))
+    fs::rename(partial, final_dir).map_err(|e| io(final_dir, e))
 }
 
-/// Link or copy every file of the plan into `dest`. Returns (linked, copied).
+/// Link or copy every file of the plan into `dest`. Returns the keys that are copies.
 fn build(
     plan: &Plan,
     dest: &Path,
     options: Options,
     protect: &[String],
-) -> Result<(usize, usize), String> {
-    let (mut linked, mut copied) = (0, 0);
+) -> Result<std::collections::BTreeSet<String>, String> {
+    let mut copied = std::collections::BTreeSet::new();
     fs::create_dir_all(dest).map_err(|e| format!("{}: {e}", dest.display()))?;
     for (key, path) in &plan.files {
         let target = dest.join(key);
@@ -367,12 +437,10 @@ fn build(
             fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
         }
         let protected = protect.iter().any(|g| glob::selects(g, key));
-        if !options.copy_only && !protected && fs::hard_link(path, &target).is_ok() {
-            linked += 1;
-        } else {
+        if options.copy_only || protected || fs::hard_link(path, &target).is_err() {
             fs::copy(path, &target).map_err(|e| format!("{}: {e}", path.display()))?;
-            copied += 1;
+            copied.insert(key.clone());
         }
     }
-    Ok((linked, copied))
+    Ok(copied)
 }
