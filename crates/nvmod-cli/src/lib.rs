@@ -99,7 +99,9 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod downloads list --instance <dir> [--downloads <dir>] [--unmatched] [--hash] [--json]
   nvmod downloads show <archive> --instance <dir> [--downloads <dir>] [--hash] [--json]
   nvmod downloads install <archive> --instance <dir> [--downloads <dir>] [--profile <name>] [--name <mod name>]
-                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]
+                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>]
+                [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>]
+                [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]
   nvmod downloads hide|unhide|forget <archive> --instance <dir> [--downloads <dir>] [--dry-run] [--json]
                               the downloads library (default <instance>/downloads): each archive with the state
                               MO2 keeps in its .meta file (installed, uninstalled, hidden, paused), its Nexus mod

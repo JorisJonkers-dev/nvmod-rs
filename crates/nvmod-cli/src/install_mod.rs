@@ -118,7 +118,7 @@ fn print_questions(out: &mut dyn Write, questions: &[Question], json: bool) {
 }
 
 /// The extraction limits given on the command line; the name of the flag whose value is not a number on error.
-fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str> {
+pub(crate) fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str> {
     fn number<T: std::str::FromStr>(
         args: &Args,
         flag: &'static str,

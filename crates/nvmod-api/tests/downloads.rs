@@ -74,6 +74,7 @@ fn install_request(s: &Scratch) -> InstallRequest {
         dry_run: false,
         answers: None,
         max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
     }
 }
 

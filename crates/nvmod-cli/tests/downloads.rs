@@ -304,3 +304,63 @@ fn the_downloads_option_names_another_folder() {
     ]);
     assert_eq!(code, 2);
 }
+
+#[test]
+fn every_extraction_limit_applies_to_a_downloads_install() {
+    let s = Scratch::new();
+    let dl = s.root().join("downloads");
+    std::fs::create_dir_all(&dl).unwrap();
+    ZipBuilder::new()
+        .file("a/b/one.txt", &[1; 40])
+        .file("two.txt", &[2; 40])
+        .write(&dl.join("Limits.zip"));
+    let root = s.arg();
+    // (flag, a value that refuses, a value just at the limit that installs)
+    let cases = [
+        ("--max-extract-bytes", "79", "80"),
+        ("--max-extract-entries", "1", "2"),
+        ("--max-extract-entry-bytes", "39", "40"),
+        ("--max-extract-depth", "2", "3"),
+        ("--max-extract-operations", "1", "100"),
+        ("--max-extract-seconds", "0", "60"),
+    ];
+    for (flag, refuse, _) in cases {
+        let (code, _, err) = nvmod(&[
+            "downloads",
+            "install",
+            "Limits.zip",
+            "--instance",
+            &root,
+            flag,
+            refuse,
+        ]);
+        assert_eq!(code, 2, "{flag} {refuse}: {err}");
+        assert!(err.contains(flag), "{flag} should be named in: {err}");
+        assert!(!s.root().join("mods/Limits").exists(), "{flag}");
+    }
+    for (flag, _, allow) in cases {
+        let name = format!("Limits {}", flag.trim_start_matches("--max-extract-"));
+        let (code, _, err) = nvmod(&[
+            "downloads",
+            "install",
+            "Limits.zip",
+            "--instance",
+            &root,
+            flag,
+            allow,
+            "--name",
+            &name,
+        ]);
+        assert_eq!(code, 0, "{flag} {allow}: {err}");
+    }
+    let (code, _, err) = nvmod(&[
+        "downloads",
+        "install",
+        "Limits.zip",
+        "--instance",
+        &root,
+        "--max-extract-ratio",
+        "x",
+    ]);
+    assert_eq!(code, 5, "{err}");
+}

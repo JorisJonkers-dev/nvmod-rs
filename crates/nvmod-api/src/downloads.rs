@@ -81,6 +81,10 @@ pub struct InstallRequest {
     /// The most bytes the extraction may write; `None` for the default limit.
     #[serde(default)]
     pub max_extract_bytes: Option<u64>,
+    /// The other limits of the extraction (entries, bytes per entry, expansion ratio, folder depth, steps of work,
+    /// seconds); a value left `None` keeps its default. `max_extract_bytes`, when set, wins over `max_bytes`.
+    #[serde(default)]
+    pub extract_limits: crate::install::LimitOverrides,
 }
 
 /// What [`install`] did to the archive's `.meta`.
@@ -346,7 +350,7 @@ pub fn install(
         fomod_answers: None,
         on_conflict: crate::install::OnConflict::Refuse,
         max_extract_bytes: request.max_extract_bytes,
-        extract_limits: crate::install::LimitOverrides::default(),
+        extract_limits: request.extract_limits,
     };
     let output = match crate::install::install(&inner, progress, cancel)? {
         Outcome::Cancelled => return Ok(Outcome::Cancelled),
