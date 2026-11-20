@@ -365,6 +365,34 @@ fn listed_plugins(instance: &NvmodInstance, profile: &str) -> Vec<String> {
     names
 }
 
+/// The Oblivion archive version nv-rs reads besides 104.
+const NV_RS_EXTRA_VERSION: u32 = 103;
+
+/// `archive.unsupported-version`: the archive has a version the directory reader does not support. The severity
+/// follows what the engine loads: nv-rs reads version 103 as well as 104, so 103 is a warning (the directory
+/// cannot be listed or checked here, the engine still loads it); any other version is an error.
+fn unsupported_version(subject: &str, version: u32) -> Finding {
+    let (severity, rule) = if version == NV_RS_EXTRA_VERSION {
+        (
+            Severity::Warning,
+            "nv-rs loads version 103 and 104 archives, so this is a warning; the archive's files are not checked here",
+        )
+    } else {
+        (
+            Severity::Error,
+            "nv-rs loads only version 103 and 104 archives, so an archive of another version is an error",
+        )
+    };
+    Finding::new(
+        "archive.unsupported-version",
+        severity,
+        subject.to_owned(),
+        format!(
+            "the archive has version {version}, which the directory reader does not support (104 is); {rule}"
+        ),
+    )
+}
+
 /// `archive.corrupt-header` for every archive, `archive.not-listed` for those the game does not load.
 fn unloaded_and_damaged(
     instance: &NvmodInstance,
@@ -379,13 +407,18 @@ fn unloaded_and_damaged(
         let layer = &layers[f.layer];
         let subject = format!("{}: {}", layer.name, f.name);
         // A damaged header is reported whether or not the archive loads.
-        if let Err(why) = nvmod_bsa::read_file(&layer_root(instance, layer).join(&f.name)) {
-            findings.push(Finding::new(
+        match nvmod_bsa::read_file(&layer_root(instance, layer).join(&f.name)) {
+            Ok(_) => {}
+            // A version this reader does not know is not a damaged header.
+            Err(nvmod_bsa::BsaError::UnsupportedVersion(version)) => {
+                findings.push(unsupported_version(&subject, version));
+            }
+            Err(why) => findings.push(Finding::new(
                 "archive.corrupt-header",
                 Severity::Error,
                 subject.clone(),
                 format!("the archive's directory cannot be read: {why}"),
-            ));
+            )),
         }
         if settings.archive_list.is_none()
             || loaded

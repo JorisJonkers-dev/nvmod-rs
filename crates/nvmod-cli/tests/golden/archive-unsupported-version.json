@@ -1,0 +1,17 @@
+{
+  "negative": [],
+  "positive": [
+    {
+      "code": "archive.unsupported-version",
+      "message": "the archive has version 103, which the directory reader does not support (104 is); nv-rs loads version 103 and 104 archives, so this is a warning; the archive's files are not checked here",
+      "severity": "warning",
+      "subject": "Alpha: Alpha.bsa"
+    },
+    {
+      "code": "archive.unsupported-version",
+      "message": "the archive has version 9, which the directory reader does not support (104 is); nv-rs loads only version 103 and 104 archives, so an archive of another version is an error",
+      "severity": "error",
+      "subject": "Beta: Beta.bsa"
+    }
+  ]
+}

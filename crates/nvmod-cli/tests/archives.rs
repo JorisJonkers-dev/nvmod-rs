@@ -340,3 +340,49 @@ fn archive_corrupt_header_has_a_positive_and_a_negative_fixture() {
     assert!(negative.is_empty());
     golden("archive-corrupt-header.json", &pair(&positive, &negative));
 }
+
+#[test]
+fn an_unsupported_archive_version_is_not_a_corrupt_header() {
+    let s = Scratch::new();
+    s.modlist("+Alpha\r\n+Beta\r\n+Gamma\r\n+Delta\r\n");
+    s.plugins(&["Alpha.esp", "Beta.esp", "Gamma.esp", "Delta.esp"], &[]);
+    s.ini("", None);
+    s.file(
+        "Alpha",
+        "Alpha.bsa",
+        &BsaBuilder::new().file("a/a.txt", 4).version(103).bytes(),
+    );
+    s.file(
+        "Beta",
+        "Beta.bsa",
+        &BsaBuilder::new().file("a/b.txt", 4).version(9).bytes(),
+    );
+    s.bsa("Gamma", "Gamma.bsa", &["a/c.txt"]);
+    let mut bad = BsaBuilder::new().file("a/d.txt", 4).bytes();
+    bad.truncate(40);
+    s.file("Delta", "Delta.bsa", &bad);
+
+    let positive = s.findings("archive.unsupported-version");
+    assert_eq!(positive.len(), 2, "{positive:?}");
+    assert_eq!(positive[0]["subject"], "Alpha: Alpha.bsa");
+    assert_eq!(positive[0]["severity"], "warning");
+    assert!(
+        positive[0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("version 103")
+    );
+    assert_eq!(positive[1]["subject"], "Beta: Beta.bsa");
+    assert_eq!(positive[1]["severity"], "error");
+    assert!(
+        positive[1]["message"]
+            .as_str()
+            .unwrap()
+            .contains("version 9")
+    );
+    // Only the truly damaged header is a corrupt header; version 104 raises neither.
+    let corrupt = s.findings("archive.corrupt-header");
+    assert_eq!(corrupt.len(), 1, "{corrupt:?}");
+    assert_eq!(corrupt[0]["subject"], "Delta: Delta.bsa");
+    golden("archive-unsupported-version.json", &pair(&positive, &[]));
+}
