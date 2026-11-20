@@ -1216,6 +1216,8 @@ fn install_dry_run_writes_nothing() {
         name: None,
         dry_run: true,
         answers: None,
+        fomod_answers: None,
+        on_conflict: nvmod_api::install::OnConflict::Refuse,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1245,6 +1247,8 @@ fn install_for_real_then_rollback_removes_it() {
         name: None,
         dry_run: false,
         answers: None,
+        fomod_answers: None,
+        on_conflict: nvmod_api::install::OnConflict::Refuse,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1279,6 +1283,8 @@ fn install_cancelled_before_changes_nothing() {
         name: None,
         dry_run: false,
         answers: None,
+        fomod_answers: None,
+        on_conflict: nvmod_api::install::OnConflict::Refuse,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1307,6 +1313,8 @@ fn an_install_that_needs_fomod_answers_returns_the_questions() {
         name: None,
         dry_run: false,
         answers: None,
+        fomod_answers: None,
+        on_conflict: nvmod_api::install::OnConflict::Refuse,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1346,6 +1354,8 @@ fn an_install_over_the_extraction_limit_is_refused() {
         name: None,
         dry_run: false,
         answers: None,
+        fomod_answers: None,
+        on_conflict: nvmod_api::install::OnConflict::Refuse,
         max_extract_bytes: Some(50),
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -2222,4 +2232,67 @@ fn a_mods_remove_takes_the_mod_out_and_rollback_brings_it_back() {
     assert!(!modlist.contains("Patch"), "{modlist}");
     let plugins = fs::read_to_string(s.root().join("profiles/Default/plugins.txt")).unwrap();
     assert!(!plugins.contains("Patch.esp"), "{plugins}");
+}
+
+#[test]
+fn the_fomod_stream_gives_the_step_then_the_plan_and_the_events_follow_the_schema() {
+    use nvmod_api::fomod::{FomodEvent, NextRequest};
+    let s = Scratch::new();
+    let work = TempDir::new("api-fomod-stream");
+    let archive = work.path().join("Ask.zip");
+    let files: [(&str, &[u8]); 2] = [("red.txt", b"red"), ("blue.txt", b"blue")];
+    fomod_zip(&archive, ASK, &files);
+    let before = fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let mut request = NextRequest {
+        instance: s.root(),
+        profile: None,
+        archive: Some(archive),
+        answers: std::collections::BTreeMap::new(),
+        previous: std::collections::BTreeMap::new(),
+        reconfigure: None,
+        max_extract_bytes: None,
+        extract_limits: nvmod_api::install::LimitOverrides::default(),
+    };
+    let call = |r: &NextRequest| {
+        nvmod_api::fomod::next(r, &mut NoProgress, &CancelToken::new())
+            .expect("no error")
+            .done()
+            .expect("not cancelled")
+    };
+    let FomodEvent::Step(step) = call(&request) else {
+        panic!("the open group is asked first");
+    };
+    assert_eq!(
+        (step.step.as_str(), step.groups[0].id.as_str()),
+        ("Options", "Options/Style")
+    );
+    let names: Vec<&str> = step.groups[0]
+        .options
+        .iter()
+        .map(|o| o.name.as_str())
+        .collect();
+    assert_eq!(names, ["Red", "Blue"]);
+    let json = serde_json::to_value(FomodEvent::Step(step)).unwrap();
+    assert_eq!(json["event"], "step");
+    // The checked-in schema is the one the types generate, and it names the event tag.
+    let schema = nvmod_api::fomod::events_schema();
+    assert!(schema.contains("\"step\"") && schema.contains("\"plan\""));
+    assert!(nvmod_api::fomod::answers_schema().contains("schema_version"));
+
+    request
+        .answers
+        .insert("Options/Style".to_owned(), vec!["Blue".to_owned()]);
+    let FomodEvent::Plan(plan) = call(&request) else {
+        panic!("the answer ends the stream");
+    };
+    assert_eq!(plan.files, ["style.txt"]);
+    assert_eq!(plan.answers["Options/Style"], ["Blue"]);
+    assert_eq!(
+        fs::read(s.root().join("profiles/Default/modlist.txt")).unwrap(),
+        before
+    );
+    assert!(
+        !s.root().join("mods/Ask").exists(),
+        "the stream writes nothing"
+    );
 }

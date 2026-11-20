@@ -667,6 +667,7 @@ dependencies = [
  "nvmod-stage",
  "roxmltree",
  "ruzstd",
+ "schemars",
  "serde",
  "serde_json",
  "sevenz-rust2",

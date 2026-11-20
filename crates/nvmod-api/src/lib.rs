@@ -42,6 +42,9 @@
 //! | [`init::create`] | [`init::CreateRequest`] | [`init::CreateOutput`] |
 //! | [`import_mo2::import`] | [`import_mo2::ImportRequest`] | [`import_mo2::ImportOutput`] |
 //! | [`install::install`] | [`install::InstallRequest`] | [`install::InstallOutput`] |
+//! | [`install::reinstall`] | [`install::ReinstallRequest`] | [`install::InstallOutput`] |
+//! | [`install::reconfigure`] | [`install::ReinstallRequest`] | [`install::InstallOutput`] |
+//! | [`fomod::next`] | [`fomod::NextRequest`] | [`fomod::FomodEvent`] |
 //! | [`install::rollback`] | [`install::RollbackRequest`] | [`install::RollbackReport`] |
 //! | [`downloads::list`] | [`downloads::ListRequest`] | [`downloads::ListOutput`] |
 //! | [`downloads::show`] | [`downloads::ShowRequest`] | [`downloads::ShowOutput`] |
@@ -67,6 +70,7 @@ pub mod backup;
 pub mod conflicts;
 pub mod doctor;
 pub mod downloads;
+pub mod fomod;
 pub mod import_mo2;
 pub mod init;
 pub mod install;

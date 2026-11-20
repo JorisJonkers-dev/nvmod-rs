@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FomodEvent",
+  "description": "One event of the stream: `{\"event\": \"step\", ...}` or `{\"event\": \"plan\", ...}`.",
+  "oneOf": [
+    {
+      "description": "A step with something to answer.",
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "const": "step"
+        }
+      },
+      "$ref": "#/$defs/StepEvent",
+      "required": [
+        "event"
+      ]
+    },
+    {
+      "description": "Everything is decided; the Mod's file list.",
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "const": "plan"
+        }
+      },
+      "$ref": "#/$defs/PlanEvent",
+      "required": [
+        "event"
+      ]
+    }
+  ],
+  "$defs": {
+    "Decided": {
+      "description": "A choice the installer made for a group without asking, with the reason.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "description": "Why this was unambiguous.",
+          "type": "string"
+        },
+        "selected": {
+          "description": "The options chosen.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "selected",
+        "reason"
+      ]
+    },
+    "GroupEvent": {
+      "description": "One group of a [`StepEvent`].",
+      "type": "object",
+      "properties": {
+        "answered": {
+          "description": "True when the answers given so far answer this group.",
+          "type": "boolean"
+        },
+        "decided": {
+          "description": "Set when the installer decided the group; it needs no answer.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decided"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "description": "`step name/group name`, the key in the answers.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "The group's rule.",
+          "$ref": "#/$defs/GroupKind"
+        },
+        "max": {
+          "description": "The most options to choose.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "min": {
+          "description": "The fewest options to choose.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "name": {
+          "description": "The group's name.",
+          "type": "string"
+        },
+        "options": {
+          "description": "The options, in the order the FOMOD shows them.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OptionEvent"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "min",
+        "max",
+        "answered",
+        "options"
+      ]
+    },
+    "GroupKind": {
+      "description": "How a group limits the selection.",
+      "oneOf": [
+        {
+          "description": "`SelectAny`.",
+          "type": "string",
+          "const": "SelectAny"
+        },
+        {
+          "description": "`SelectAll`.",
+          "type": "string",
+          "const": "SelectAll"
+        },
+        {
+          "description": "`SelectExactlyOne`.",
+          "type": "string",
+          "const": "SelectExactlyOne"
+        },
+        {
+          "description": "`SelectAtMostOne`.",
+          "type": "string",
+          "const": "SelectAtMostOne"
+        },
+        {
+          "description": "`SelectAtLeastOne`.",
+          "type": "string",
+          "const": "SelectAtLeastOne"
+        }
+      ]
+    },
+    "Inferred": {
+      "description": "A choice made without asking.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The question id it would have had.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why this was unambiguous.",
+          "type": "string"
+        },
+        "selected": {
+          "description": "The options chosen.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "selected",
+        "reason"
+      ]
+    },
+    "OptionEvent": {
+      "description": "One option of a [`GroupEvent`].",
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "The author's description (empty when there is none).",
+          "type": "string"
+        },
+        "dynamic": {
+          "description": "True when the author gave the type as a `dependencyType` with patterns, false for a fixed type.",
+          "type": "boolean"
+        },
+        "image": {
+          "description": "The option's image, a path inside the archive as the FOMOD spells it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "description": "The name; this is what an answer gives back.",
+          "type": "string"
+        },
+        "selected": {
+          "description": "Whether to show the option ticked: the answer given, else the choice made for the group, else the\nprevious answer, else the author's `Required` and `Recommended` options.",
+          "type": "boolean"
+        },
+        "type": {
+          "description": "The type descriptor evaluated against the flags set so far and the active Plugins. `null` when it\ndepends on something nothing here can see (an unanswered group of the same step, a file that is not a\nPlugin).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PluginType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usable": {
+          "description": "False for a `NotUsable` option: it cannot be chosen.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "dynamic",
+        "usable",
+        "selected"
+      ]
+    },
+    "PlanEvent": {
+      "description": "The files the Mod will hold, and how the FOMOD was answered: the last event of a session.",
+      "type": "object",
+      "properties": {
+        "answers": {
+          "description": "The answers that counted, the content of the `answers` of the saved answers file. Empty for an archive\nthat is not a FOMOD.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "files": {
+          "description": "Files of the Mod, relative paths with `/`, sorted.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "inferred": {
+          "description": "Choices the installer made without asking.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Inferred"
+          }
+        }
+      },
+      "required": [
+        "files",
+        "inferred",
+        "answers"
+      ]
+    },
+    "PluginType": {
+      "description": "A plugin's type descriptor.",
+      "oneOf": [
+        {
+          "description": "Must be installed.",
+          "type": "string",
+          "const": "Required"
+        },
+        {
+          "description": "Suggested by the author.",
+          "type": "string",
+          "const": "Recommended"
+        },
+        {
+          "description": "Free to choose.",
+          "type": "string",
+          "const": "Optional"
+        },
+        {
+          "description": "Cannot be installed.",
+          "type": "string",
+          "const": "NotUsable"
+        },
+        {
+          "description": "Free to choose, with a warning.",
+          "type": "string",
+          "const": "CouldBeUsable"
+        }
+      ]
+    },
+    "StepEvent": {
+      "description": "An install step that has a group to answer.",
+      "type": "object",
+      "properties": {
+        "groups": {
+          "description": "Every group of the step, answered, decided and open ones together.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GroupEvent"
+          }
+        },
+        "index": {
+          "description": "The step's position among all steps of the FOMOD, counting from 0.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "may_not_apply": {
+          "description": "True when a condition nothing here can evaluate decides whether the step is shown at all.",
+          "type": "boolean"
+        },
+        "module": {
+          "description": "The module's name (`moduleName`; empty when the FOMOD has none).",
+          "type": "string"
+        },
+        "step": {
+          "description": "The step's name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "module",
+        "step",
+        "index",
+        "may_not_apply",
+        "groups"
+      ]
+    }
+  }
+}
