@@ -5,7 +5,7 @@
 
 use nvmod_catalog::Catalog;
 use nvmod_core::{Finding, Severity};
-use nvmod_instance::{NvmodInstance, find_ci};
+use nvmod_instance::{NvmodInstance, base_masters_present, find_ci};
 use nvmod_loadorder::{Error, Slot, empty_masterlist, load_masterlist, propose, read_slots};
 use nvmod_pe::{Version4, inspect_file};
 use std::path::Path;
@@ -225,6 +225,38 @@ fn nvse_plugins(
     }
 }
 
+/// A master of the base copy that the Profile does not list at all: the game loads it anyway (through its `.nam`
+/// file), but sort, LOD planning and the save checks read the list and do not see it. A Profile made before
+/// `profile create` listed the base masters has this; it is never rewritten silently. A master that is listed but
+/// inactive is a choice, and not reported.
+fn unlisted_base_masters(
+    instance: &NvmodInstance,
+    profile: &str,
+    order: &[Slot],
+    findings: &mut Vec<Finding>,
+) {
+    let missing: Vec<&str> = base_masters_present(&instance.config.base)
+        .into_iter()
+        .filter(|name| position(order, name).is_none())
+        .collect();
+    if missing.is_empty() {
+        return;
+    }
+    findings.push(Finding::new(
+        "loadorder.base-master-unlisted",
+        Severity::Warning,
+        profile,
+        format!(
+            "the base copy has {} that this profile's plugins.txt does not list; the game loads {}, but sort, LOD planning and save checks do not see {}. List {}: `nvmod plugins enable {} --instance <dir> --profile {profile}` (each goes to its place among the base masters; nothing else changes), then `nvmod stage` if the Staging tree is stale",
+            missing.join(", "),
+            if missing.len() == 1 { "it" } else { "them" },
+            if missing.len() == 1 { "it" } else { "them" },
+            if missing.len() == 1 { "it" } else { "them" },
+            missing.join(" "),
+        ),
+    ));
+}
+
 /// What the checks compare the Instance with.
 pub(crate) struct Inputs<'a> {
     pub masterlist: Option<&'a Path>,
@@ -245,11 +277,15 @@ pub(crate) fn check(
         game,
         catalog,
     } = *inputs;
+    let listed = read_slots(&instance.profile_dir(profile));
+    if let Ok(order) = &listed {
+        unlisted_base_masters(instance, profile, order, findings);
+    }
     let Ok(data) = nvmod_loadorder::staging_data(instance, profile) else {
         return;
     };
     nvse_plugins(instance, &data, game, catalog, findings);
-    let order = match read_slots(&instance.profile_dir(profile)) {
+    let order = match listed {
         Ok(order) => order,
         Err(Error::Refused(why) | Error::Failed(why)) => {
             findings.push(Finding::new(
