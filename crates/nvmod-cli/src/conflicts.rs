@@ -60,6 +60,9 @@ fn print_report(report: &Report, json: bool, out: &mut dyn Write) -> u8 {
         report.profile,
         report.conflicts.len()
     );
+    for left_out in &report.excluded {
+        let _ = writeln!(out, "  {}", left_out.reason);
+    }
     for m in &report.mods {
         let mut flags = Vec::new();
         for (on, word) in [

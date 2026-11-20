@@ -397,3 +397,98 @@ fn tree_refusals_go_to_stderr_with_exit_two() {
         "{err}"
     );
 }
+
+const MARKER: &[u8] = b"[General]\r\nnotes=\"kept\"\r\n[raulGeneratedLod]\r\ngenerated=true\r\nprofile=\"Default\"\r\n";
+
+#[test]
+fn a_generated_mod_is_listed_as_generated_and_left_out_of_the_conflicts_with_one_reason() {
+    let s = Scratch::new();
+    // A generated Mod at the top of the list that collides with everything below it.
+    s.modlist("+Generated LOD (Default)\r\n+A\r\n+B\r\n+C\r\n");
+    s.mod_file("Generated LOD (Default)", "meta.ini", MARKER);
+    s.mod_file("Generated LOD (Default)", "meshes/rock.nif", b"lod");
+    s.mod_file("Generated LOD (Default)", "textures/a.dds", b"lod");
+
+    let (code, report) = s.json("conflicts", &[]);
+    assert_eq!(code, 0);
+    assert!(
+        report["mods"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|m| m["name"] != "Generated LOD (Default)")
+    );
+    assert!(
+        winners(&report)
+            .iter()
+            .all(|(_, winner)| winner != "Generated LOD (Default)")
+    );
+    let excluded = report["excluded"].as_array().unwrap();
+    assert_eq!(excluded.len(), 1);
+    assert_eq!(excluded[0]["mod"], "Generated LOD (Default)");
+    assert!(
+        excluded[0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("generated Mod")
+    );
+    // The other Mods keep the conflicts they had without it.
+    let (_, plain) = Scratch::new().json("conflicts", &[]);
+    assert_eq!(winners(&report), winners(&plain));
+
+    let root = s.root();
+    let (code, out, err) = nvmod(&["conflicts", "--instance", root.to_str().unwrap()]);
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(out.matches("generated Mod").count(), 1, "{out}");
+
+    // Asking for the Mod by name says why it is not there.
+    let (code, _, err) = nvmod(&[
+        "conflicts",
+        "--instance",
+        root.to_str().unwrap(),
+        "--mod",
+        "Generated LOD (Default)",
+    ]);
+    assert_eq!(code, 2);
+    assert!(err.contains("generated Mod"), "{err}");
+
+    // The virtual Data folder still has its files.
+    let (_, tree) = s.json("tree", &["--path", "meshes"]);
+    assert!(
+        tree["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["provider"] == "Generated LOD (Default)")
+    );
+
+    // The listing marks it; the others carry no such key.
+    let (_, listed) = s.json("mods", &["list"]);
+    let rows = listed["mods"].as_array().unwrap();
+    let first = rows
+        .iter()
+        .find(|r| r["name"] == "Generated LOD (Default)")
+        .unwrap();
+    assert_eq!(first["generated"], true);
+    assert!(
+        rows.iter()
+            .filter(|r| r["name"] != "Generated LOD (Default)")
+            .all(|r| r.get("generated").is_none())
+    );
+}
+
+#[test]
+fn a_meta_ini_without_a_profile_or_with_generated_false_is_not_a_marker() {
+    let s = Scratch::new();
+    s.modlist("+A\r\n+B\r\n+C\r\n");
+    s.mod_file("A", "meta.ini", b"[raulGeneratedLod]\r\ngenerated=true\r\n");
+    s.mod_file(
+        "B",
+        "meta.ini",
+        b"[raulGeneratedLod]\r\ngenerated=false\r\nprofile=\"Default\"\r\n",
+    );
+    let (code, report) = s.json("conflicts", &[]);
+    assert_eq!(code, 0);
+    assert!(report.get("excluded").is_none());
+    assert_eq!(report["mods"].as_array().unwrap().len(), 3);
+}

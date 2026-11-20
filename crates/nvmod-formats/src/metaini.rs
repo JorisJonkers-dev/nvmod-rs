@@ -23,6 +23,28 @@ struct Line {
     section: String,
 }
 
+/// The `meta.ini` section of the marker the Toolbox writes into a generated LOD Mod.
+pub const GENERATED_SECTION: &str = "raulGeneratedLod";
+
+/// Whether the Mod folder `mod_dir` is marked as generated: its `meta.ini` (found without case) has
+/// `generated=true` and a `profile` in the [`GENERATED_SECTION`] section. A missing or unreadable file is not marked.
+#[must_use]
+pub fn is_generated_mod_dir(mod_dir: &std::path::Path) -> bool {
+    let Some(file) = std::fs::read_dir(mod_dir).ok().and_then(|entries| {
+        entries
+            .flatten()
+            .find(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .eq_ignore_ascii_case("meta.ini")
+            })
+            .map(|e| e.path())
+    }) else {
+        return false;
+    };
+    crate::text::read_limited(&file).is_ok_and(|bytes| MetaIni::parse(&bytes).is_generated())
+}
+
 /// An editable `meta.ini`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MetaIni {
@@ -173,6 +195,17 @@ impl MetaIni {
             return None;
         };
         Some(decode(trim_ascii(&line.raw[value_at..])))
+    }
+
+    /// Whether the file carries the marker of a generated Mod: `generated=true` and a non-empty `profile` in
+    /// [`GENERATED_SECTION`]. Every other key is left alone.
+    #[must_use]
+    pub fn is_generated(&self) -> bool {
+        self.get(GENERATED_SECTION, "generated")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true"))
+            && self
+                .get_string(GENERATED_SECTION, "profile")
+                .is_some_and(|p| !p.is_empty())
     }
 
     /// Like [`MetaIni::get`] with Qt's `@ByteArray`, quotes and doubled backslashes removed.
