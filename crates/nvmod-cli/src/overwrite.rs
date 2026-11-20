@@ -33,6 +33,17 @@ fn print_report(out: &mut dyn Write, r: &Report) {
     if let Some(detail) = &r.detail {
         let _ = writeln!(out, "{detail}");
     }
+    for change in &r.changes {
+        let who = change
+            .provider
+            .as_deref()
+            .map_or(String::new(), |p| format!(" ({p})"));
+        let kind = serde_json::to_value(change.kind)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_default();
+        let _ = writeln!(out, "  {kind}: {}{who}", change.path);
+    }
     for file in &r.files {
         let _ = writeln!(out, "  {file}");
     }
@@ -41,6 +52,76 @@ fn print_report(out: &mut dyn Write, r: &Report) {
     }
     if r.journal.is_some() {
         let _ = writeln!(out, "undo with `nvmod rollback`");
+    }
+}
+
+const SWEEP_USAGE: &str = "usage: nvmod sweep [--to <mod>] [--protect <glob>] --instance <dir> [--profile <name>] [--dry-run] [--json]
+  takes what a program did to the Staging tree back: new and replaced files go to Overwrite (or the Mod --to), the
+  tree is built again (which puts every Mod's file back); files written in place and files deleted are reported;
+  --protect adds a glob of paths to stage as copies from now on";
+
+/// `nvmod sweep`: see [`SWEEP_USAGE`].
+pub(crate) fn run_sweep(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
+    let args = match Args::parse(
+        args,
+        &["json", "dry-run"],
+        &["instance", "profile", "to", "protect"],
+    ) {
+        Ok(a) if a.option("instance").is_some() && a.positional.is_empty() => a,
+        Ok(_) => {
+            let _ = writeln!(err, "{SWEEP_USAGE}");
+            return USAGE;
+        }
+        Err(why) => {
+            let _ = writeln!(err, "nvmod sweep: {why}\n{SWEEP_USAGE}");
+            return USAGE;
+        }
+    };
+    let refused = |why: &str, err: &mut dyn Write| {
+        let _ = writeln!(err, "nvmod sweep: refused: {why}");
+        REFUSED
+    };
+    let root = Path::new(args.option("instance").unwrap_or_default());
+    let instance = match NvmodInstance::open(root) {
+        Ok(i) => i,
+        Err(e) => return refused(&crate::install_mod::describe_open_error(root, &e), err),
+    };
+    let profile = match instance.resolve_profile(args.option("profile")) {
+        Ok(p) => p,
+        Err(e) => return refused(&e.to_string(), err),
+    };
+    let dry_run = args.flag("dry-run");
+    if !dry_run
+        && let Some(name) = nvmod_backup::game_running(&instance.root)
+            .or_else(|| nvmod_backup::process_running(&["ModOrganizer.exe"]))
+    {
+        return refused(
+            &format!("`{name}` is running; close it first (a dry run is allowed)"),
+            err,
+        );
+    }
+    let action = Action::Sweep {
+        to: args.option("to").map(str::to_owned),
+        protect: args.option("protect").map(str::to_owned),
+    };
+    match lifecycle::apply(&instance, &profile, "overwrite", &action, dry_run) {
+        Ok(report) => {
+            if args.flag("json") {
+                let _ = writeln!(
+                    out,
+                    "{}",
+                    serde_json::to_string_pretty(&report).unwrap_or_default()
+                );
+            } else {
+                print_report(out, &report);
+            }
+            OK
+        }
+        Err(ModsError::Refused(why)) => refused(&why, err),
+        Err(ModsError::Failed(why)) => {
+            let _ = writeln!(err, "nvmod sweep: {why}");
+            ROLLED_BACK
+        }
     }
 }
 

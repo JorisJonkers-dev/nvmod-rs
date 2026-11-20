@@ -5,8 +5,11 @@
 //!
 //! Layout: `staging/<profile>/data/...` is the tree, `staging/<profile>.json` its manifest.
 
+pub mod glob;
 mod plan;
+mod records;
 pub mod stamp;
+pub mod sweep;
 
 use nvmod_core::{Finding, Severity};
 use nvmod_formats::plugins::parse_plugin_list;
@@ -14,10 +17,13 @@ use nvmod_formats::text::read_limited;
 use nvmod_instance::{NvmodInstance, find_ci};
 use plan::Plan;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub use plan::{Collision, is_mod_metadata, mod_files};
+pub use records::Record;
+pub use sweep::PROTECT_FILE;
 
 /// One plugin of a Load order.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,6 +129,10 @@ pub struct Manifest {
     pub copied: usize,
     /// Files that a later Mod replaced.
     pub overridden: usize,
+    /// What each file of the tree was when it was built, by lowercased path (schema 2). Only the file on disk has
+    /// it: the [`Report`] of a run leaves it empty.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub records: BTreeMap<String, Record>,
 }
 
 /// The result of one staging run.
@@ -139,7 +149,7 @@ pub struct Report {
     pub findings: Vec<Finding>,
 }
 
-const SCHEMA: u32 = 1;
+const SCHEMA: u32 = 2;
 
 fn manifest_path(instance: &NvmodInstance, profile: &str) -> PathBuf {
     instance.staging_dir(profile).with_extension("json")
@@ -225,6 +235,19 @@ pub fn doctor_findings(instance: &NvmodInstance, profile: &str) -> Vec<Finding> 
         )),
         Some(_) => {}
     }
+    if let Ok(changes) = sweep::scan(instance, profile)
+        && !changes.is_empty()
+    {
+        findings.push(Finding::new(
+            "stage.unswept",
+            Severity::Warning,
+            profile,
+            format!(
+                "{} path(s) of the Staging tree differ from what was built (a program wrote, replaced or removed them); run `nvmod sweep` to take the output into Overwrite and put the Mods' files back",
+                changes.len()
+            ),
+        ));
+    }
     for c in collisions(instance, profile).unwrap_or_default() {
         findings.push(Finding::new(
             "stage.case-collision",
@@ -264,7 +287,8 @@ pub fn stage(
         ))
     };
     let _ = fs::remove_dir_all(&partial);
-    let (linked, copied) = match build(&plan, &partial.join("data"), options) {
+    let protect = sweep::protected_globs(instance, profile);
+    let (linked, copied) = match build(&plan, &partial.join("data"), options, &protect) {
         Ok(counts) => counts,
         Err(why) => {
             let _ = fs::remove_dir_all(&partial);
@@ -283,13 +307,22 @@ pub fn stage(
             refused @ StageError::Refused(_) => refused,
         });
     }
-    let manifest = Manifest {
+    let records = plan
+        .owners
+        .iter()
+        .filter_map(|(key, (provider, source))| {
+            Record::of(&partial.join("data").join(key), provider, source)
+                .map(|record| (key.clone(), record))
+        })
+        .collect();
+    let mut manifest = Manifest {
         schema: SCHEMA,
         profile: profile.to_owned(),
         files: plan.files.len(),
         linked,
         copied,
         overridden: plan.overridden,
+        records,
     };
     let text = serde_json::to_string_pretty(&manifest).map_err(|e| failed(e.to_string()))?;
     if let Err(why) = swap(
@@ -301,6 +334,7 @@ pub fn stage(
         let _ = fs::remove_dir_all(&partial);
         return Err(failed(why));
     }
+    manifest.records.clear();
     Ok(Report {
         manifest,
         tree: final_dir.join("data").display().to_string(),
@@ -319,7 +353,12 @@ fn swap(partial: &Path, final_dir: &Path, manifest: &Path, text: &str) -> Result
 }
 
 /// Link or copy every file of the plan into `dest`. Returns (linked, copied).
-fn build(plan: &Plan, dest: &Path, options: Options) -> Result<(usize, usize), String> {
+fn build(
+    plan: &Plan,
+    dest: &Path,
+    options: Options,
+    protect: &[String],
+) -> Result<(usize, usize), String> {
     let (mut linked, mut copied) = (0, 0);
     fs::create_dir_all(dest).map_err(|e| format!("{}: {e}", dest.display()))?;
     for (key, path) in &plan.files {
@@ -327,7 +366,8 @@ fn build(plan: &Plan, dest: &Path, options: Options) -> Result<(usize, usize), S
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
         }
-        if !options.copy_only && fs::hard_link(path, &target).is_ok() {
+        let protected = protect.iter().any(|g| glob::selects(g, key));
+        if !options.copy_only && !protected && fs::hard_link(path, &target).is_ok() {
             linked += 1;
         } else {
             fs::copy(path, &target).map_err(|e| format!("{}: {e}", path.display()))?;
