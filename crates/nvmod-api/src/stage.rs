@@ -21,6 +21,9 @@ pub struct StageRequest {
     /// Never try a hard link; copy every file.
     #[serde(default)]
     pub copy: bool,
+    /// Build the whole tree again instead of changing only what differs from the last run.
+    #[serde(default)]
+    pub full: bool,
 }
 
 /// The result of [`stage`].
@@ -71,6 +74,7 @@ pub fn stage(
     }
     let options = Options {
         copy_only: request.copy,
+        full: request.full,
     };
     let report = nvmod_stage::stage(&instance, &profile, options).map_err(|e| match e {
         StageError::Refused(why) => JobError::new(ErrorKind::Refused, STAGE, why),

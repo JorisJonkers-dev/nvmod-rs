@@ -21,6 +21,8 @@ pub struct Collision {
 pub(crate) struct Plan {
     /// Lowercased `/` path to the winning source file.
     pub(crate) files: BTreeMap<String, PathBuf>,
+    /// Lowercased `/` path to the owner and the path the owner spells (relative to its folder, `/` separated).
+    pub(crate) owners: BTreeMap<String, (String, String)>,
     pub(crate) overridden: usize,
     pub(crate) collisions: Vec<Collision>,
     pub(crate) findings: Vec<Finding>,
@@ -73,14 +75,14 @@ impl Plan {
         let mut files = Vec::new();
         walk(dir, "", &mut files);
         let mut seen: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let mut chosen: BTreeMap<String, PathBuf> = BTreeMap::new();
+        let mut chosen: BTreeMap<String, (String, PathBuf)> = BTreeMap::new();
         for (relative, path) in files {
             if !base && is_mod_metadata(&relative) {
                 continue;
             }
             let key = relative.to_lowercase();
-            seen.entry(key.clone()).or_default().push(relative);
-            chosen.entry(key).or_insert(path);
+            seen.entry(key.clone()).or_default().push(relative.clone());
+            chosen.entry(key).or_insert((relative, path));
         }
         for (key, paths) in seen {
             if paths.len() > 1 && !base {
@@ -90,7 +92,9 @@ impl Plan {
                     paths,
                 });
             }
-            let path = chosen.remove(&key).unwrap_or_default();
+            let (relative, path) = chosen.remove(&key).unwrap_or_default();
+            self.owners
+                .insert(key.clone(), (owner.to_owned(), relative));
             if self.files.insert(key, path).is_some() {
                 self.overridden += 1;
             }

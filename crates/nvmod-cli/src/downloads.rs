@@ -15,7 +15,9 @@ const USAGE_TEXT: &str = "usage:
   nvmod downloads list --instance <dir> [--downloads <dir>] [--unmatched] [--hash] [--json]
   nvmod downloads show <archive> --instance <dir> [--downloads <dir>] [--hash] [--json]
   nvmod downloads install <archive> --instance <dir> [--downloads <dir>] [--profile <name>] [--name <mod name>]
-                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]
+                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>]
+                [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>]
+                [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]
   nvmod downloads hide|unhide|forget <archive> --instance <dir> [--downloads <dir>] [--dry-run] [--json]";
 
 fn print_json(out: &mut dyn Write, value: &impl serde::Serialize) {
@@ -281,24 +283,31 @@ fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 
         "install",
         args,
         &["json", "dry-run"],
-        &["profile", "name", "answers", "max-extract-bytes"],
+        &[
+            "profile",
+            "name",
+            "answers",
+            "max-extract-bytes",
+            "max-extract-entries",
+            "max-extract-entry-bytes",
+            "max-extract-ratio",
+            "max-extract-depth",
+            "max-extract-operations",
+            "max-extract-seconds",
+        ],
         1,
         err,
     ) {
         Ok(c) => c,
         Err(code) => return code,
     };
-    let mut max_extract_bytes = None;
-    if let Some(text) = c.args.option("max-extract-bytes") {
-        let Ok(n) = text.parse() else {
-            let _ = writeln!(
-                err,
-                "nvmod downloads install: --max-extract-bytes wants a number"
-            );
+    let extract_limits = match crate::install_mod::extract_limits(&c.args) {
+        Ok(limits) => limits,
+        Err(flag) => {
+            let _ = writeln!(err, "nvmod downloads install: --{flag} wants a number");
             return USAGE;
-        };
-        max_extract_bytes = Some(n);
-    }
+        }
+    };
     let archive = match archive_name(&c.args.positional[0], &c.instance, c.downloads.as_deref()) {
         Ok(name) => name,
         Err(why) => {
@@ -314,7 +323,8 @@ fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 
         name: c.args.option("name").map(str::to_owned),
         dry_run: c.args.flag("dry-run"),
         answers: c.args.option("answers").map(PathBuf::from),
-        max_extract_bytes,
+        max_extract_bytes: extract_limits.max_bytes,
+        extract_limits,
     };
     match nvmod_api::downloads::install(&request, &mut NoProgress, &CancelToken::new()) {
         Ok(Outcome::Done(output)) => {

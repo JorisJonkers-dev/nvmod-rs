@@ -54,11 +54,17 @@ fn interrupt(args: &[String], step: &str, signal: &str, work: &Path) -> Output {
     child.wait_with_output().unwrap()
 }
 
-/// A snapshot of an Instance without `.nvmod` (the journals stay as the record of what happened).
+/// A snapshot of an Instance without `.nvmod` (the journals stay as the record of what happened) and without the
+/// staging manifests.
 fn without_journal(
     mut state: std::collections::BTreeMap<String, Vec<u8>>,
 ) -> std::collections::BTreeMap<String, Vec<u8>> {
-    state.retain(|k, _| !k.starts_with(".nvmod"));
+    // The manifest of a built tree holds the file ids and times of what it linked: not byte-identical after the
+    // tree is built again.
+    state.retain(|k, _| {
+        let manifest = k.starts_with("staging/") && k.contains(".json");
+        !(k.starts_with(".nvmod") || manifest)
+    });
     state
 }
 

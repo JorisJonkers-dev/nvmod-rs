@@ -11,6 +11,36 @@ use std::sync::mpsc;
 
 const SORT: &str = "loadorder.sort";
 
+/// How [`sort`] orders the plugins.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SortMode {
+    /// loot-rs's full sort: the order LOOT would produce.
+    #[default]
+    Full,
+    /// Keep the given order wherever no hard constraint is violated and move only the plugins that fix the
+    /// violations (what an imported Load order should use).
+    Minimal,
+}
+
+impl SortMode {
+    /// The word for flags and output: `full` or `minimal`.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            SortMode::Full => "full",
+            SortMode::Minimal => "minimal",
+        }
+    }
+
+    fn to_loot(self) -> loot_rs::api::SortMode {
+        match self {
+            SortMode::Full => loot_rs::api::SortMode::Full,
+            SortMode::Minimal => loot_rs::api::SortMode::MinimalChange,
+        }
+    }
+}
+
 /// What [`sort`] needs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SortRequest {
@@ -22,6 +52,9 @@ pub struct SortRequest {
     pub masterlist: PathBuf,
     /// Write the order: `plugins.txt`, `loadorder.txt` and the plugin file times. `false` only proposes.
     pub apply: bool,
+    /// How to order the plugins; the full sort when left out.
+    #[serde(default)]
+    pub mode: SortMode,
 }
 
 /// The result of [`sort`].
@@ -75,7 +108,15 @@ pub fn sort(
         "loadorder.sort.reading-masterlist",
     ));
     let masterlist = nvmod_loadorder::load_masterlist(&request.masterlist).map_err(failure)?;
-    let Some(mut proposal) = propose(&instance, &profile, &masterlist, progress, cancel)? else {
+    let Some(mut proposal) = propose(
+        &instance,
+        &profile,
+        &masterlist,
+        request.mode,
+        progress,
+        cancel,
+    )?
+    else {
         return Ok(Outcome::Cancelled);
     };
     // The capabilities file is only read on the nv-rs target; a missing or invalid one is no coverage, never an
@@ -118,6 +159,7 @@ fn propose(
     instance: &nvmod_instance::NvmodInstance,
     profile: &str,
     masterlist: &loot_rs::api::Masterlist,
+    mode: SortMode,
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Option<Proposal>, JobError> {
@@ -126,6 +168,7 @@ fn propose(
     let (send, receive) = mpsc::channel();
     let hook_cancel = cancel.clone();
     let options = SortOptions::default()
+        .with_mode(mode.to_loot())
         .with_cancel(cancel.to_loot())
         .with_progress(ProgressHook::new(move |p| {
             if !hook_cancel.is_cancelled() {

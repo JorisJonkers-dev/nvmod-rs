@@ -133,6 +133,75 @@ pub fn add_plugins(
     Ok(Some((encoded, order_text.into_bytes())))
 }
 
+/// The new `(plugins.txt, loadorder.txt)` after listing `new` as inactive plugins: each name not yet in either file
+/// goes into `loadorder.txt` only (masters after its last master, other plugins at its end); `plugins.txt` keeps its
+/// lines. `None` when every name is listed already.
+///
+/// # Errors
+/// A name that `plugins.txt` would hold has no place in Windows-1252.
+pub fn add_inactive_plugins(
+    old_plugins: Option<&[u8]>,
+    old_order: Option<&[u8]>,
+    new: &[String],
+) -> Result<Option<NewLists>, String> {
+    let read = |bytes: Option<&[u8]>| -> Vec<String> {
+        bytes.map_or_default(|b| {
+            lines(&decode(b))
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+    };
+    let plugins = read(old_plugins);
+    let mut order = if old_order.is_some() {
+        read(old_order)
+    } else {
+        plugins.clone()
+    };
+    let mut changed = false;
+    for name in new {
+        if position(&order, name).is_some() || position(&plugins, name).is_some() {
+            continue;
+        }
+        changed = true;
+        let first = order.iter().take_while(|l| l.starts_with('#')).count();
+        let at = if is_master(name) {
+            order
+                .iter()
+                .rposition(|l| !l.starts_with('#') && is_master(name_of(l)))
+                .map_or(first, |i| i + 1)
+        } else {
+            order.len()
+        };
+        order.insert(at, name.clone());
+    }
+    if !changed {
+        return Ok(None);
+    }
+    let with_header = |mut list: Vec<String>| -> Vec<String> {
+        if !list.first().is_some_and(|l| l.starts_with('#')) {
+            list.insert(0, HEADER.to_owned());
+        }
+        list
+    };
+    let plugins_text = join(
+        &with_header(plugins)
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+    );
+    let order_text = join(
+        &with_header(order)
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+    );
+    let encoded = encode_windows_1252(&plugins_text)
+        .ok_or("a plugin name cannot be written to plugins.txt in the Windows code page")?;
+    Ok(Some((encoded, order_text.into_bytes())))
+}
+
 /// The new `(plugins.txt, loadorder.txt)` without the lines for `names` (ignoring case); every other line, comment
 /// lines included, stays. `None` when neither file lists any of them.
 ///
@@ -221,6 +290,29 @@ mod tests {
         assert_eq!(text(&p)[1..], ["FalloutNV.esm", "M.esm", "A.esp", "C.esp"]);
         assert!(
             add_plugins(Some(plugins), Some(order), &["a.esp".into()])
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn inactive_plugins_go_to_the_load_order_only() {
+        let plugins = b"FalloutNV.esm\r\nA.esp\r\n";
+        let order = b"FalloutNV.esm\r\nA.esp\r\nB.esp\r\n";
+        let (p, o) = add_inactive_plugins(
+            Some(plugins),
+            Some(order),
+            &["M.esm".into(), "C.esp".into(), "a.esp".into()],
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            text(&o)[1..],
+            ["FalloutNV.esm", "M.esm", "A.esp", "B.esp", "C.esp"]
+        );
+        assert_eq!(text(&p)[1..], ["FalloutNV.esm", "A.esp"]);
+        assert!(
+            add_inactive_plugins(Some(plugins), Some(order), &["b.esp".into()])
                 .unwrap()
                 .is_none()
         );

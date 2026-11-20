@@ -27,7 +27,7 @@ fn writes(args: &[String]) -> bool {
     let has = |flag: &str| args.iter().any(|a| a == flag);
     match word(0) {
         Some("stage" | "target" | "rollback") => true,
-        Some("install") => !has("--dry-run"),
+        Some("install" | "sweep") => !has("--dry-run"),
         Some("downloads") => {
             matches!(word(1), Some("install" | "hide" | "unhide" | "forget")) && !has("--dry-run")
         }
@@ -50,6 +50,9 @@ fn writes(args: &[String]) -> bool {
             word(1),
             Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
+        Some("overwrite") => {
+            matches!(word(1), Some("create-mod" | "move" | "delete" | "sync")) && !has("--dry-run")
+        }
         Some("exec") => matches!(word(1), Some("add" | "edit" | "remove" | "import")),
         Some("tools") => word(1) == Some("trust"),
         _ => false,

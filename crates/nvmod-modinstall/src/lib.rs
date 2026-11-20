@@ -147,6 +147,9 @@ fn has_extension(name: &str, ext: &str) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case(ext))
 }
 
+/// Scratch folders made by this process so far.
+static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// A scratch folder, removed when dropped.
 #[derive(Debug)]
 struct Scratch(PathBuf);
@@ -156,8 +159,11 @@ impl Scratch {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_nanos());
+        // The counter keeps two scratch folders made in the same clock tick apart
+        // (macOS reads the clock in microseconds, so threads collide on the time alone).
+        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir =
-            std::env::temp_dir().join(format!("nvmod-install-{}-{nanos}", std::process::id()));
+            std::env::temp_dir().join(format!("nvmod-install-{}-{nanos}-{n}", std::process::id()));
         fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
         Ok(Scratch(dir))
     }

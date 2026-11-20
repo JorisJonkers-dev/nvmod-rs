@@ -18,6 +18,7 @@ mod logging;
 mod mods;
 mod mods_life;
 mod nvse_usage;
+mod overwrite;
 mod pe;
 mod plugins;
 mod profile;
@@ -52,7 +53,7 @@ pub const ROLLED_BACK: u8 = 4;
 const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fallout: New Vegas / TTW\n\nusage:\n  nvmod pe <file> [--json]    inspect one PE file (a plugin DLL or an executable)\n  nvmod catalog [--json]      list the NVSE plugin catalogue
   nvmod init --base <dir> --instance <dir>
                               make an nvmod Instance skeleton for a Steam or GOG base copy
-  nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]
+  nvmod stage --instance <dir> [--profile <name>] [--copy] [--full] [--json]
                               build the Staging tree: a hard-link tree of lowercased paths (copies with --copy
                               or where links cannot be made)
   nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
@@ -77,12 +78,14 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod rollback --instance <dir> [--json]
                               undo the last install, sort or mods change: restore the profile files (an install also
                               removes the Mod)
-  nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist) [--apply] [--json]
+  nvmod sort --instance <dir> [--profile <name>] (--masterlist <file> | --fetch-masterlist) [--mode full|minimal]
+                [--apply] [--json]
                               compute the Load order with loot-rs from the Staging tree and print it; with
                               --apply write plugins.txt and loadorder.txt and set the plugin file times
                               (needs `nvmod stage` first); --fetch-masterlist takes the masterlist pinned in tools.lock.toml
                               (checksum verified, kept in the tool store) instead of a file; locked plugins
-                              (`nvmod plugins lock`) keep their position
+                              (`nvmod plugins lock`) keep their position; --mode minimal keeps the given order and
+                              moves only the plugins a hard rule forces (default: full)
   nvmod mods list --instance <dir> [--profile <name>] [--category <id>] [--json]
   nvmod mods enable|disable <mod>... --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod mods reorder <mod> (--top | --bottom | --before <mod> | --after <mod> | --position <n>)
@@ -99,7 +102,9 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod downloads list --instance <dir> [--downloads <dir>] [--unmatched] [--hash] [--json]
   nvmod downloads show <archive> --instance <dir> [--downloads <dir>] [--hash] [--json]
   nvmod downloads install <archive> --instance <dir> [--downloads <dir>] [--profile <name>] [--name <mod name>]
-                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]
+                [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>]
+                [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>]
+                [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]
   nvmod downloads hide|unhide|forget <archive> --instance <dir> [--downloads <dir>] [--dry-run] [--json]
                               the downloads library (default <instance>/downloads): each archive with the state
                               MO2 keeps in its .meta file (installed, uninstalled, hidden, paused), its Nexus mod
@@ -125,6 +130,17 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               .nvmod/backups.json); prune keeps the newest 10 and one per day for 14 days;
                               restore verifies (exit 3 on a mismatch), snapshots the current state first and
                               refuses while the game runs; it also reads MO2's own timestamped list backups
+  nvmod sweep [--to <mod>] [--protect <glob>] --instance <dir> [--profile <name>] [--dry-run] [--json]
+                              after a program exits: new and replaced files of the Staging tree go to Overwrite
+                              (or the Mod --to), the tree is built again so every Mod's file is back; a file
+                              written in place or deleted is reported; --protect stages matching paths as copies
+  nvmod overwrite list [--json] | create-mod <name> [<glob>...] | move <path> --to <mod> | delete <path>... |
+                sync [--to <mod>] --instance <dir> [--profile <name>] [--dry-run] [--json]
+                              Overwrite holds what programs wrote that no Mod owns: list it (with the Mods that
+                              provide the same path), make a Mod of all or some of it (at the top of the list; its
+                              plugins are listed as inactive), move a file or folder into a Mod, delete to the trash,
+                              or sync the files a Mod provides back into that Mod (several providers need --to);
+                              every change is undone by `nvmod rollback`
   nvmod plugins list --instance <dir> [--profile <name>] [--json]
   nvmod plugins enable <plugin>... [--with-masters] --instance <dir> [--profile <name>] [--dry-run] [--json]
   nvmod plugins disable <plugin>... --instance <dir> [--profile <name>] [--dry-run] [--json]
@@ -251,6 +267,11 @@ fn writes_instance(args: &[String]) -> bool {
             args.get(1).map(String::as_str),
             Some("enable" | "disable" | "move" | "lock" | "unlock")
         ),
+        Some("overwrite") => matches!(
+            args.get(1).map(String::as_str),
+            Some("create-mod" | "move" | "delete" | "sync")
+        ),
+        Some("sweep") => !args.iter().any(|a| a == "--dry-run"),
         Some("sort") => args.iter().any(|a| a == "--apply" || a == "--keep-order"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
         Some("saves") => matches!(
@@ -374,6 +395,8 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("rollback") => install_mod::run_rollback(&args[1..], out, err),
         Some("mods") => mods::run(&args[1..], out, err),
         Some("profile") => profile::run(&args[1..], out, err),
+        Some("overwrite") => overwrite::run(&args[1..], out, err),
+        Some("sweep") => overwrite::run_sweep(&args[1..], out, err),
         Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
