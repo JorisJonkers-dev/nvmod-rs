@@ -24,7 +24,7 @@ fn nvmod(args: &[&str]) -> (i32, String, String) {
 }
 
 struct Scratch {
-    _base: TempDir,
+    base_dir: TempDir,
     inst: TempDir,
 }
 
@@ -46,11 +46,14 @@ impl Scratch {
             );
         }
         let inst = TempDir::new("bm-inst");
-        let s = Scratch { _base: base, inst };
+        let s = Scratch {
+            base_dir: base,
+            inst,
+        };
         let (code, _, err) = nvmod(&[
             "init",
             "--base",
-            s._base.path().to_str().unwrap(),
+            s.base_dir.path().to_str().unwrap(),
             "--instance",
             s.root().to_str().unwrap(),
         ]);
@@ -125,7 +128,8 @@ fn a_new_profile_lists_every_master_of_the_base_copy_active_and_in_game_order() 
     let mut want = String::from(HEADER);
     want += "FalloutNV.esm\r\n";
     for name in ALL {
-        want += &format!("{name}\r\n");
+        want.push_str(name);
+        want.push_str("\r\n");
     }
     assert_eq!(s.list_file("Default", "plugins.txt"), want);
     assert_eq!(s.list_file("Default", "loadorder.txt"), want);
@@ -136,7 +140,7 @@ fn a_new_profile_lists_every_master_of_the_base_copy_active_and_in_game_order() 
     assert_eq!(rows[0]["forced"], true);
     assert_eq!(rows[5]["name"], "GunRunnersArsenal.esm");
     assert_eq!(rows[9]["name"], "TribalPack.esm");
-    assert!(s.findings(CODE).is_empty());
+    assert_eq!(s.findings(CODE), Vec::<Value>::new());
 }
 
 #[test]
@@ -148,7 +152,7 @@ fn a_base_copy_without_dlc_still_gives_one_plugin() {
         format!("{HEADER}FalloutNV.esm\r\n")
     );
     assert_eq!(s.plugins("Default").len(), 1);
-    assert!(s.findings(CODE).is_empty());
+    assert_eq!(s.findings(CODE), Vec::<Value>::new());
 }
 
 #[test]
@@ -172,7 +176,7 @@ fn each_profile_made_reads_the_base_copy_as_it_is_then() {
     let s = Scratch::new(&["DeadMoney.esm"]);
     s.create("Early");
     write_file(
-        s._base.path(),
+        s.base_dir.path(),
         "Data/HonestHearts.esm",
         &PluginBuilder::master().build(),
     );
@@ -258,7 +262,7 @@ fn the_doctor_names_base_masters_an_existing_profile_does_not_list_and_the_repai
     );
     assert!(rows.iter().take(4).all(|r| r["active"] == true));
     let negative = s.findings(CODE);
-    assert!(negative.is_empty(), "{negative:?}");
+    assert_eq!(negative, Vec::<Value>::new());
     golden("base-master-unlisted.json", &pair(&positive, &negative));
 }
 
@@ -271,5 +275,5 @@ fn a_master_that_is_listed_but_inactive_is_a_choice_and_not_reported() {
         "profiles/Default/plugins.txt",
         format!("{HEADER}FalloutNV.esm\r\n").as_bytes(),
     );
-    assert!(s.findings(CODE).is_empty());
+    assert_eq!(s.findings(CODE), Vec::<Value>::new());
 }
