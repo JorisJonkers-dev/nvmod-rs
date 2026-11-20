@@ -541,17 +541,22 @@ fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
     );
 }
 
-// Finding a running program reads `/proc`, so it works on Linux only (nvmod_run::find_process).
+// The running program is found in a process directory a test describes (NVMOD_PROC_DIR), so no process is started
+// and the host's processes are not seen; it works on every platform.
 #[test]
-#[cfg(target_os = "linux")]
 fn a_running_mo2_refuses_the_run() {
     let s = Scratch::new();
     let tool = s.tool("t.exe");
     s.exec_add("T", &tool, &[]);
-    let mut sleeper = Command::new("sleep").arg("20").spawn().unwrap();
-    let (code, _, err) = s.run(&["T", "--wait"], &[("NVMOD_MO2_PROCESSES", "sleep")]);
-    let _ = sleeper.kill();
-    let _ = sleeper.wait();
+    let procs = TempDir::new("run-mo2-proc");
+    write_file(procs.path(), "4242/comm", b"ModOrganizer.exe\n");
+    write_file(
+        procs.path(),
+        "4242/stat",
+        b"4242 (ModOrganizer.exe) S 1 1 1",
+    );
+    let dir = procs.path().to_str().unwrap();
+    let (code, _, err) = s.run(&["T", "--wait"], &[("NVMOD_PROC_DIR", dir)]);
     assert_eq!(code, 2, "{err}");
     assert!(err.contains("Mod Organizer 2 is running"), "{err}");
     assert!(!s.record.exists());
