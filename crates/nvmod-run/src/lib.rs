@@ -11,8 +11,7 @@ mod registry;
 pub use launch::{LaunchSpec, Launcher, ProcessLauncher, Running};
 pub use lock::{Holder, InstanceLock, LOCK_FILE, LockError, find_process, mo2_running, pid_alive};
 pub use native::{
-    Native, SHARED_ROOT, app_data, find_viewer, log_dir, log_header, my_games, newest_viewer,
-    prepare_run_dir, run_dir,
+    Native, app_data, find_viewer, log_dir, log_header, my_games, prepare_run_dir, run_dir,
 };
 pub use plan::{
     ENTRY_GAME, ENTRY_NV_RS, GAME_APP_ID, Platform, Request, RunPlan, StagingAction, data_dir,

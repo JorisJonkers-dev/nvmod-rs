@@ -101,11 +101,6 @@ pub(crate) fn run_with(
             .option("viewer")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("NV_VIEWER").map(PathBuf::from)),
-        shared_root: std::env::var_os("NVMOD_NV_RS_ROOT")
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("HOME").map(|h| PathBuf::from(h).join(nvmod_run::SHARED_ROOT))
-            }),
         restage: a.flag("restage"),
         no_stage: a.flag("no-stage"),
     };

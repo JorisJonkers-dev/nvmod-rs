@@ -436,7 +436,11 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     fake_viewer(&viewer);
     let state = s.inst.path().join("state");
     let state_s = state.to_str().unwrap();
-    let (code, out, err) = s.run(&["nv-rs", "--wait"], &[("XDG_STATE_HOME", state_s)]);
+    let viewer_s = viewer.to_str().unwrap();
+    let (code, out, err) = s.run(
+        &["nv-rs", "--wait"],
+        &[("XDG_STATE_HOME", state_s), ("NV_VIEWER", viewer_s)],
+    );
     assert_eq!(code, 0, "{err}");
     // nvmod works in the Instance and base copy it resolved through links, as the program's folder shows; on
     // macOS the temporary folder `/var/...` is `/private/var/...`.
@@ -487,27 +491,28 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
     assert!(text.starts_with("# nvmod run "), "{text}");
     assert!(text.contains("viewer says hello"), "{text}");
     assert!(out.contains(log.to_str().unwrap()), "{out}");
-    // Not installed: refused with the way forward.
-    std::fs::remove_file(&viewer).unwrap();
-    let (code, _, err) = s.run(
-        &["nv-rs", "--wait"],
-        &[("NVMOD_NV_RS_ROOT", "/nonexistent")],
+    // No program named: refused in plain words, with no command to run and no search for a program.
+    let (code, _, err) = s.run(&["nv-rs", "--wait"], &[]);
+    assert_eq!(code, 2, "{err}");
+    assert!(
+        err.contains("--viewer") && !err.contains("install-nv-rs"),
+        "{err}"
     );
-    assert_eq!((code, err.contains("install-nv-rs")), (2, true));
 }
 
 #[test]
-fn the_newest_shared_build_is_found_and_the_dry_run_writes_nothing() {
+fn a_named_program_is_planned_and_the_dry_run_writes_nothing() {
     let s = Scratch::new();
-    let shared = s.inst.path().join("opt");
-    fake_viewer(&shared.join("nv-rs-2026-11-15.9-linux/bin/nv-viewer"));
-    fake_viewer(&shared.join("nv-rs-2026-11-15.10-linux/bin/nv-viewer"));
-    let shared_s = shared.to_str().unwrap();
+    let viewer = s.inst.path().join("opt/nv-viewer");
+    fake_viewer(&viewer);
     let before = snapshot(&s.root());
-    let (code, out, err) = s.run(&["nv-rs", "--dry-run"], &[("NVMOD_NV_RS_ROOT", shared_s)]);
+    let (code, out, err) = s.run(
+        &["nv-rs", "--dry-run", "--viewer", viewer.to_str().unwrap()],
+        &[],
+    );
     assert_eq!(code, 0, "{err}");
     assert!(
-        out.contains("viewer: ") && out.contains("15.10-linux/bin/nv-viewer"),
+        out.contains("viewer: ") && out.contains("opt/nv-viewer"),
         "{out}"
     );
     assert!(
@@ -529,8 +534,12 @@ fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
     let (code, _, err) = nvmod(&["target", "nv-rs", "--instance", &s.r()]);
     assert_eq!(code, 0, "{err}");
     let shared = s.inst.path().join("opt");
-    fake_viewer(&shared.join("nv-rs-1/bin/nv-viewer"));
-    let env = [("NVMOD_NV_RS_ROOT", shared.to_str().unwrap())];
+    fake_viewer(&shared.join("nv-viewer"));
+    let env = [(
+        "NV_VIEWER",
+        shared.join("nv-viewer").to_str().unwrap().to_owned(),
+    )];
+    let env: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
     let (code, out, err) = s.run(&["game", "--dry-run", "--json"], &env);
     assert_eq!(code, 0, "{err}");
     let plan: Value = serde_json::from_str(&out).unwrap();

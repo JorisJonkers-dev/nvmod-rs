@@ -16,7 +16,7 @@
 //! * [`JobError`] has a stable [`ErrorKind`], a plain summary and [`JobError::copy_text`]. It never holds a command
 //!   line.
 //! * Nothing here prints or ends the process. The `nvmod` subcommands `mods list|enable|disable|reorder`, `sort`,
-//!   `saves list`, `downloads list|show|install|hide|unhide|forget`, `doctor`, `conflicts`, `tree`, `install-nv-rs` and `run --dry-run` are wrappers over these jobs.
+//!   `saves list`, `downloads list|show|install|hide|unhide|forget`, `doctor`, `conflicts`, `tree` and `run --dry-run` are wrappers over these jobs.
 //!
 //! The jobs:
 //!
@@ -50,7 +50,6 @@
 //! | [`downloads::show`] | [`downloads::ShowRequest`] | [`downloads::ShowOutput`] |
 //! | [`downloads::install`] | [`downloads::InstallRequest`] | [`downloads::InstallOutput`] |
 //! | [`downloads::change`] | [`downloads::ChangeRequest`] | [`downloads::ChangeOutput`] |
-//! | [`install_nvrs::install`] | [`install_nvrs::InstallRequest`] | [`install_nvrs::InstallOutput`] |
 //! | [`stage::stage`] | [`stage::StageRequest`] | [`stage::StageOutput`] |
 //! | [`profile::create`] | [`profile::CreateRequest`] | [`profile::CreateOutput`] |
 //! | [`profile_ops::list`] | [`profile_ops::ListRequest`] | [`profile_ops::ListReport`] |
@@ -74,7 +73,6 @@ pub mod fomod;
 pub mod import_mo2;
 pub mod init;
 pub mod install;
-pub mod install_nvrs;
 pub mod job;
 pub mod loadorder;
 pub mod mods;
