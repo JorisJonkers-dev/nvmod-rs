@@ -534,21 +534,20 @@ fn categories_are_set_listed_filtered_and_the_file_is_untouched() {
     );
 }
 
-// Finding a running game reads `/proc`, so it works on Linux only (nvmod_backup::game_running).
+// Finding a running game reads the process list (`/proc`, or `NVMOD_PROC_DIR`), which is made up here.
 #[test]
-#[cfg(target_os = "linux")]
 fn a_running_game_refuses_a_change_but_not_a_dry_run() {
     let s = Scratch::new();
-    let mut child = Command::new("sleep").arg("30").spawn().unwrap();
+    let procs = TempDir::new("ml-proc");
+    write_file(procs.path(), "4242/comm", b"FalloutNV.exe\n");
+    write_file(procs.path(), "4242/stat", b"4242 (FalloutNV.exe) S 1 1 1\n");
     let before = s.tree();
-    let env = [("NVMOD_GAME_PROCESSES", "sleep")];
+    let env = [("NVMOD_PROC_DIR", procs.path().to_str().unwrap())];
     let (code, _, err) = s.run_env(&["remove", "Plain"], &env);
     assert_eq!(code, 2, "{err}");
     assert!(err.contains("running"), "{err}");
     let (code, _, err) = s.run_env(&["remove", "Plain", "--dry-run"], &env);
     assert_eq!(code, 0, "{err}");
-    child.kill().unwrap();
-    child.wait().unwrap();
     assert_eq!(s.tree(), before);
 }
 

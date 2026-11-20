@@ -9,10 +9,19 @@ use std::process::Command;
 
 const T0: i64 = 1_794_657_600; // 2026-11-14T12:00:00Z
 
+/// Where `nvmod` looks for processes by default: nowhere, so a game process of another test (or of another
+/// program on the machine) never makes a backup refuse.
+const NO_PROCESSES: &str = "/nonexistent-nvmod-proc";
+
 fn nvmod_at(now: i64, args: &[&str]) -> (i32, String, String) {
+    nvmod_at_proc(now, args, Path::new(NO_PROCESSES))
+}
+
+fn nvmod_at_proc(now: i64, args: &[&str], procs: &Path) -> (i32, String, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_nvmod"))
         .args(args)
         .env("NVMOD_NOW", now.to_string())
+        .env("NVMOD_PROC_DIR", procs)
         .output()
         .unwrap();
     (
@@ -262,33 +271,28 @@ fn a_failed_restore_puts_the_profile_back_and_exits_4() {
     );
 }
 
-// Finding a running game reads `/proc`, so it works on Linux only (nvmod_backup::game_running).
+// Finding a running game reads the process list (`/proc`, or `NVMOD_PROC_DIR`), which is made up here: starting a
+// real process named like the game would make every other test running at that moment refuse.
 #[test]
-#[cfg(target_os = "linux")]
 fn restore_refuses_while_the_game_runs() {
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
-    let Some(sleep) = ["/usr/bin/sleep", "/bin/sleep"]
-        .iter()
-        .find(|p| Path::new(p).is_file())
-    else {
-        return;
-    };
-    let tools = TempDir::new("bk-game");
-    let fake = tools.path().join("FalloutNV.exe");
-    // A symlink, not a copy: nothing is written, so no descriptor open for writing can leak into a forked
-    // child and make the exec fail with ETXTBSY. The process name (`comm`) is the name it was started under.
-    std::os::unix::fs::symlink(sleep, &fake).unwrap();
-    let mut child = Command::new(&fake).arg("30").spawn().unwrap();
+    let procs = TempDir::new("bk-proc");
+    write_file(procs.path(), "4242/comm", b"FalloutNV.exe\n");
+    write_file(procs.path(), "4242/stat", b"4242 (FalloutNV.exe) S 1 1 1\n");
     let before = snapshot(&s.root());
-    let (code, _, err) = s.run(T0 + 5, &["backup", "restore", "latest"]);
-    let _ = child.kill();
-    let _ = child.wait();
-    if cfg!(target_os = "linux") {
-        assert_eq!(code, 2, "{err}");
-        assert!(err.contains("game is running"), "{err}");
-        assert_eq!(snapshot(&s.root()), before);
-    }
+    let root = s.root();
+    let args = [
+        "backup",
+        "restore",
+        "latest",
+        "--instance",
+        root.to_str().unwrap(),
+    ];
+    let (code, _, err) = nvmod_at_proc(T0 + 5, &args, procs.path());
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains("game is running"), "{err}");
+    assert_eq!(snapshot(&s.root()), before);
 }
 
 #[test]
