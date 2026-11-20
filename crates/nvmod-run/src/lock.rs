@@ -221,32 +221,55 @@ impl Drop for InstanceLock {
 }
 
 /// The name of a running program from `names` (compared without regard to case), found in `/proc` on Linux;
-/// elsewhere `None`. `comm` holds 15 characters at most, so a longer name matches on its prefix.
+/// elsewhere `None`. `comm` holds 15 characters at most, so a longer name matches on its prefix. A zombie does not
+/// count. `NVMOD_PROC_DIR` replaces `/proc` as the process source, so a test can name processes without starting
+/// any and without seeing the host's; the entries of such a directory are taken as running unless their `stat` says
+/// zombie.
 #[must_use]
 pub fn find_process(names: &[String]) -> Option<String> {
+    match std::env::var_os("NVMOD_PROC_DIR") {
+        Some(root) => find_in(Path::new(&root), names, false),
+        None => find_in(Path::new("/proc"), names, true),
+    }
+}
+
+/// The first process directory under `root` whose `comm` is one of `names` and that is alive: by the kernel when
+/// `check_pid`, by its `stat` state otherwise.
+fn find_in(root: &Path, names: &[String], check_pid: bool) -> Option<String> {
     let names: Vec<String> = names.iter().map(|n| n.to_ascii_lowercase()).collect();
-    for entry in fs::read_dir("/proc").into_iter().flatten().flatten() {
-        if !entry
-            .file_name()
-            .to_string_lossy()
-            .bytes()
-            .all(|b| b.is_ascii_digit())
-        {
+    for entry in fs::read_dir(root).into_iter().flatten().flatten() {
+        let file_name = entry.file_name().to_string_lossy().into_owned();
+        if !file_name.bytes().all(|b| b.is_ascii_digit()) {
             continue;
         }
         let Ok(comm) = fs::read_to_string(entry.path().join("comm")) else {
             continue;
         };
         let comm = comm.trim().to_ascii_lowercase();
-        if names
+        let wanted = names
             .iter()
-            .any(|n| *n == comm || (comm.len() == 15 && n.starts_with(&comm)))
-            && pid_alive(entry.file_name().to_string_lossy().parse().unwrap_or(0))
-        {
+            .any(|n| *n == comm || (comm.len() == 15 && n.starts_with(&comm)));
+        if !wanted {
+            continue;
+        }
+        let alive = if check_pid {
+            pid_alive(file_name.parse().unwrap_or(0))
+        } else {
+            !is_zombie(&entry.path())
+        };
+        if alive {
             return Some(comm);
         }
     }
     None
+}
+
+/// Whether the process directory `dir` holds a zombie: `stat` reads `pid (comm) S ...` and `S` is `Z`.
+fn is_zombie(dir: &Path) -> bool {
+    fs::read_to_string(dir.join("stat")).is_ok_and(|stat| {
+        stat.rsplit_once(')')
+            .is_some_and(|(_, rest)| rest.trim_start().starts_with('Z'))
+    })
 }
 
 /// The Mod Organizer 2 process name when one runs: `ModOrganizer.exe` plus the comma separated names in
@@ -269,6 +292,39 @@ pub fn mo2_running() -> Option<String> {
 mod tests {
     use super::*;
     use nvmod_testkit::TempDir;
+
+    fn proc_entry(root: &Path, pid: &str, comm: &str, state: &str) {
+        let dir = root.join(pid);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("comm"), format!("{comm}\n")).unwrap();
+        fs::write(dir.join("stat"), format!("{pid} ({comm}) {state} 1 1 1")).unwrap();
+    }
+
+    #[test]
+    fn a_process_directory_names_the_running_programs_and_skips_zombies() {
+        let dir = TempDir::new("proc-fake");
+        proc_entry(dir.path(), "10", "bash", "S");
+        proc_entry(dir.path(), "11", "ModOrganizer.exe", "S");
+        proc_entry(dir.path(), "12", "other.exe", "Z");
+        let names = vec!["modorganizer.exe".to_owned(), "other.exe".to_owned()];
+        assert_eq!(
+            find_in(dir.path(), &names, false).as_deref(),
+            Some("modorganizer.exe")
+        );
+        // Only a zombie of the wanted name: nothing runs.
+        let zombies = TempDir::new("proc-zombie");
+        proc_entry(zombies.path(), "12", "other.exe", "Z");
+        assert_eq!(find_in(zombies.path(), &names, false), None);
+        // A missing source is nothing running, not a panic.
+        assert_eq!(find_in(&dir.path().join("none"), &names, false), None);
+        // A name longer than 15 characters matches on its prefix.
+        let long = TempDir::new("proc-long");
+        proc_entry(long.path(), "13", "modorganizer.ex", "S");
+        assert_eq!(
+            find_in(long.path(), &names, false).as_deref(),
+            Some("modorganizer.ex")
+        );
+    }
 
     #[test]
     fn a_second_acquire_names_the_holder_and_release_frees_it() {
