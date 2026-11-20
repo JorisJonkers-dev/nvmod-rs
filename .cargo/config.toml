@@ -1,6 +1,8 @@
 # Run logs written by test runs (and `cargo run`) go below target/, not into the developer's real state directory.
 [env]
 NVMOD_STATE_DIR = { value = "target/test-state", relative = true }
+# The catalogue overlay (catalogue.d) of a test run is the empty one below target/, never the developer's own.
+NVMOD_CONFIG_DIR = { value = "target/test-config", relative = true }
 
 # Cargo ignores crate versions published less than 7 days ago unless they are already in Cargo.lock:
 # a malicious release is usually found and pulled within days (JorisJonkers-dev/workspace#167).

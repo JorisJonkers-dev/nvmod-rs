@@ -149,6 +149,9 @@ pub(crate) fn check(
             winner: winner.source.clone(),
             shadowed,
             catalog_id: entry.map(|p| p.id.clone()),
+            catalog_source: entry
+                .filter(|p| !p.source.is_shipped())
+                .map(|p| p.source.label()),
             nv_rs: entry.map_or(Kind::External, |p| p.provided_by.nv_rs.kind),
             pe,
         });

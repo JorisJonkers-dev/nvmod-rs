@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 
+mod overlay;
+
+pub use overlay::{Note, config_dir};
+
 /// The catalogue shipped with the program.
 pub const BUILTIN: &str = include_str!("../../../data/nvse-plugins.toml");
 
@@ -170,6 +174,41 @@ pub struct Plugin {
     pub version: Option<String>,
     /// Where the entry came from.
     pub provenance: Provenance,
+    /// Who wrote the entry: the catalogue shipped with nvmod, or the player's overlay. A file cannot set it.
+    #[serde(
+        default,
+        skip_deserializing,
+        skip_serializing_if = "Source::is_shipped"
+    )]
+    pub source: Source,
+}
+
+/// Who wrote a catalogue entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Source {
+    /// The catalogue shipped with nvmod.
+    #[default]
+    Shipped,
+    /// A file in the player's `catalogue.d` folder.
+    User,
+}
+
+impl Source {
+    /// Whether this is the shipped catalogue (the default, left out of JSON).
+    #[must_use]
+    pub fn is_shipped(&self) -> bool {
+        *self == Source::Shipped
+    }
+
+    /// The name used in reports.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Source::Shipped => "shipped",
+            Source::User => "user",
+        }
+    }
 }
 
 /// A mod folder name with its Nexus id, for the `meta.ini` mismatch check.
@@ -267,6 +306,33 @@ fn check_provenance(what: &str, p: &Provenance) -> Result<(), CatalogError> {
     Ok(())
 }
 
+/// The checks one entry passes on its own, before any reference to another entry is resolved.
+fn check_plugin(p: &Plugin) -> Result<(), CatalogError> {
+    if p.nexus_mod_id == Some(0) {
+        return fail(format!(
+            "plugin {}: nexus_mod_id 0 means unknown; leave it out",
+            p.id
+        ));
+    }
+    check_provenance(&format!("plugin {}", p.id), &p.provenance)?;
+    check_provided(&p.id, &p.provided_by)?;
+    for (field, value) in [
+        ("game_version", &p.game_version),
+        ("min_xnvse", &p.min_xnvse),
+        ("version", &p.version),
+    ] {
+        if value.as_deref().is_some_and(|v| !valid_version(v)) {
+            return fail(format!(
+                "plugin {}: {field} `{}` is not a version like 1.4.0.525",
+                p.id,
+                value.as_deref().unwrap_or_default()
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 /// The loaded, validated catalogue.
 #[derive(Debug, Clone)]
 pub struct Catalog {
@@ -274,6 +340,8 @@ pub struct Catalog {
     pub plugins: Vec<Plugin>,
     /// Known mod names with Nexus ids.
     pub mods: Vec<KnownMod>,
+    /// What was wrong with the player's overlay files (empty for the shipped catalogue alone).
+    pub notes: Vec<Note>,
 }
 
 impl Catalog {
@@ -311,27 +379,7 @@ impl Catalog {
                     p.id, p.dll
                 ));
             }
-            if p.nexus_mod_id == Some(0) {
-                return fail(format!(
-                    "plugin {}: nexus_mod_id 0 means unknown; leave it out",
-                    p.id
-                ));
-            }
-            check_provenance(&format!("plugin {}", p.id), &p.provenance)?;
-            check_provided(&p.id, &p.provided_by)?;
-            for (field, value) in [
-                ("game_version", &p.game_version),
-                ("min_xnvse", &p.min_xnvse),
-                ("version", &p.version),
-            ] {
-                if value.as_deref().is_some_and(|v| !valid_version(v)) {
-                    return fail(format!(
-                        "plugin {}: {field} `{}` is not a version like 1.4.0.525",
-                        p.id,
-                        value.as_deref().unwrap_or_default()
-                    ));
-                }
-            }
+            check_plugin(p)?;
         }
         for p in &file.plugin {
             let references = p
@@ -361,6 +409,7 @@ impl Catalog {
         Ok(Catalog {
             plugins: file.plugin,
             mods: file.mods,
+            notes: Vec::new(),
         })
     }
 
