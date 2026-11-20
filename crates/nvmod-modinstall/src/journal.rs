@@ -32,6 +32,11 @@ pub const KIND_LIFECYCLE: &str = "lifecycle";
 /// Mod folder, no list of another Profile and no Staging tree beyond them.
 pub const KIND_PROFILE: &str = "profile";
 
+/// The kind of journal that `nvmod sweep` writes. It records what was moved (for the trash and for audit) but is
+/// never rolled back: the files a program wrote are in Overwrite after it, an interrupted sweep is finished by
+/// running it again, and building the tree again would drop what the program wrote there.
+pub const KIND_SWEEP: &str = "sweep";
+
 const FILES: [&str; 4] = [
     "modlist.txt",
     "plugins.txt",
@@ -422,7 +427,7 @@ pub fn rollback(instance: &NvmodInstance) -> Result<RollbackReport, RollbackErro
         };
         let journal: Journal = serde_json::from_str(&text)
             .map_err(|e| RollbackError::Failed(format!("{}: {e}", path.display())))?;
-        if journal.status == "rolled-back" {
+        if journal.status == "rolled-back" || journal.kind == KIND_SWEEP {
             continue;
         }
         let report = RollbackReport {

@@ -127,6 +127,10 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
                               .nvmod/backups.json); prune keeps the newest 10 and one per day for 14 days;
                               restore verifies (exit 3 on a mismatch), snapshots the current state first and
                               refuses while the game runs; it also reads MO2's own timestamped list backups
+  nvmod sweep [--to <mod>] [--protect <glob>] --instance <dir> [--profile <name>] [--dry-run] [--json]
+                              after a program exits: new and replaced files of the Staging tree go to Overwrite
+                              (or the Mod --to), the tree is built again so every Mod's file is back; a file
+                              written in place or deleted is reported; --protect stages matching paths as copies
   nvmod overwrite list [--json] | create-mod <name> [<glob>...] | move <path> --to <mod> | delete <path>... |
                 sync [--to <mod>] --instance <dir> [--profile <name>] [--dry-run] [--json]
                               Overwrite holds what programs wrote that no Mod owns: list it (with the Mods that
@@ -268,6 +272,7 @@ fn writes_instance(args: &[String]) -> bool {
             args.get(1).map(String::as_str),
             Some("create-mod" | "move" | "delete" | "sync")
         ),
+        Some("sweep") => !args.iter().any(|a| a == "--dry-run"),
         Some("sort") => args.iter().any(|a| a == "--apply" || a == "--keep-order"),
         Some("backup") => args.get(1).map(String::as_str) == Some("restore"),
         Some("saves") => matches!(
@@ -392,6 +397,7 @@ fn dispatch(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
         Some("mods") => mods::run(&args[1..], out, err),
         Some("profile") => profile::run(&args[1..], out, err),
         Some("overwrite") => overwrite::run(&args[1..], out, err),
+        Some("sweep") => overwrite::run_sweep(&args[1..], out, err),
         Some("saves") => saves::run(&args[1..], out, err),
         Some("target") => target::run(&args[1..], out, err),
         Some("verify") => verify::run(&args[1..], out, err),
