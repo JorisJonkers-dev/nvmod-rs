@@ -2,13 +2,15 @@
 //! `nvmod install <archive> --instance <dir> ...` and `nvmod rollback --instance <dir>`.
 
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
-use nvmod_api::install::{InstallOutput, InstallRequest, Question, Report, RollbackRequest};
+use nvmod_api::install::{
+    InstallOutput, InstallRequest, LimitOverrides, Question, Report, RollbackRequest,
+};
 use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--json]";
+const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
 fn open(args: &Args, name: &str, err: &mut dyn Write) -> Result<NvmodInstance, u8> {
@@ -108,6 +110,27 @@ fn print_questions(out: &mut dyn Write, questions: &[Question], json: bool) {
     }
 }
 
+/// The extraction limits given on the command line; the name of the flag whose value is not a number on error.
+fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str> {
+    fn number<T: std::str::FromStr>(
+        args: &Args,
+        flag: &'static str,
+    ) -> Result<Option<T>, &'static str> {
+        args.option(flag)
+            .map(|text| text.parse().map_err(|_| flag))
+            .transpose()
+    }
+    Ok(LimitOverrides {
+        max_bytes: number(args, "max-extract-bytes")?,
+        max_entries: number(args, "max-extract-entries")?,
+        max_entry_bytes: number(args, "max-extract-entry-bytes")?,
+        max_ratio: number(args, "max-extract-ratio")?,
+        max_path_depth: number(args, "max-extract-depth")?,
+        max_operations: number(args, "max-extract-operations")?,
+        max_seconds: number(args, "max-extract-seconds")?,
+    })
+}
+
 pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
         args,
@@ -118,6 +141,12 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             "name",
             "answers",
             "max-extract-bytes",
+            "max-extract-entries",
+            "max-extract-entry-bytes",
+            "max-extract-ratio",
+            "max-extract-depth",
+            "max-extract-operations",
+            "max-extract-seconds",
         ],
     );
     let args = match parsed {
@@ -131,14 +160,13 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             return USAGE;
         }
     };
-    let mut max_extract_bytes = None;
-    if let Some(text) = args.option("max-extract-bytes") {
-        let Ok(n) = text.parse() else {
-            let _ = writeln!(err, "nvmod install: --max-extract-bytes wants a number");
+    let limits = match extract_limits(&args) {
+        Ok(limits) => limits,
+        Err(flag) => {
+            let _ = writeln!(err, "nvmod install: --{flag} wants a number");
             return USAGE;
-        };
-        max_extract_bytes = Some(n);
-    }
+        }
+    };
     let request = InstallRequest {
         instance: PathBuf::from(args.option("instance").unwrap_or_default()),
         profile: args.option("profile").map(str::to_owned),
@@ -146,7 +174,8 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         name: args.option("name").map(str::to_owned),
         dry_run: args.flag("dry-run"),
         answers: args.option("answers").map(PathBuf::from),
-        max_extract_bytes,
+        max_extract_bytes: None,
+        extract_limits: limits,
     };
     match nvmod_api::install::install(&request, &mut NoProgress, &CancelToken::new()) {
         Ok(Outcome::Done(InstallOutput::Installed(report))) => {

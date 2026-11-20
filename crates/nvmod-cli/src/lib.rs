@@ -56,10 +56,14 @@ const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fall
   nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
                               import one MO2 profile into a new Instance (the MO2 instance is only read)
   nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run]
-                [--answers <file>] [--json]
+                [--answers <file>] [--max-extract-bytes <n>] [--max-extract-entries <n>]
+                [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>]
+                [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]
                               install a Mod from a zip, 7z, tar or compressed tar archive (rar is refused); a FOMOD is
                               answered where its XML is unambiguous and otherwise exits 1 with the questions
-                              (--json), which --answers completes; then stage the profile
+                              (--json), which --answers completes; then stage the profile. The --max-extract-*
+                              flags raise or lower the extraction limits (defaults in docs/DECISIONS.md); an archive
+                              past one is refused (exit 2) and the Instance is left as it was
   nvmod rollback --instance <dir> [--json]
                               undo the last install, sort or mods change: restore the profile files (an install also
                               removes the Mod)

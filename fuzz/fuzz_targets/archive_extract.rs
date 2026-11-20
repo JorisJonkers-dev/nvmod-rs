@@ -29,6 +29,13 @@ fuzz_target!(|data: &[u8]| {
     let limits = Limits {
         max_bytes: 1 << 20,
         max_entries: 256,
+        max_entry_bytes: 1 << 19,
+        max_ratio: 50,
+        ratio_floor_bytes: 4096,
+        max_path_depth: 8,
+        max_operations: 100_000,
+        max_duration: std::time::Duration::from_secs(5),
+        ..Limits::default()
     };
     // Any refusal is fine; a panic, a hang or a write outside `dest` is not.
     let _ = nvmod_modinstall::extract::extract(&archive, &dest, limits);
