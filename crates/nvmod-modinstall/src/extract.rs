@@ -294,8 +294,9 @@ impl Meter {
     }
 }
 
-/// Windows drops trailing dots and spaces from a name and compares names without regard to case, so two paths
-/// that differ only that way are the same file there. Each folder and file seen is kept under its folded name.
+/// Windows drops trailing dots and spaces from a name and compares names without regard to case, so two file paths
+/// that differ only that way are the same file there. Each folder and file seen is kept under its folded name;
+/// folders that differ only in case are allowed, files (and a file against a folder) are not.
 #[derive(Default)]
 struct Names {
     seen: HashMap<String, (String, bool)>,
@@ -322,20 +323,22 @@ impl Names {
             let is_dir = dir || i + 1 < parts.len();
             let folded = prefix.to_lowercase();
             if let Some((spelling, was_dir)) = self.seen.get(&folded) {
-                if *spelling != prefix {
-                    return Err(format!(
-                        "path `{name}` differs only in letter case from `{spelling}`, which would overwrite it on a case-insensitive file system"
-                    ));
+                if *was_dir && is_dir {
+                    // Folders that differ only in case are fine: real archives hold `Textures` and `textures`,
+                    // and what matters is that no two files collide.
+                    continue;
                 }
                 if *was_dir != is_dir {
                     return Err(format!("path `{name}` is both a file and a folder"));
                 }
-                if !is_dir {
-                    return Err(format!("path `{name}` appears twice in the archive"));
+                if *spelling != prefix {
+                    return Err(format!(
+                        "path `{name}` differs only in letter case from the file `{spelling}`, which would overwrite it on a case-insensitive file system"
+                    ));
                 }
-            } else {
-                self.seen.insert(folded, (prefix.clone(), is_dir));
+                return Err(format!("path `{name}` appears twice in the archive"));
             }
+            self.seen.insert(folded, (prefix.clone(), is_dir));
         }
         Ok(())
     }

@@ -250,15 +250,42 @@ macro_rules! bounded_tests {
             }
 
             #[test]
-            fn names_that_differ_only_in_case_are_refused() {
-                let cases: [Items; 2] = [
+            fn files_that_differ_only_in_case_are_refused() {
+                let cases: [Items; 3] = [
                     &[("Readme.txt", b"a"), ("readme.txt", b"b")],
-                    &[("Meshes/a.nif", b"a"), ("meshes/b.nif", b"b")],
+                    &[("Meshes/a.nif", b"a"), ("meshes/A.nif", b"b")],
+                    &[("Data", b"a"), ("data/x.txt", b"b")],
                 ];
                 for items in cases {
                     let (_dir, result, _) = run($make, items, Limits::default());
-                    refused(&result, "letter case");
+                    match &result {
+                        Err(why) => assert!(
+                            why.contains("letter case") || why.contains("both a file and a folder"),
+                            "{why}"
+                        ),
+                        Ok(()) => panic!("accepted {items:?}"),
+                    }
                 }
+            }
+
+            #[test]
+            fn folders_that_differ_only_in_case_are_accepted() {
+                let items: Items = &[
+                    ("Textures/a.dds", b"a"),
+                    ("textures/b.dds", b"b"),
+                    ("Meshes/Armor/x.nif", b"x"),
+                    ("meshes/armor/y.nif", b"y"),
+                ];
+                let (dir, result, _) = run($make, items, Limits::default());
+                result.unwrap();
+                let out = dir.path().join("out");
+                for (name, data) in items {
+                    assert_eq!(&fs::read(out.join(name)).unwrap(), data, "{name}");
+                }
+            }
+
+            #[test]
+            fn different_file_names_in_one_folder_are_accepted() {
                 run(
                     $make,
                     &[("Meshes/a.nif", b"a"), ("Meshes/b.nif", b"b")],
