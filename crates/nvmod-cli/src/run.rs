@@ -112,7 +112,7 @@ pub(crate) fn run_with(
     let mut plan = match nvmod_api::run::plan(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(plan)) => plan,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,

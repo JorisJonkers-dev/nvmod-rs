@@ -45,6 +45,7 @@ pub fn create(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<CreateOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

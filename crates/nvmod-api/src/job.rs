@@ -75,6 +75,13 @@ impl CancelToken {
         self.0.load(Ordering::SeqCst)
     }
 
+    /// Make the safe points of the crates this job calls (the install copy, the lists, the profile transaction, the
+    /// backup steps) obey this token only, until the guard is dropped. A process-wide stop request left set does not
+    /// stop a job that has its own token; the command line gives its jobs the token its Ctrl+C handler cancels.
+    pub(crate) fn scope(&self) -> nvmod_core::cancel::Scope {
+        nvmod_core::cancel::enter(Arc::clone(&self.0))
+    }
+
     /// The same request as loot-rs's token, for a sort that must stop with the job.
     #[must_use]
     pub fn to_loot(&self) -> loot_rs::api::CancelToken {

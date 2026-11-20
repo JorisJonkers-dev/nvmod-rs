@@ -229,6 +229,16 @@ fn writes_instance(args: &[String]) -> bool {
     }
 }
 
+static PROCESS_TOKEN: std::sync::OnceLock<nvmod_api::CancelToken> = std::sync::OnceLock::new();
+
+/// The token every job of this process runs with: what SIGINT and SIGTERM (Ctrl+C on Windows) cancel. A job that is
+/// given a token obeys that token only (nvmod-rs#212), so the command line hands its jobs this one.
+pub(crate) fn process_token() -> nvmod_api::CancelToken {
+    PROCESS_TOKEN
+        .get_or_init(nvmod_api::CancelToken::new)
+        .clone()
+}
+
 /// [`run`] for the binary. For a writing command (see [`writes_instance`]) SIGTERM and SIGINT (Ctrl+C on
 /// Windows) do not kill the process: they ask the step in flight to stop, which the journal machinery rolls
 /// back. The run then ends with exit code 4 and a `finished` record: `{"event":"finished",...,"interrupted":true,
@@ -236,7 +246,10 @@ fn writes_instance(args: &[String]) -> bool {
 pub fn run_main(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     if writes_instance(args) {
         // Best effort: without a handler the default action (end the process) stays.
-        let _ = ctrlc::set_handler(nvmod_core::cancel::request);
+        let _ = ctrlc::set_handler(|| {
+            nvmod_core::cancel::request();
+            process_token().cancel();
+        });
     }
     let code = run(args, out, err);
     if code == ROLLED_BACK && nvmod_core::cancel::requested() {

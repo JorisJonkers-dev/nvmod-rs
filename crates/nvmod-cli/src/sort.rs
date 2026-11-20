@@ -237,7 +237,7 @@ fn keep_order(
     let done = match nvmod_api::sort_apply::keep_order(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(done)) => done,
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,
@@ -349,7 +349,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     let (proposal, applied) = match nvmod_api::loadorder::sort(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(done)) => (done.proposal, done.applied),
         Ok(nvmod_api::Outcome::Cancelled) => return REFUSED,

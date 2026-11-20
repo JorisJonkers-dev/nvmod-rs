@@ -6,7 +6,7 @@ use crate::{OK, REFUSED, ROLLED_BACK, USAGE, VERIFICATION, args::Args};
 use nvmod_api::install_nvrs::{
     DEFAULT_ASSET, DEFAULT_RELEASE_URL, DEFAULT_REPO, InstallOutput, InstallRequest, Method,
 };
-use nvmod_api::{CancelToken, ErrorKind, JobError, NoProgress, Outcome};
+use nvmod_api::{ErrorKind, JobError, NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -58,7 +58,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         curl: path("curl").unwrap_or_else(|| PathBuf::from("curl")),
         retry_delay_ms,
     };
-    match nvmod_api::install_nvrs::install(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::install_nvrs::install(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(done)) => {
             print_done(out, &done);
             OK

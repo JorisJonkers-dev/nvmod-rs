@@ -4,7 +4,7 @@
 
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
 use nvmod_api::import_mo2::{ImportOutput, ImportRequest, Report};
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::Path;
 
@@ -43,7 +43,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         copy_only: args.flag("copy"),
     };
     let json = args.flag("json");
-    match nvmod_api::import_mo2::import(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::import_mo2::import(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(ImportOutput::Imported(report))) => {
             print_report(out, &report, json);
             OK

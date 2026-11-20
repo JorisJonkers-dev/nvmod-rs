@@ -10,7 +10,7 @@
 
 use crate::{OK, REFUSED, USAGE, VERIFICATION, args::Args};
 use nvmod_api::verify::{VerifyOutput, VerifyRequest};
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use nvmod_core::Severity;
 use std::io::Write;
 use std::path::PathBuf;
@@ -90,7 +90,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         proton: args.option("proton").map(str::to_owned),
         fail_on,
     };
-    match nvmod_api::verify::verify(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::verify::verify(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(done)) => {
             print_verification(out, &done, args.flag("json"));
             if done.verified { OK } else { VERIFICATION }

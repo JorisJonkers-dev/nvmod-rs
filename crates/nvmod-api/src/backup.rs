@@ -134,6 +134,7 @@ pub fn create(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<CreateOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -166,6 +167,7 @@ pub fn list(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<ListOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -189,6 +191,7 @@ pub fn prune(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<PruneOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -236,6 +239,7 @@ pub fn restore(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<RestoreOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

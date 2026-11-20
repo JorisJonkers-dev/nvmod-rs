@@ -88,6 +88,7 @@ pub fn verify(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<VerifyOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

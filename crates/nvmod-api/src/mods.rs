@@ -41,6 +41,7 @@ pub fn list(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<ListOutput>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }
@@ -134,6 +135,7 @@ pub fn change(
     progress: &mut dyn Progress,
     cancel: &CancelToken,
 ) -> Result<Outcome<Report>, JobError> {
+    let _scope = cancel.scope();
     if cancel.is_cancelled() {
         return Ok(Outcome::Cancelled);
     }

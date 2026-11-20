@@ -33,7 +33,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
     match nvmod_api::init::create(
         &request,
         &mut nvmod_api::NoProgress,
-        &nvmod_api::CancelToken::new(),
+        &crate::process_token(),
     ) {
         Ok(nvmod_api::Outcome::Done(made)) => {
             let _ = writeln!(

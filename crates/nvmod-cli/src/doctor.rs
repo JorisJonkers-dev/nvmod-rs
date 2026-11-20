@@ -4,7 +4,7 @@
 
 use crate::{FOUND, OK, REFUSED, USAGE, args::Args};
 use nvmod_api::doctor::{CheckOutput, CheckRequest, Target, is_open_refusal};
-use nvmod_api::{CancelToken, ErrorKind, JobError, NoProgress, Outcome};
+use nvmod_api::{ErrorKind, JobError, NoProgress, Outcome};
 use nvmod_core::Severity;
 use std::io::Write;
 use std::path::PathBuf;
@@ -65,7 +65,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         },
     };
     let request = CheckRequest { target, fail_on };
-    match nvmod_api::doctor::check(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::doctor::check(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(done)) => print_report(&done, args.flag("json"), out),
         Ok(Outcome::Cancelled) => {
             let _ = writeln!(err, "nvmod doctor: cancelled");

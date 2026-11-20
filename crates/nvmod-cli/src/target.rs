@@ -4,7 +4,7 @@
 
 use crate::{OK, REFUSED, USAGE, args::Args};
 use nvmod_api::target::{SetRequest, Target};
-use nvmod_api::{CancelToken, NoProgress, Outcome};
+use nvmod_api::{NoProgress, Outcome};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -34,7 +34,7 @@ pub(crate) fn run(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> 
         instance: PathBuf::from(args.option("instance").unwrap_or_default()),
         target,
     };
-    match nvmod_api::target::set(&request, &mut NoProgress, &CancelToken::new()) {
+    match nvmod_api::target::set(&request, &mut NoProgress, &crate::process_token()) {
         Ok(Outcome::Done(_)) => {
             let _ = writeln!(out, "nvmod target: the Instance now runs on {name}");
             OK
