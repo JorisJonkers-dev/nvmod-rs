@@ -13,8 +13,8 @@
 
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
 pub use nvmod_modinstall::{
-    AnswersFile, Decided, FomodEvent, GroupEvent, OptionEvent, PlanEvent, StepEvent, answers_schema,
-    events_schema,
+    AnswersFile, Decided, FomodEvent, GroupEvent, OptionEvent, PlanEvent, StepEvent,
+    answers_schema, events_schema,
 };
 use nvmod_modinstall::{Limits, Session};
 use serde::{Deserialize, Serialize};

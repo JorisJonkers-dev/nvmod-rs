@@ -24,12 +24,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub use extract::{LimitOverrides, Limits};
-pub use fomod::{GroupKind, Inferred, PluginType, Question, QuestionOption};
 pub use fomod::{Decided, GroupEvent, OptionEvent, StepEvent};
+pub use fomod::{GroupKind, Inferred, PluginType, Question, QuestionOption};
 pub use journal::{RollbackError, RollbackReport, rollback};
-pub use saved::{
-    ANSWERS_PATH, AnswersFile, ReinstallRequest, open_saved, reconfigure, reinstall,
-};
+pub use saved::{ANSWERS_PATH, AnswersFile, ReinstallRequest, open_saved, reconfigure, reinstall};
 pub use session::{FomodEvent, PlanEvent, Session, answers_schema, events_schema};
 
 /// What to do when a Mod folder of the name already exists.
@@ -416,7 +414,11 @@ pub fn read_answers(path: &Path) -> Result<Answers, String> {
 
 /// The answers of a request: the file's, with the in-memory ones laid over them.
 fn gather_answers(request: &Request) -> Result<Answers, String> {
-    let mut answers = request.answers.map(read_answers).transpose()?.unwrap_or_default();
+    let mut answers = request
+        .answers
+        .map(read_answers)
+        .transpose()?
+        .unwrap_or_default();
     for (id, picked) in request.answers_inline.into_iter().flatten() {
         answers.insert(id.clone(), picked.clone());
     }
@@ -452,7 +454,6 @@ fn fail_point(step: &str) -> Result<(), String> {
     nvmod_core::cancel::step_point(step)
 }
 
-
 /// Refuse a plan that writes into `.nvmod` at the top of the Mod: that folder holds nvmod's own records.
 fn check_reserved(plan: &Plan) -> Result<(), String> {
     if plan.iter().any(|(_, relative)| {
@@ -460,7 +461,8 @@ fn check_reserved(plan: &Plan) -> Result<(), String> {
         lower == ".nvmod" || lower.starts_with(".nvmod/")
     }) {
         return Err(
-            "the archive installs into `.nvmod`, which nvmod keeps for its own records of a Mod".to_owned(),
+            "the archive installs into `.nvmod`, which nvmod keeps for its own records of a Mod"
+                .to_owned(),
         );
     }
     Ok(())
@@ -490,16 +492,19 @@ fn listed_entry(modlist: Option<&[u8]>, name: &str) -> Result<Option<(String, bo
 fn free_name(mods: &Path, modlist: Option<&[u8]>, name: &str) -> String {
     let text = modlist.map_or_default(nvmod_formats::text::decode);
     let parsed = Modlist::parse(&text);
-    (2..)
-        .map(|n| format!("{name} {n}"))
-        .find(|candidate| {
-            find_ci(mods, candidate).is_none()
-                && !parsed
-                    .entries
-                    .iter()
-                    .any(|e| e.name.eq_ignore_ascii_case(candidate))
-        })
-        .unwrap_or_else(|| name.to_owned())
+    let mut n = 2_u32;
+    loop {
+        let candidate = format!("{name} {n}");
+        if find_ci(mods, &candidate).is_none()
+            && !parsed
+                .entries
+                .iter()
+                .any(|e| e.name.eq_ignore_ascii_case(&candidate))
+        {
+            return candidate;
+        }
+        n += 1;
+    }
 }
 
 /// The files of a Mod folder as `/` paths (without `meta.ini`, hidden markers' suffix kept, and `.nvmod`).
@@ -592,10 +597,11 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
     }
     if conflict == Some("merged") {
         // The Mod afterwards: what the folder holds with the new files laid over it.
-        let mut by_key: std::collections::BTreeMap<String, String> = existing_files(&instance.mod_dir(&name))
-            .into_iter()
-            .map(|f| (f.to_ascii_lowercase(), f))
-            .collect();
+        let mut by_key: std::collections::BTreeMap<String, String> =
+            existing_files(&instance.mod_dir(&name))
+                .into_iter()
+                .map(|f| (f.to_ascii_lowercase(), f))
+                .collect();
         for f in files {
             by_key.insert(f.to_ascii_lowercase(), f);
         }

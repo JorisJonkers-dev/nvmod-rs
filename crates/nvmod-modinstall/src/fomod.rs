@@ -1066,7 +1066,8 @@ mod tests {
 
     impl Env for Plugins {
         fn file_state(&self, file: &str) -> Option<FileState> {
-            if !file.to_ascii_lowercase().ends_with(".esp") {
+            let lower = file.to_ascii_lowercase();
+            if !(lower.ends_with(".esp") || lower.ends_with(".esm")) {
                 return None;
             }
             Some(
@@ -1310,7 +1311,10 @@ mod tests {
     fn the_stream_gives_the_first_open_step_and_goes_on_with_each_answer() {
         let m = Module::parse(TWO_STEPS).unwrap();
         let first = step_of(m.next(&none(), &Answers::new(), &Answers::new()).unwrap());
-        assert_eq!((first.step.as_str(), first.index, first.module.as_str()), ("Look", 0, "Two"));
+        assert_eq!(
+            (first.step.as_str(), first.index, first.module.as_str()),
+            ("Look", 0, "Two")
+        );
         let group = &first.groups[0];
         assert_eq!(group.id, "Look/Style");
         assert!(group.decided.is_none() && !group.answered);
@@ -1319,15 +1323,27 @@ mod tests {
         let ticked: Vec<bool> = group.options.iter().map(|o| o.selected).collect();
         assert_eq!(ticked, [false, false, false]);
         let base = &first.groups[1];
-        assert_eq!(base.decided.as_ref().map(|d| d.selected.clone()), Some(vec!["Core".to_owned()]));
-        assert!(base.options[0].selected, "a decided group shows its choice ticked");
+        assert_eq!(
+            base.decided.as_ref().map(|d| d.selected.clone()),
+            Some(vec!["Core".to_owned()])
+        );
+        assert!(
+            base.options[0].selected,
+            "a decided group shows its choice ticked"
+        );
 
         // Blue hides the second step: the plan is next.
         let blue = ans(&[("Look/Style", &["Blue"])]);
         let Next::Done(sel) = m.next(&none(), &blue, &Answers::new()).unwrap() else {
             panic!("blue ends the stream");
         };
-        assert_eq!(sel.files.iter().map(|f| f.source.as_str()).collect::<Vec<_>>(), ["blue", "core"]);
+        assert_eq!(
+            sel.files
+                .iter()
+                .map(|f| f.source.as_str())
+                .collect::<Vec<_>>(),
+            ["blue", "core"]
+        );
         assert_eq!(sel.answers, blue);
 
         // Red shows it.
@@ -1345,7 +1361,9 @@ mod tests {
         struct Esm(FileState);
         impl Env for Esm {
             fn file_state(&self, file: &str) -> Option<FileState> {
-                file.to_ascii_lowercase().ends_with(".esm").then_some(self.0)
+                file.to_ascii_lowercase()
+                    .ends_with(".esm")
+                    .then_some(self.0)
             }
         }
         let by_state = |state| {
@@ -1420,17 +1438,23 @@ mod tests {
             <pattern><dependencies><flagDependency flag="x" value="1"/></dependencies>
               <files><file source="x-only" destination="x-only" priority="2"/></files></pattern>
           </patterns></conditionalFileInstalls></config>"#;
-        let with = |names: &[&str], env: &dyn Env| picks(xml, env, &ans(&[("S/Pick", names)])).unwrap();
+        let with =
+            |names: &[&str], env: &dyn Env| picks(xml, env, &ans(&[("S/Pick", names)])).unwrap();
         assert_eq!(with(&["X", "Y"], &none()), ["nested", "x-only"]);
         assert_eq!(with(&["X"], &none()), ["x-only"]);
         assert_eq!(with(&["Y"], &none()), Vec::<String>::new());
         struct Both;
         impl Env for Both {
             fn file_state(&self, file: &str) -> Option<FileState> {
-                file.eq_ignore_ascii_case("Both.esm").then_some(FileState::Active)
+                file.eq_ignore_ascii_case("Both.esm")
+                    .then_some(FileState::Active)
             }
         }
-        assert_eq!(with(&["Y"], &Both), ["nested"], "the Or branch: an active .esm");
+        assert_eq!(
+            with(&["Y"], &Both),
+            ["nested"],
+            "the Or branch: an active .esm"
+        );
         // The first pattern of a dependencyType whose condition holds decides.
         let typed = r#"<config><installSteps order="Explicit"><installStep name="S"><optionalFileGroups><group name="G" type="SelectExactlyOne"><plugins order="Explicit">
             <plugin name="A"><typeDescriptor><dependencyType><defaultType name="Optional"/><patterns>

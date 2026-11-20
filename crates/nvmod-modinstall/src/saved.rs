@@ -157,9 +157,7 @@ pub fn reconfigure(request: &ReinstallRequest) -> Result<Report, InstallError> {
 ///
 /// # Errors
 /// The Mod has no saved answers, or its archive is gone or refused.
-pub fn open_saved(
-    request: &ReinstallRequest,
-) -> Result<(Session, AnswersFile), InstallError> {
+pub fn open_saved(request: &ReinstallRequest) -> Result<(Session, AnswersFile), InstallError> {
     let (_, saved) = read(request.instance, request.r#mod).map_err(InstallError::Refused)?;
     let archive = archive_of(request, &saved)?;
     let session = Session::open(request.instance, request.profile, &archive, request.limits)
