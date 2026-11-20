@@ -14,6 +14,7 @@ mod plugins;
 mod profile;
 mod readiness;
 mod report;
+mod ttw_ini;
 
 pub use base::{BaseExe, BaseReport, BaseSummary, check_base, check_instance};
 pub use builtin::{CapabilitiesStatus, CapabilitiesUse, ExtenderCoverage, NvRsReport};

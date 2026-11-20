@@ -9,6 +9,17 @@
       "type": "string",
       "const": "lodwright-verify"
     },
+    "correlation": {
+      "description": "With a reference: the per-channel correlation of the terrain diffuse (and normal map) of every block present\non both sides with the reference's. Omitted without a reference.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CorrelationReport"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "differences": {
       "description": "Differences from the reference folder; empty when no reference was given.",
       "type": "array",
@@ -125,6 +136,169 @@
     "errors"
   ],
   "$defs": {
+    "Channels": {
+      "description": "A Pearson correlation per colour channel, from -1 to 1, rounded to three decimals.",
+      "type": "object",
+      "properties": {
+        "b": {
+          "description": "The blue channel.",
+          "type": "number",
+          "format": "double"
+        },
+        "g": {
+          "description": "The green channel.",
+          "type": "number",
+          "format": "double"
+        },
+        "r": {
+          "description": "The red channel.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b"
+      ]
+    },
+    "CorrelationBlock": {
+      "description": "The texture correlation of one terrain block.",
+      "type": "object",
+      "properties": {
+        "diffuse": {
+          "description": "The correlation of the diffuse texture.",
+          "$ref": "#/$defs/Channels"
+        },
+        "normals": {
+          "description": "The correlation of the normal map; omitted when it is missing on a side or cannot be compared.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Channels"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "description": "The diffuse texture, relative to the folder, lower case.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "diffuse"
+      ]
+    },
+    "CorrelationLevel": {
+      "description": "The texture correlation of one terrain level.",
+      "type": "object",
+      "properties": {
+        "diffuse": {
+          "description": "The diffuse textures of this level.",
+          "$ref": "#/$defs/CorrelationSummary"
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "normals": {
+          "description": "The normal maps of this level; omitted when none could be compared.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CorrelationSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "level",
+        "diffuse"
+      ]
+    },
+    "CorrelationReport": {
+      "description": "The Pearson correlation per colour channel between the terrain textures of the blocks present on both sides and\nthe reference's, over the pixels of the decoded images (alpha is not compared). Two flat channels correlate as 1\nwhen they hold the same value and 0 otherwise; a flat channel against a varying one is 0. A pair whose size\ndiffers, or that cannot be decoded, is left out. Numbers are rounded to three decimals.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks whose diffuse textures were compared.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "diffuse": {
+          "description": "The summary of all compared diffuse textures; omitted when none was compared.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CorrelationSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "normals": {
+          "description": "The summary of all compared normal maps; omitted when none was compared.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CorrelationSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "per_block": {
+          "description": "Every compared block, sorted by path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CorrelationBlock"
+          }
+        },
+        "per_level": {
+          "description": "The same summaries per terrain level, smallest level first. Omitted when no block was compared.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CorrelationLevel"
+          }
+        }
+      },
+      "required": [
+        "blocks",
+        "per_block"
+      ]
+    },
+    "CorrelationSummary": {
+      "description": "The correlations of a set of blocks: the mean and the lowest per channel.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks in the set.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "lowest": {
+          "description": "The lowest correlation of any block, per channel.",
+          "$ref": "#/$defs/Channels"
+        },
+        "mean": {
+          "description": "The mean of the blocks' correlations, per channel.",
+          "$ref": "#/$defs/Channels"
+        }
+      },
+      "required": [
+        "blocks",
+        "mean",
+        "lowest"
+      ]
+    },
     "KnownDifference": {
       "description": "A difference the known-differences list names.",
       "type": "object",

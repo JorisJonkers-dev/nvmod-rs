@@ -190,6 +190,9 @@ pub fn check_instance(
             dlls = crate::order::staged_dlls(&data);
         }
     }
+    if let (Some(profile), Target::NvRs) = (&resolved, instance.config.target) {
+        crate::ttw_ini::check(instance, profile, &mut report.findings);
+    }
     report.nv_rs = builtin::check(instance, catalog, &dlls, mods, &mut report.findings);
     report.recount();
     Ok(report)
