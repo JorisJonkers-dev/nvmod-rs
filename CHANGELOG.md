@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.15.0...v0.15.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **backup:** scope the running-game guard to the Instance's run lock ([#233](https://github.com/JorisJonkers-dev/nvmod-rs/issues/233)) ([bff918f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/bff918ff6deb24c0c7d9c429b0547f2eb31bb2b7))
+
 ## [0.15.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.14.0...v0.15.0) (2026-11-20)
 
 
