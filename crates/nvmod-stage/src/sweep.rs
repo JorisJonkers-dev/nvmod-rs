@@ -123,6 +123,11 @@ pub fn scan(instance: &NvmodInstance, profile: &str) -> Result<Vec<Change>, Stri
         .ok_or_else(|| {
             format!("profile `{profile}` has no Staging tree with a record of its files; run `nvmod stage`")
         })?;
+    if crate::incremental::journal_path(instance, profile).is_file() {
+        return Err(format!(
+            "the last staging run of profile `{profile}` did not finish; run `nvmod stage` first"
+        ));
+    }
     let data = instance.staging_dir(profile).join("data");
     if !data.is_dir() {
         return Err(format!(

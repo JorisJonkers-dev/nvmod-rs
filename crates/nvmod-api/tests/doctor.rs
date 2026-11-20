@@ -60,12 +60,7 @@ impl Instance {
         instance
             .create_profile("Default")
             .expect("create the profile");
-        nvmod_stage::stage(
-            &instance,
-            "Default",
-            nvmod_stage::Options { copy_only: false },
-        )
-        .expect("stage");
+        nvmod_stage::stage(&instance, "Default", nvmod_stage::Options::default()).expect("stage");
         fs::write(inst.path().join("masterlist.yaml"), MASTERLIST).expect("masterlist");
         Self { _base: base, inst }
     }

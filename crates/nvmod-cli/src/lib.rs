@@ -53,7 +53,7 @@ pub const ROLLED_BACK: u8 = 4;
 const HELP: &str = "nvmod: install, check and verify the NVSE ecosystem for Fallout: New Vegas / TTW\n\nusage:\n  nvmod pe <file> [--json]    inspect one PE file (a plugin DLL or an executable)\n  nvmod catalog [--json]      list the NVSE plugin catalogue
   nvmod init --base <dir> --instance <dir>
                               make an nvmod Instance skeleton for a Steam or GOG base copy
-  nvmod stage --instance <dir> [--profile <name>] [--copy] [--json]
+  nvmod stage --instance <dir> [--profile <name>] [--copy] [--full] [--json]
                               build the Staging tree: a hard-link tree of lowercased paths (copies with --copy
                               or where links cannot be made)
   nvmod import-mo2 --mo2 <dir> --instance <dir> --base <dir> [--profile <name>] [--copy] [--json]
