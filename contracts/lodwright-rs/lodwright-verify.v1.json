@@ -613,6 +613,72 @@
         "mean"
       ]
     },
+    "WaterProfileLevel": {
+      "description": "The shape of the water of one terrain level compared with the reference: means over the blocks with water.",
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "description": "Blocks of this level with water on either side.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "depth_mine": {
+          "description": "Mean of the highest minus the lowest water vertex of a block, in world units (0 for flat planes): lodwright's.",
+          "type": "number",
+          "format": "double"
+        },
+        "depth_theirs": {
+          "description": "The same for the reference.",
+          "type": "number",
+          "format": "double"
+        },
+        "height_agreement": {
+          "description": "Mean, over the blocks where the two cover ground in common, of the share of those cells whose top surface\nheights differ by at most 1 unit; omitted when no block has cells in common.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "level": {
+          "description": "Cells per block edge.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "vertices_mine": {
+          "description": "Mean number of water vertices a block carries in the file (every water shape but the empty one): lodwright's.",
+          "type": "number",
+          "format": "double"
+        },
+        "vertices_theirs": {
+          "description": "The same for the reference.",
+          "type": "number",
+          "format": "double"
+        },
+        "wall_mine": {
+          "description": "Mean area of the steep triangles of a block (the walls and slopes at the edge of the water; seen from above they\ncover less than a thousandth of their own area), in square world units: lodwright's.",
+          "type": "number",
+          "format": "double"
+        },
+        "wall_theirs": {
+          "description": "The same for the reference.",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "level",
+        "blocks",
+        "depth_mine",
+        "depth_theirs",
+        "wall_mine",
+        "wall_theirs",
+        "vertices_mine",
+        "vertices_theirs"
+      ]
+    },
     "WaterReport": {
       "description": "The water of the terrain blocks compared with the reference: the `IoU` (intersection over union) of the ground the\ntwo water planes cover, seen from above, sampled at the centres of a 400 by 400 grid over the bounds of both\nplanes. Numbers are rounded to three decimals.",
       "type": "object",
@@ -651,6 +717,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/WaterLevel"
+          }
+        },
+        "profile": {
+          "description": "The shape of the water beyond the covered ground, per terrain level (sloped edges, how far down the water\nreaches, agreement of heights), smallest level first. Omitted when no block has water.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WaterProfileLevel"
           }
         },
         "threshold": {
