@@ -600,14 +600,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-bsa"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "nvmod-catalog"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "serde",
  "toml",
@@ -615,7 +615,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-core"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "schemars",
  "serde",
@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-formats"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "flate2",
  "nvmod-core",
@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-instance"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "nvmod-core",
  "serde",
@@ -656,7 +656,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-journal"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "nvmod-instance",
  "nvmod-stage",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-modinstall"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "bzip2",
  "flate2",
@@ -688,14 +688,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-pe"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "nvmod-runlog"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-runner"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "nvmod-core",
  "nvmod-runlog",
@@ -715,7 +715,7 @@ dependencies = [
 
 [[package]]
 name = "nvmod-stage"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "nvmod-core",
  "nvmod-formats",
@@ -727,14 +727,14 @@ dependencies = [
 
 [[package]]
 name = "nvmod-testkit"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "winapi-util",
 ]
 
 [[package]]
 name = "nvmod-tools"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "jsonschema",
  "nvmod-core",
