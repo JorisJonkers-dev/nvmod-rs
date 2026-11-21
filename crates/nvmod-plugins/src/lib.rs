@@ -706,7 +706,7 @@ pub fn apply(
         staging.is_dir().then_some(staging.as_path()),
         &order,
         locked_bytes.as_deref(),
-        nvmod_modinstall::journal::KIND_PLUGINS,
+        nvmod_journal::KIND_PLUGINS,
     )?;
     Ok(report("changed", Some(written)))
 }

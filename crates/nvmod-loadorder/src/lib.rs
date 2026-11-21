@@ -13,7 +13,7 @@ use nvmod_core::{Finding, Severity};
 use nvmod_formats::LockedOrder;
 use nvmod_formats::text::{encode_windows_1252, read_limited};
 use nvmod_instance::NvmodInstance;
-use nvmod_modinstall::journal;
+use nvmod_journal as journal;
 use std::fs;
 use std::path::{Path, PathBuf};
 
