@@ -287,3 +287,49 @@ fn refusals_exit_2_and_usage_errors_exit_5() {
     let (code, _, _) = nvmod(&["mods", "list"]);
     assert_eq!(code, 5);
 }
+
+#[test]
+fn disabling_a_mod_takes_the_plugins_only_it_provides_out_of_the_active_list() {
+    let s = Scratch::new(true);
+    let root = s.root();
+    // Alpha and Gamma both ship Shared.esp; only Gamma ships Mine.esp; Beta is already disabled
+    for (m, file) in [
+        ("Alpha", "Shared.esp"),
+        ("Gamma", "Shared.esp"),
+        ("Gamma", "Mine.esp"),
+    ] {
+        write_file(&root, &format!("mods/{m}/{file}"), b"x");
+    }
+    let plugins = b"# list\r\n*FalloutNV.esm\r\n*Shared.esp\r\n*Mine.esp\r\n";
+    let order = b"# list\r\nFalloutNV.esm\r\nShared.esp\r\nMine.esp\r\n";
+    write_file(&root, "profiles/Default/plugins.txt", plugins);
+    write_file(&root, "profiles/Default/loadorder.txt", order);
+    let (code, out, err) = s.run(&["disable", "Gamma", "--json"]);
+    assert_eq!(code, 0, "{err}");
+    let v: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["plugins_deactivated"], serde_json::json!(["Mine.esp"]));
+    assert_eq!(
+        fs::read(root.join("profiles/Default/plugins.txt")).unwrap(),
+        b"# list\r\n*FalloutNV.esm\r\n*Shared.esp\r\n",
+        "Shared.esp stays: Alpha still provides it"
+    );
+    assert_eq!(
+        fs::read(root.join("profiles/Default/loadorder.txt")).unwrap(),
+        order,
+        "the Load order keeps the place of the plugin"
+    );
+    // the dry run reports the same and writes nothing; a rollback brings the active list back
+    let (code, out, err) = nvmod(&["rollback", "--instance", root.to_str().unwrap()]);
+    assert_eq!(code, 0, "{err}{out}");
+    assert_eq!(
+        fs::read(root.join("profiles/Default/plugins.txt")).unwrap(),
+        plugins
+    );
+    let (_, out, _) = s.run(&["disable", "Gamma", "--dry-run", "--json"]);
+    let v: Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["plugins_deactivated"], serde_json::json!(["Mine.esp"]));
+    assert_eq!(
+        fs::read(root.join("profiles/Default/plugins.txt")).unwrap(),
+        plugins
+    );
+}

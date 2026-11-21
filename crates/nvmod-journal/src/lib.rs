@@ -45,11 +45,11 @@ const FILES: [&str; 4] = [
 ];
 
 /// Whether a journal of `kind` changes (and so restores) `FILES[index]`: an install the first three, a sort the
-/// two plugin lists, a mods change `modlist.txt`, a plugins change the plugin lists and `lockedorder.txt`.
+/// two plugin lists, a mods change `modlist.txt` and `plugins.txt` (a disable takes plugins out of the active list), a plugins change the plugin lists and `lockedorder.txt`.
 fn restores(kind: &str, index: usize) -> bool {
     match kind {
         KIND_SORT => index == 1 || index == 2,
-        KIND_MODS => index == 0,
+        KIND_MODS => index <= 1,
         KIND_PLUGINS => index >= 1,
         KIND_LIFECYCLE => true,
         _ => index < 3,

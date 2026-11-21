@@ -343,7 +343,7 @@ fn insert_index(doc: &Doc<'_>, place: &Place) -> Result<usize, ModsError> {
 }
 
 /// The plugin files at the top of a Mod folder (`.esp`, `.esm`, `.esl`).
-fn plugins_of(dir: &Path) -> Vec<String> {
+pub(crate) fn plugins_of(dir: &Path) -> Vec<String> {
     let mut names: Vec<String> = fs::read_dir(dir)
         .into_iter()
         .flatten()
