@@ -40,6 +40,67 @@
           "format": "uint64",
           "minimum": 0
         },
+        "phase": {
+          "description": "The run's phase this block belongs to: `terrain`, `objects` or `trees` (an open set).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase_count": {
+          "description": "How many phases the run has.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "phase_done": {
+          "description": "Progress inside the phase; the phase's total never changes during the run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "phase_index": {
+          "description": "Which phase of the run this is, from 1. A phase is one step of one world, with the reading of the\nplugins first and the manifest last.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "phase_total": {
+          "description": "The phase's total, in the units of `phase_done`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "run_done": {
+          "description": "Run-wide progress; never decreases during a run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "run_total": {
+          "description": "The run's total, in the units of `run_done`; the same on every line of a run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
         "up_to_date": {
           "description": "The block's files were kept from an earlier run (its inputs did not change).",
           "type": "boolean",
