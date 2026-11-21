@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.16.0...v0.16.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **mods:** disabling a Mod takes the plugins only it provides out of the active list ([#257](https://github.com/JorisJonkers-dev/nvmod-rs/issues/257)) ([#258](https://github.com/JorisJonkers-dev/nvmod-rs/issues/258)) ([c7dcc95](https://github.com/JorisJonkers-dev/nvmod-rs/commit/c7dcc95a6de21c60551c12b0d90f0fb582608a35))
+
 ## [0.16.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.15.1...v0.16.0) (2026-11-21)
 
 
