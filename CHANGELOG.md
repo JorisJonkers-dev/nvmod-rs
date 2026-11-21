@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.16.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.15.1...v0.16.0) (2026-11-21)
+
+
+### Features
+
+* **catalog:** a data-only user overlay from catalogue.d ([#254](https://github.com/JorisJonkers-dev/nvmod-rs/issues/254)) ([dc5fc8e](https://github.com/JorisJonkers-dev/nvmod-rs/commit/dc5fc8e9dac46d4ec75873240e5e2eb80707fcd7))
+* **doctor:** Tale of Two Wastelands Profile's Fallout.ini values ([#240](https://github.com/JorisJonkers-dev/nvmod-rs/issues/240)) ([f6d9141](https://github.com/JorisJonkers-dev/nvmod-rs/commit/f6d914113eefe46086cd2d2525f8113a05202a8d))
+* **downloads:** every extraction limit on 'downloads install' ([#249](https://github.com/JorisJonkers-dev/nvmod-rs/issues/249)) ([29c4be4](https://github.com/JorisJonkers-dev/nvmod-rs/commit/29c4be49337db97e70daed4ac64e7a107443370b))
+* **overwrite:** list, create a Mod from Overwrite, move, delete and sync ([#245](https://github.com/JorisJonkers-dev/nvmod-rs/issues/245)) ([f0df790](https://github.com/JorisJonkers-dev/nvmod-rs/commit/f0df790a4a0313ded715488fbdf07349cbb38593))
+* **sort:** --mode full|minimal for the loot-rs minimal-change sort ([#251](https://github.com/JorisJonkers-dev/nvmod-rs/issues/251)) ([723f80d](https://github.com/JorisJonkers-dev/nvmod-rs/commit/723f80d6e0dffcbaa20d3006c5fbda84197e052c))
+* **stage:** incremental staging with a crash-safe journal ([#256](https://github.com/JorisJonkers-dev/nvmod-rs/issues/256)) ([fa24222](https://github.com/JorisJonkers-dev/nvmod-rs/commit/fa24222fdd1031a081be67d11a6f2000c9fcce52))
+* **stage:** nvmod sweep takes program output back into Overwrite ([#253](https://github.com/JorisJonkers-dev/nvmod-rs/issues/253)) ([ca1e51a](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ca1e51a950cc8b27a22a1d76c73e2320ba16cbff))
+
+
+### Bug Fixes
+
+* **modinstall:** scratch folders made in the same clock tick no longer collide ([#252](https://github.com/JorisJonkers-dev/nvmod-rs/issues/252)) ([79243d6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/79243d6d6dfae2e5e7cb24e2f7a046469818b69b))
+* **run:** start only the named program, no lookup of a separate nv-viewer ([#242](https://github.com/JorisJonkers-dev/nvmod-rs/issues/242)) ([6282cb3](https://github.com/JorisJonkers-dev/nvmod-rs/commit/6282cb31776966b56c345e8a4695bef0c000cf5f))
+
 ## [0.15.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.15.0...v0.15.1) (2026-11-20)
 
 
