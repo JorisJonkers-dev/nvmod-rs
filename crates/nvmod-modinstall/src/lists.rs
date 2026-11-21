@@ -247,38 +247,6 @@ pub fn remove_plugins(
     Ok(Some((encoded, order_text.into_bytes())))
 }
 
-/// The new `plugins.txt` without the lines for `names` (ignoring case): the plugins stop being active but stay in
-/// `loadorder.txt`, which remembers their place. Every other line and comment stays. `None` when `plugins.txt` lists
-/// none of them.
-///
-/// # Errors
-/// A name that `plugins.txt` holds has no place in Windows-1252.
-pub fn deactivate_plugins(
-    old_plugins: Option<&[u8]>,
-    names: &[String],
-) -> Result<Option<Vec<u8>>, String> {
-    let Some(bytes) = old_plugins else {
-        return Ok(None);
-    };
-    let text = decode(bytes);
-    let all: Vec<String> = lines(&text)
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
-        .map(str::to_owned)
-        .collect();
-    let kept: Vec<&str> = all
-        .iter()
-        .map(String::as_str)
-        .filter(|l| l.starts_with('#') || !names.iter().any(|n| name_of(l).eq_ignore_ascii_case(n)))
-        .collect();
-    if kept.len() == all.len() {
-        return Ok(None);
-    }
-    encode_windows_1252(&join(&kept)).map(Some).ok_or_else(|| {
-        "a plugin name cannot be written to plugins.txt in the Windows code page".to_owned()
-    })
-}
-
 /// Whether `name` is listed in `list` (a parsed plugin list), ignoring case.
 #[must_use]
 pub fn lists(list: &[String], name: &str) -> bool {
@@ -287,20 +255,6 @@ pub fn lists(list: &[String], name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn deactivating_drops_only_the_active_lines_of_the_named_plugins() {
-        let old = b"# list\r\n*A.esm\r\n*b.esp\r\n*C.esp\r\n";
-        let new = deactivate_plugins(Some(old), &["B.ESP".to_owned()])
-            .unwrap()
-            .unwrap();
-        assert_eq!(new, b"# list\r\n*A.esm\r\n*C.esp\r\n");
-        assert_eq!(
-            deactivate_plugins(Some(old), &["Z.esp".to_owned()]),
-            Ok(None)
-        );
-        assert_eq!(deactivate_plugins(None, &["A.esm".to_owned()]), Ok(None));
-    }
-
     use super::*;
 
     fn text(bytes: &[u8]) -> Vec<String> {

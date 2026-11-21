@@ -56,6 +56,13 @@ fn print_report(out: &mut dyn Write, report: &Report) {
             report.plugins_deactivated.join(", ")
         );
     }
+    if !report.plugins_reactivated.is_empty() {
+        let _ = writeln!(
+            out,
+            "active again, where they were: {}",
+            report.plugins_reactivated.join(", ")
+        );
+    }
     if let Some(n) = report.staged_files {
         let _ = writeln!(out, "staged again: {n} file(s)");
     }
