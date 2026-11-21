@@ -543,8 +543,8 @@ dependencies = [
 
 [[package]]
 name = "loot-rs"
-version = "0.8.1"
-source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.8.1#4b22e6837b08a5d9edfbd6938761a1c5a77adf9e"
+version = "0.9.0"
+source = "git+https://github.com/JorisJonkers-dev/loot-rs?tag=v0.9.0#5df5f2ddc9f66c24fb651f3363cf4967f0572c07"
 dependencies = [
  "loot-condition-interpreter",
  "regex",
