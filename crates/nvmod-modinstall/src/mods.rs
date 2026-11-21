@@ -82,6 +82,9 @@ pub struct Report {
     pub changed: Vec<String>,
     /// The list after the change (or as it would be).
     pub mods: Vec<ModRow>,
+    /// The plugins that only a disabled Mod provided, taken out of `plugins.txt` (they stay in `loadorder.txt`).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugins_deactivated: Vec<String>,
     /// Files in the Staging tree after the change; `None` when the profile has no Staging tree or nothing was written.
     pub staged_files: Option<usize>,
     /// The journal `nvmod rollback` uses; `None` for a dry run or when nothing changed.
@@ -267,6 +270,39 @@ fn plan(
     Ok((out, changed))
 }
 
+/// The plugins of the Mods just disabled (`changed`) that no enabled Mod of `now` provides and `plugins.txt` lists,
+/// and the new `plugins.txt` without them.
+fn deactivated_by(
+    instance: &NvmodInstance,
+    profile: &str,
+    now: &Modlist,
+    changed: &[String],
+) -> Result<(Vec<String>, Option<Vec<u8>>), ModsError> {
+    let mods = instance.root.join("mods");
+    let provided = |name: &str| -> Vec<String> {
+        find_ci(&mods, name).map_or_default(|folder| crate::lifecycle::plugins_of(&folder))
+    };
+    let others: Vec<String> = now
+        .enabled_mods()
+        .filter(|e| !changed.iter().any(|c| c.eq_ignore_ascii_case(&e.name)))
+        .flat_map(|e| provided(&e.name))
+        .collect();
+    let mut theirs: Vec<String> = changed
+        .iter()
+        .flat_map(|name| provided(name))
+        .filter(|p| !others.iter().any(|o| o.eq_ignore_ascii_case(p)))
+        .collect();
+    theirs.sort();
+    theirs.dedup();
+    let old = fs::read(instance.profile_dir(profile).join("plugins.txt")).ok();
+    let new =
+        crate::lists::deactivate_plugins(old.as_deref(), &theirs).map_err(ModsError::Refused)?;
+    if new.is_none() {
+        return Ok((Vec::new(), None));
+    }
+    Ok((theirs, new))
+}
+
 /// Apply `change` to the Mods of `profile`, or plan to.
 ///
 /// # Errors
@@ -286,7 +322,15 @@ pub fn apply(
     let text = decode(&bytes);
     let (new_lines, changed) = plan(&instance.root.join("mods"), &text, change)?;
     let new_bytes = join(&new_lines);
-    let mods = rows(instance, &Modlist::parse(&decode(&new_bytes)));
+    let parsed_now = Modlist::parse(&decode(&new_bytes));
+    let mods = rows(instance, &parsed_now);
+    // Disabling a Mod takes the plugins that no other enabled Mod provides out of the active list, so the Load
+    // order and the Doctor do not name plugins nothing stages any more.
+    let (plugins_deactivated, new_plugins) = if matches!(change, Change::Disable(_)) {
+        deactivated_by(instance, profile, &parsed_now, &changed)?
+    } else {
+        (Vec::new(), None)
+    };
     let mut report = Report {
         status: if dry_run {
             "dry-run"
@@ -304,6 +348,7 @@ pub fn apply(
         profile: profile.to_owned(),
         changed,
         mods,
+        plugins_deactivated,
         staged_files: None,
         journal: None,
     };
@@ -316,6 +361,9 @@ pub fn apply(
     let outcome = (|| -> Result<Option<usize>, String> {
         crate::fail_point("lists")?;
         journal::write_atomic(&file, &new_bytes)?;
+        if let Some(plugins) = &new_plugins {
+            journal::write_atomic(&instance.profile_dir(profile).join("plugins.txt"), plugins)?;
+        }
         if !staged {
             return Ok(None);
         }

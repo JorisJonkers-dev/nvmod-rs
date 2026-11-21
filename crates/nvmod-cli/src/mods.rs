@@ -49,6 +49,13 @@ fn print_report(out: &mut dyn Write, report: &Report) {
         }
     );
     print_rows(out, &report.mods);
+    if !report.plugins_deactivated.is_empty() {
+        let _ = writeln!(
+            out,
+            "no longer active (no enabled Mod provides them): {}",
+            report.plugins_deactivated.join(", ")
+        );
+    }
     if let Some(n) = report.staged_files {
         let _ = writeln!(out, "staged again: {n} file(s)");
     }
