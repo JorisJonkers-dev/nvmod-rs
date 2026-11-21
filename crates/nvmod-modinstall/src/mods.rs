@@ -4,7 +4,7 @@
 //! only `modlist.txt` (every other line, comment and the CRLF line ends are kept) and stages the profile again
 //! when it had a Staging tree. A dry run computes the same result and writes nothing.
 
-use crate::journal;
+use crate::{deactivated, journal};
 use nvmod_formats::text::{decode, lines};
 use nvmod_formats::{EntryKind, ModState, Modlist};
 use nvmod_instance::{NvmodInstance, find_ci};
@@ -85,6 +85,9 @@ pub struct Report {
     /// The plugins that only a disabled Mod provided, taken out of `plugins.txt` (they stay in `loadorder.txt`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub plugins_deactivated: Vec<String>,
+    /// The plugins an enable put back into `plugins.txt`, each where it was before the disable.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugins_reactivated: Vec<String>,
     /// Files in the Staging tree after the change; `None` when the profile has no Staging tree or nothing was written.
     pub staged_files: Option<usize>,
     /// The journal `nvmod rollback` uses; `None` for a dry run or when nothing changed.
@@ -270,37 +273,102 @@ fn plan(
     Ok((out, changed))
 }
 
-/// The plugins of the Mods just disabled (`changed`) that no enabled Mod of `now` provides and `plugins.txt` lists,
-/// and the new `plugins.txt` without them.
-fn deactivated_by(
+/// What a change does to the active plugin list: the new `plugins.txt` and `deactivated.txt` (`None`: unchanged;
+/// for `deactivated.txt` an empty record list means the file goes), and the plugin names for the report.
+#[derive(Default)]
+struct PluginEdit {
+    plugins: Option<Vec<u8>>,
+    records: Option<Vec<deactivated::Record>>,
+    deactivated: Vec<String>,
+    reactivated: Vec<String>,
+}
+
+/// The names of every plugin the base copy has: the masters it is known for and what its `Data` folder holds.
+fn base_plugins(instance: &NvmodInstance) -> Vec<String> {
+    let mut names: Vec<String> = nvmod_instance::BASE_MASTERS
+        .iter()
+        .map(|n| (*n).to_owned())
+        .collect();
+    if let Some(data) = find_ci(&instance.config.base, "Data") {
+        names.extend(crate::lifecycle::plugins_of(&data));
+    }
+    names
+}
+
+/// The plugins that the Mods of `names` have at the top of their folders.
+fn provided_by(instance: &NvmodInstance, names: &[String]) -> Vec<String> {
+    let mods = instance.root.join("mods");
+    names
+        .iter()
+        .flat_map(|name| find_ci(&mods, name).map_or_default(|f| crate::lifecycle::plugins_of(&f)))
+        .collect()
+}
+
+/// A disable takes the plugins that only the disabled Mods provide out of `plugins.txt`: not one that an enabled
+/// Mod provides or that the base copy has (a Mod may ship its own copy of a base master, as Tale of Two Wastelands
+/// does), and no other line. They are noted in `deactivated.txt` so an enable can put them back.
+/// An enable puts back what a disable took out and the enabled Mods provide.
+fn plugin_edit(
     instance: &NvmodInstance,
     profile: &str,
     now: &Modlist,
+    change: &Change,
     changed: &[String],
-) -> Result<(Vec<String>, Option<Vec<u8>>), ModsError> {
-    let mods = instance.root.join("mods");
-    let provided = |name: &str| -> Vec<String> {
-        find_ci(&mods, name).map_or_default(|folder| crate::lifecycle::plugins_of(&folder))
-    };
-    let others: Vec<String> = now
-        .enabled_mods()
-        .filter(|e| !changed.iter().any(|c| c.eq_ignore_ascii_case(&e.name)))
-        .flat_map(|e| provided(&e.name))
-        .collect();
-    let mut theirs: Vec<String> = changed
-        .iter()
-        .flat_map(|name| provided(name))
-        .filter(|p| !others.iter().any(|o| o.eq_ignore_ascii_case(p)))
-        .collect();
-    theirs.sort();
-    theirs.dedup();
-    let old = fs::read(instance.profile_dir(profile).join("plugins.txt")).ok();
-    let new =
-        crate::lists::deactivate_plugins(old.as_deref(), &theirs).map_err(ModsError::Refused)?;
-    if new.is_none() {
-        return Ok((Vec::new(), None));
+) -> PluginEdit {
+    let dir = instance.profile_dir(profile);
+    let old = fs::read(dir.join("plugins.txt")).ok();
+    let notes = deactivated::parse(fs::read(dir.join(deactivated::FILE)).ok().as_deref());
+    let mut edit = PluginEdit::default();
+    match change {
+        Change::Disable(_) => {
+            let enabled: Vec<String> = now
+                .enabled_mods()
+                .filter(|e| !changed.iter().any(|c| c.eq_ignore_ascii_case(&e.name)))
+                .map(|e| e.name.clone())
+                .collect();
+            let mut keep = provided_by(instance, &enabled);
+            keep.extend(base_plugins(instance));
+            let mut theirs: Vec<String> = provided_by(instance, changed)
+                .into_iter()
+                .filter(|p| !keep.iter().any(|o| o.eq_ignore_ascii_case(p)))
+                .collect();
+            theirs.sort();
+            theirs.dedup();
+            if let Some((bytes, taken)) = deactivated::deactivate(old.as_deref(), &theirs) {
+                edit.deactivated = taken.iter().map(|r| r.name().to_owned()).collect();
+                edit.deactivated.sort();
+                edit.plugins = Some(bytes);
+                let mut all = notes;
+                all.retain(|r| {
+                    !taken
+                        .iter()
+                        .any(|t| t.name().eq_ignore_ascii_case(r.name()))
+                });
+                all.extend(taken);
+                edit.records = Some(all);
+            }
+        }
+        Change::Enable(_) => {
+            let provided = provided_by(instance, changed);
+            let (back, rest): (Vec<_>, Vec<_>) = notes
+                .into_iter()
+                .partition(|r| provided.iter().any(|p| p.eq_ignore_ascii_case(r.name())));
+            if !back.is_empty() {
+                if let Some(old) = &old {
+                    let loadorder = fs::read(dir.join("loadorder.txt")).ok();
+                    let new = deactivated::reactivate(old, &back, loadorder.as_deref());
+                    if new != *old {
+                        edit.reactivated = back.iter().map(|r| r.name().to_owned()).collect();
+                        edit.reactivated.sort();
+                        edit.plugins = Some(new);
+                    }
+                }
+                edit.records = Some(rest);
+            }
+        }
+        Change::Move { .. } => {}
     }
-    Ok((theirs, new))
+    edit
 }
 
 /// Apply `change` to the Mods of `profile`, or plan to.
@@ -326,11 +394,7 @@ pub fn apply(
     let mods = rows(instance, &parsed_now);
     // Disabling a Mod takes the plugins that no other enabled Mod provides out of the active list, so the Load
     // order and the Doctor do not name plugins nothing stages any more.
-    let (plugins_deactivated, new_plugins) = if matches!(change, Change::Disable(_)) {
-        deactivated_by(instance, profile, &parsed_now, &changed)?
-    } else {
-        (Vec::new(), None)
-    };
+    let edit = plugin_edit(instance, profile, &parsed_now, change, &changed);
     let mut report = Report {
         status: if dry_run {
             "dry-run"
@@ -348,7 +412,8 @@ pub fn apply(
         profile: profile.to_owned(),
         changed,
         mods,
-        plugins_deactivated,
+        plugins_deactivated: edit.deactivated.clone(),
+        plugins_reactivated: edit.reactivated.clone(),
         staged_files: None,
         journal: None,
     };
@@ -361,8 +426,18 @@ pub fn apply(
     let outcome = (|| -> Result<Option<usize>, String> {
         crate::fail_point("lists")?;
         journal::write_atomic(&file, &new_bytes)?;
-        if let Some(plugins) = &new_plugins {
-            journal::write_atomic(&instance.profile_dir(profile).join("plugins.txt"), plugins)?;
+        let dir = instance.profile_dir(profile);
+        if let Some(plugins) = &edit.plugins {
+            journal::write_atomic(&dir.join("plugins.txt"), plugins)?;
+        }
+        if let Some(records) = &edit.records {
+            let notes = dir.join(deactivated::FILE);
+            match deactivated::render(records) {
+                Some(bytes) => journal::write_atomic(&notes, &bytes)?,
+                None => {
+                    let _ = fs::remove_file(&notes);
+                }
+            }
         }
         if !staged {
             return Ok(None);

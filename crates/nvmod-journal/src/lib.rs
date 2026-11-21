@@ -37,20 +37,22 @@ pub const KIND_PROFILE: &str = "profile";
 /// running it again, and building the tree again would drop what the program wrote there.
 pub const KIND_SWEEP: &str = "sweep";
 
-const FILES: [&str; 4] = [
+const FILES: [&str; 5] = [
     "modlist.txt",
     "plugins.txt",
     "loadorder.txt",
     "lockedorder.txt",
+    "deactivated.txt",
 ];
 
 /// Whether a journal of `kind` changes (and so restores) `FILES[index]`: an install the first three, a sort the
-/// two plugin lists, a mods change `modlist.txt` and `plugins.txt` (a disable takes plugins out of the active list), a plugins change the plugin lists and `lockedorder.txt`.
+/// two plugin lists, a mods change `modlist.txt`, `plugins.txt` and `deactivated.txt` (a disable takes plugins out of
+/// the active list and notes them, an enable puts them back), a plugins change the plugin lists and `lockedorder.txt`.
 fn restores(kind: &str, index: usize) -> bool {
     match kind {
         KIND_SORT => index == 1 || index == 2,
-        KIND_MODS => index <= 1,
-        KIND_PLUGINS => index >= 1,
+        KIND_MODS => index <= 1 || index == 4,
+        KIND_PLUGINS => (1..=3).contains(&index),
         KIND_LIFECYCLE => true,
         _ => index < 3,
     }
