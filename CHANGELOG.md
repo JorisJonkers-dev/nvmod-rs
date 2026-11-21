@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.16.2...v0.17.0) (2026-11-21)
+
+
+### Features
+
+* **tools:** take loot-rs v0.9.0 ([#265](https://github.com/JorisJonkers-dev/nvmod-rs/issues/265)) ([f98e7c8](https://github.com/JorisJonkers-dev/nvmod-rs/commit/f98e7c8b82e8d71349eb3ed51041564973d67348))
+
 ## [0.16.2](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.16.1...v0.16.2) (2026-11-21)
 
 
