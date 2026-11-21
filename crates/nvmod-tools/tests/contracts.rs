@@ -281,7 +281,7 @@ fn a_document_above_the_negotiated_version_is_refused() {
     ));
 }
 
-/// The names and versions lodwright-rs v0.8.0 lists under `lodwright contracts --json`, in its order. `lodwright-api`
+/// The names and versions lodwright-rs v0.9.0 lists under `lodwright contracts --json`, in its order. `lodwright-api`
 /// is the in-process library API and has no schema file, so it is the one name nvmod does not vendor.
 const LODWRIGHT_HANDSHAKE: [&str; 9] = [
     "lodwright-plan",
