@@ -100,4 +100,45 @@ impl Plan {
             }
         }
     }
+
+    /// Leave out the loose files of other owners at the paths the archives (`*.bsa`) at the top of the Mod folder
+    /// `dir` of `owner` hold, so those archives' files are the ones the game reads. An archive that cannot be read
+    /// is reported and leaves the plan as it is.
+    pub(crate) fn give_way_to_archives(&mut self, owner: &str, dir: &Path) {
+        let mut archives: Vec<PathBuf> = std::fs::read_dir(dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.is_file() && p.extension().is_some_and(|e| e.eq_ignore_ascii_case("bsa")))
+            .collect();
+        archives.sort();
+        for archive in archives {
+            let directory = match nvmod_bsa::read_file(&archive) {
+                Ok(d) => d,
+                Err(e) => {
+                    self.findings.push(Finding::new(
+                        "stage.generated-archive-unreadable",
+                        nvmod_core::Severity::Warning,
+                        owner.to_owned(),
+                        format!(
+                            "{}: {e}; loose files of other Mods at its paths stay in the Staging tree",
+                            archive.display()
+                        ),
+                    ));
+                    continue;
+                }
+            };
+            for entry in directory.files {
+                let other = self
+                    .owners
+                    .get(&entry.path)
+                    .is_some_and(|(by, _)| by != owner);
+                if other {
+                    self.files.remove(&entry.path);
+                    self.owners.remove(&entry.path);
+                }
+            }
+        }
+    }
 }

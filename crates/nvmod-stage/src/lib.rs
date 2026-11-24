@@ -195,8 +195,15 @@ fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> 
     let mut plan = Plan::default();
     plan.add_dir("the base copy", &data, true);
     // modlist.txt lists the highest priority first; the Load order is the reverse, and the later Mod wins.
+    // A generated Mod (the Toolbox's far view, made for this Load order) wins over every other Mod wherever it
+    // sits in the list: its far-view files belong together, and another Mod's file at one of its paths (a texture
+    // pack's far-view atlas) would break the rest of it.
     let enabled: Vec<_> = modlist.enabled_mods().collect();
-    for entry in enabled.iter().rev() {
+    let (generated, ordinary): (Vec<&nvmod_formats::ModlistEntry>, Vec<_>) =
+        enabled.iter().rev().partition(|entry| {
+            nvmod_formats::metaini::is_generated_mod_dir(&instance.mod_dir(&entry.name))
+        });
+    for entry in ordinary.into_iter().chain(generated.iter().copied()) {
         let dir = instance.mod_dir(&entry.name);
         if dir.is_dir() {
             plan.add_dir(&entry.name, &dir, false);
@@ -208,6 +215,12 @@ fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> 
                 "listed in modlist.txt but has no folder in mods/; it is left out of the Staging tree",
             ));
         }
+    }
+    // A packed generated Mod keeps its files in an archive, and a loose file beats an archive in the game: loose
+    // files of the base copy and of other Mods at the archive's paths are left out, so the archive's file is the
+    // one the game reads.
+    for entry in &generated {
+        plan.give_way_to_archives(&entry.name, &instance.mod_dir(&entry.name));
     }
     // Overwrite, the folder that captures what programs write, sits above every Mod.
     let overwrite = instance.root.join(OVERWRITE_DIR);
