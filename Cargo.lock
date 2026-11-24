@@ -1053,6 +1053,7 @@ dependencies = [
 name = "nvmod-stage"
 version = "0.17.0"
 dependencies = [
+ "nvmod-bsa",
  "nvmod-core",
  "nvmod-formats",
  "nvmod-instance",

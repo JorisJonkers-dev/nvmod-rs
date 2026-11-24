@@ -179,6 +179,139 @@ fn where_two_mods_provide_a_file_the_later_mod_in_the_load_order_wins() {
     );
 }
 
+/// The marker the Toolbox writes into the `meta.ini` of the far view it generates for a Profile.
+const GENERATED_META: &[u8] = b"[raulGeneratedLod]\r\ngenerated=true\r\nprofile=Default\r\n";
+
+/// A texture pack that ships far-view files of its own must not replace the far view generated for the Load order:
+/// the generated blocks keep their UVs and would sample the pack's atlas (far rocks drawn with crate textures).
+#[test]
+fn a_generated_mod_wins_over_every_other_mod_wherever_it_is_listed() {
+    let s = Scratch::new();
+    let atlas = "Textures/Landscape/LOD/WastelandNV/Blocks/WastelandNV.Buildings.dds";
+    s.mod_file("Generated LOD (Default)", "meta.ini", GENERATED_META);
+    s.mod_file("Generated LOD (Default)", atlas, b"generated");
+    s.mod_file("Texture Pack", atlas, b"pack");
+    s.mod_file("Texture Pack", "Textures/Rock.dds", b"pack rock");
+    // The pack is listed above the generated Mod, so by the list alone it would win.
+    s.modlist("Default", "+Texture Pack\r\n+Generated LOD (Default)\r\n");
+    assert_eq!(s.stage(&[]).0, 0);
+    let staged = |p: &str| std::fs::read(s.staged("Default", &p.to_lowercase())).unwrap();
+    assert_eq!(staged(atlas), b"generated");
+    assert_eq!(staged("Textures/Rock.dds"), b"pack rock");
+
+    // A Mod without the marker is ordered by the list as before.
+    s.mod_file("Plain LOD", "meta.ini", b"[General]\r\nversion=1\r\n");
+    s.mod_file("Plain LOD", atlas, b"plain");
+    s.modlist("Default", "+Texture Pack\r\n+Plain LOD\r\n");
+    assert_eq!(s.stage(&[]).0, 0);
+    assert_eq!(staged(atlas), b"pack");
+}
+
+/// A packed generated far view is an archive; a loose file beats an archive in the game, so the loose files of
+/// the base copy and of other Mods at the archive's paths are left out of the Staging tree. Overwrite stays on top.
+#[test]
+fn loose_files_at_the_paths_of_a_packed_generated_mod_are_left_out() {
+    let s = Scratch::new();
+    let atlas = "textures/landscape/lod/wastelandnv/blocks/wastelandnv.buildings.dds";
+    let block = "meshes/landscape/lod/wastelandnv/blocks/wastelandnv.level4.x0.y0.nif";
+    let bsa = nvmod_testkit::BsaBuilder::new()
+        .file(atlas, 4)
+        .file(block, 4)
+        .bytes();
+    s.mod_file("Generated LOD (Default)", "meta.ini", GENERATED_META);
+    s.mod_file("Generated LOD (Default)", "Lodwright LOD.bsa", &bsa);
+    s.mod_file("Generated LOD (Default)", "Lodwright LOD.esp", b"stub");
+    s.mod_file(
+        "Texture Pack",
+        "Textures/Landscape/LOD/WastelandNV/Blocks/WastelandNV.Buildings.dds",
+        b"pack",
+    );
+    s.mod_file("Texture Pack", "Textures/Rock.dds", b"pack rock");
+    write_file(s.base.path(), &format!("Data/{block}"), b"base block");
+    s.modlist("Default", "+Texture Pack\r\n+Generated LOD (Default)\r\n");
+    let (code, out, err) = s.stage(&["--json"]);
+    assert_eq!(code, 0, "{out} {err}");
+    assert!(!s.staged("Default", atlas).exists());
+    assert!(!s.staged("Default", block).exists());
+    assert!(s.staged("Default", "lodwright lod.bsa").is_file());
+    assert_eq!(
+        std::fs::read(s.staged("Default", "textures/rock.dds")).unwrap(),
+        b"pack rock"
+    );
+
+    // What a program wrote into Overwrite still sits above every Mod.
+    write_file(&s.root(), &format!("overwrite/{atlas}"), b"written");
+    assert_eq!(s.stage(&[]).0, 0);
+    assert_eq!(
+        std::fs::read(s.staged("Default", atlas)).unwrap(),
+        b"written"
+    );
+}
+
+/// A symbolic link that resolves nowhere never reaches the Staging tree: a dangling loose far-view path would hide
+/// the far block an archive holds. The file under it (or the archive's) is what the game reads.
+#[cfg(unix)]
+#[test]
+fn a_dangling_symbolic_link_never_enters_the_staging_tree() {
+    let s = Scratch::new();
+    let block = "meshes/landscape/lod/wastelandnv/blocks/wastelandnv.level4.x0.y0.nif";
+    let atlas = "textures/landscape/lod/wastelandnv/blocks/wastelandnv.buildings.dds";
+    write_file(s.base.path(), &format!("Data/{block}"), b"base block");
+    s.mod_file("Far Links", "keep.txt", b"k");
+    for path in [block, atlas] {
+        let link = s.root().join("mods/Far Links").join(path);
+        std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink("../../../../../nowhere/missing.dds", &link).unwrap();
+        assert!(!link.exists(), "the link resolves nowhere");
+    }
+    s.modlist("Default", "+Far Links\r\n");
+    assert_eq!(s.stage(&[]).0, 0);
+    assert_eq!(
+        std::fs::read(s.staged("Default", block)).unwrap(),
+        b"base block"
+    );
+    assert!(std::fs::symlink_metadata(s.staged("Default", atlas)).is_err());
+    let tree = s.root().join("staging/Default/data");
+    let dangling: Vec<_> = walkdir(&tree)
+        .into_iter()
+        .filter(|p| std::fs::symlink_metadata(p).is_ok() && !p.exists())
+        .collect();
+    assert!(dangling.is_empty(), "{dangling:?}");
+}
+
+/// Every path under `dir`, links included, without following them.
+#[cfg(unix)]
+fn walkdir(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir).unwrap().flatten() {
+        let path = entry.path();
+        if entry.file_type().unwrap().is_dir() {
+            out.extend(walkdir(&path));
+        } else {
+            out.push(path);
+        }
+    }
+    out
+}
+
+/// An archive of a generated Mod that cannot be read is reported, and staging goes on with the loose files.
+#[test]
+fn an_unreadable_archive_of_a_generated_mod_is_reported() {
+    let s = Scratch::new();
+    s.mod_file("Generated LOD (Default)", "meta.ini", GENERATED_META);
+    s.mod_file(
+        "Generated LOD (Default)",
+        "Lodwright LOD.bsa",
+        b"not an archive",
+    );
+    s.mod_file("Texture Pack", "Textures/Rock.dds", b"pack rock");
+    s.modlist("Default", "+Texture Pack\r\n+Generated LOD (Default)\r\n");
+    let (code, out, err) = s.stage(&["--json"]);
+    assert_eq!(code, 0, "{out} {err}");
+    assert!(out.contains("stage.generated-archive-unreadable"), "{out}");
+    assert!(s.staged("Default", "textures/rock.dds").is_file());
+}
+
 #[test]
 fn disabled_mods_separators_and_foreign_entries_are_left_out() {
     let s = Scratch::new();

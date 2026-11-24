@@ -9,6 +9,7 @@ publish.workspace = true
 description = "Builds the Staging tree of an nvmod Instance: a hard-link tree of lowercased paths."
 
 [dependencies]
+nvmod-bsa = { workspace = true }
 nvmod-core = { workspace = true }
 nvmod-formats = { workspace = true }
 nvmod-instance = { workspace = true }
