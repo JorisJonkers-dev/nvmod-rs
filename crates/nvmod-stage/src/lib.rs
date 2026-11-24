@@ -263,9 +263,10 @@ pub struct WithoutReport {
 /// tree are not touched; `dest` is replaced only when the new tree is complete.
 ///
 /// # Errors
-/// `Refused` when the profile cannot be read, `without` names a Mod the profile does not enable, or `dest` is the
-/// profile's own Staging tree or lies inside the Instance's `mods` or base copy; `Failed` when a file cannot be
-/// linked or copied (the partial tree is removed and an old tree at `dest` stays).
+/// `Refused` when the profile cannot be read, `without` names a Mod the profile does not enable, or `dest` lies in
+/// the Instance's `mods`, `profiles`, `staging`, `overwrite` or `run` folder or in the base copy, or holds the
+/// Instance or the base copy; `Failed` when a file cannot be linked or copied (the partial tree is removed and an old
+/// tree at `dest` stays).
 pub fn stage_without(
     instance: &NvmodInstance,
     profile: &str,
@@ -290,11 +291,13 @@ pub fn stage_without(
             }
         }
     };
-    let own = instance.staging_dir(profile);
     let base = &instance.config.base;
-    if inside(dest, &own) || inside(dest, &instance.root.join("mods")) || inside(dest, base) {
+    // the Instance's own folders (Mods, profiles, Staging trees, Overwrite, run logs) and the base copy are never the
+    // destination; a folder of a tool beside them (raul keeps its own under `.raul`) may be
+    let owned = ["mods", "profiles", "staging", OVERWRITE_DIR, "run"];
+    if owned.iter().any(|f| inside(dest, &instance.root.join(f))) || inside(dest, base) {
         return refuse(format!(
-            "{} is the profile's own Staging tree or inside the Instance's mods or base copy; pick another folder",
+            "{} is inside the Instance's mods, profiles, Staging trees, Overwrite or base copy; pick another folder",
             dest.display()
         ));
     }

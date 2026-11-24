@@ -116,8 +116,10 @@ fn it_refuses_a_mod_the_profile_does_not_enable_and_a_folder_of_the_instance() {
     let why = refused(&["Nope"], &dir.path().join("x"));
     assert!(why.contains("Nope"), "{why}");
     let own = instance.staging_dir("Default");
-    assert!(refused(&["Far"], &own).contains("own Staging tree"));
-    assert!(refused(&["Far"], &own.join("data")).contains("own Staging tree"));
+    assert!(refused(&["Far"], &own).contains("Staging trees"));
+    assert!(refused(&["Far"], &own.join("data")).contains("Staging trees"));
+    assert!(refused(&["Far"], &instance.profile_dir("Default")).contains("profiles"));
+    assert!(refused(&["Far"], &instance.root.join("overwrite/x")).contains("Overwrite"));
     assert!(refused(&["Far"], &instance.root.join("mods/Rocks/x")).contains("mods"));
     assert!(refused(&["Far"], dir.path()).contains("would be replaced whole"));
     assert!(refused(&["Far"], &instance.root).contains("would be replaced whole"));
