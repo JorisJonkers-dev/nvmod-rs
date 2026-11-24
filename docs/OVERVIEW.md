@@ -3,6 +3,9 @@
 The [README](../README.md) is the short version. This page has why nvmod is its own project, what it covers,
 how to work on it, and the legal notice.
 
+nvmod is written in Rust. It keeps an Instance: the game's mods, profiles and downloads in a Mod Organizer 2 style
+layout, next to the game folder rather than in it.
+
 ## Why a separate project
 
 nvmod is one of the Components raul is made of, next to [nv-rs](https://github.com/JorisJonkers-dev/nv-rs),
