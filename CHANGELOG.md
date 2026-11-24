@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.17.1...v0.18.0) (2026-11-24)
+
+
+### Features
+
+* **stage:** stage a profile without named Mods into another folder ([#280](https://github.com/JorisJonkers-dev/nvmod-rs/issues/280)) ([a4bdd17](https://github.com/JorisJonkers-dev/nvmod-rs/commit/a4bdd17b0fe77d1d0676c88a1af1e62a09fbdfdf))
+
 ## [0.17.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.17.0...v0.17.1) (2026-11-24)
 
 
