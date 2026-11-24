@@ -4,7 +4,7 @@ The [README](../README.md) is the short version. This page has why nvmod is its 
 how to work on it, and the legal notice.
 
 nvmod is written in Rust. It keeps an Instance: the game's mods, profiles and downloads in a Mod Organizer 2 style
-layout, next to the game folder rather than in it.
+layout, outside the game folder.
 
 ## Why a separate project
 
