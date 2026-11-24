@@ -4,7 +4,7 @@
 an Instance (the game's mods, profiles and downloads in a Mod Organizer 2 style layout), installs mods from their
 archives (FOMOD installers included), stages each profile into a data folder the game reads, finds file conflicts,
 keeps the plugins and their load order, backs up saves and profiles, and checks the whole set with its content
-Doctor. Your game folder is never written to.
+Doctor. Mods are installed into the Instance, not into the game folder.
 
 Players use it through [raul](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox), which links nvmod's
 libraries and is the only window. `nvmod` also works alone from the command line.
@@ -12,8 +12,8 @@ libraries and is the only window. `nvmod` also works alone from the command line
 ## Used from raul
 
 raul's **Mods** page is nvmod: install a mod from its archive, answer a FOMOD installer's questions in the window,
-turn mods on and off, change their priority, remove them, and undo any of it. Each change takes an automatic snapshot
-first, as the command line does.
+turn mods on and off, change their priority, remove them, and undo any of it. raul takes an automatic snapshot of the
+profile before an install or a change to the list.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/mods/mods-listed.png" alt="raul's Mods page: the mods with their priority and the selected mod's actions" width="49%">
@@ -22,7 +22,7 @@ first, as the command line does.
 
 The **Load order** page lists the plugins and sorts them with nvmod's sort, which uses
 [loot-rs](https://github.com/JorisJonkers-dev/loot-rs) and the LOOT masterlist. raul shows the moves and the
-masterlist's messages before anything changes. The Home page's load order check is nvmod's Doctor.
+masterlist's messages before anything changes. The Home page's load order check runs nvmod's Doctor.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/load-order/load-order-preview.png" alt="raul's Load order page: a preview of three moves with the masterlist's messages" width="80%">
