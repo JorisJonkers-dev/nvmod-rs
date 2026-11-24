@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.1](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.17.0...v0.17.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch dependencies ([#272](https://github.com/JorisJonkers-dev/nvmod-rs/issues/272)) ([9e9ef3f](https://github.com/JorisJonkers-dev/nvmod-rs/commit/9e9ef3fd8d46347d691cc2e6efaf84709be3e2ea))
+* **stage:** a generated far view wins over every other Mod's files ([#277](https://github.com/JorisJonkers-dev/nvmod-rs/issues/277)) ([a87b0e6](https://github.com/JorisJonkers-dev/nvmod-rs/commit/a87b0e65fccc55138e1adcb1a890ecfc76641d67))
+
 ## [0.17.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.16.2...v0.17.0) (2026-11-21)
 
 
