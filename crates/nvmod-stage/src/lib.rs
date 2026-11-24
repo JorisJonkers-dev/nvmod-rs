@@ -179,6 +179,15 @@ pub fn read_manifest(instance: &NvmodInstance, profile: &str) -> Option<Manifest
 
 /// Read the plan: the base `Data` files, then the active Mods from the lowest priority to the highest.
 fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> {
+    plan_without(instance, profile, &[])
+}
+
+/// The plan of `profile` with the enabled Mods named in `without` (any case) left out.
+fn plan_without(
+    instance: &NvmodInstance,
+    profile: &str,
+    without: &[String],
+) -> Result<Plan, StageError> {
     let refuse = |m: String| StageError::Refused(m);
     let list = instance.profile_dir(profile).join("modlist.txt");
     let bytes = nvmod_formats::text::read_limited(&list)
@@ -198,7 +207,10 @@ fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> 
     // A generated Mod (the Toolbox's far view, made for this Load order) wins over every other Mod wherever it
     // sits in the list: its far-view files belong together, and another Mod's file at one of its paths (a texture
     // pack's far-view atlas) would break the rest of it.
-    let enabled: Vec<_> = modlist.enabled_mods().collect();
+    let enabled: Vec<_> = modlist
+        .enabled_mods()
+        .filter(|entry| !without.iter().any(|w| w.eq_ignore_ascii_case(&entry.name)))
+        .collect();
     let (generated, ordinary): (Vec<&nvmod_formats::ModlistEntry>, Vec<_>) =
         enabled.iter().rev().partition(|entry| {
             nvmod_formats::metaini::is_generated_mod_dir(&instance.mod_dir(&entry.name))
@@ -228,6 +240,125 @@ fn plan_of(instance: &NvmodInstance, profile: &str) -> Result<Plan, StageError> 
         plan.add_dir("Overwrite", &overwrite, false);
     }
     Ok(plan)
+}
+
+/// What [`stage_without`] built.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct WithoutReport {
+    /// The profile.
+    pub profile: String,
+    /// The `Data` folder of the tree that was built.
+    pub tree: PathBuf,
+    /// The Mods that were left out, as `modlist.txt` spells them.
+    pub left_out: Vec<String>,
+    /// Files in the tree.
+    pub files: usize,
+    /// The active plugins whose file is in the tree, in Load order: the list a game on this tree loads. A plugin only
+    /// a left-out Mod provided is not in it.
+    pub plugins: Vec<String>,
+}
+
+/// Build the Staging tree of `profile` without the enabled Mods `without` into `dest` (the tree is `dest/data`),
+/// for a picture or a test of the profile as it would be without them. The profile, its lists and its own Staging
+/// tree are not touched; `dest` is replaced only when the new tree is complete.
+///
+/// # Errors
+/// `Refused` when the profile cannot be read, `without` names a Mod the profile does not enable, or `dest` lies in
+/// the Instance's `mods`, `profiles`, `staging`, `overwrite` or `run` folder or in the base copy, or holds the
+/// Instance or the base copy; `Failed` when a file cannot be linked or copied (the partial tree is removed and an old
+/// tree at `dest` stays).
+pub fn stage_without(
+    instance: &NvmodInstance,
+    profile: &str,
+    without: &[String],
+    dest: &Path,
+    options: Options,
+) -> Result<WithoutReport, StageError> {
+    let refuse = |m: String| Err(StageError::Refused(m));
+    if !instance.profile_dir(profile).is_dir() {
+        return refuse(format!("the Instance has no profile `{profile}`"));
+    }
+    // `a` is `b` or lies inside it, links followed where the path exists.
+    let inside = |a: &Path, b: &Path| {
+        let b = fs::canonicalize(b).unwrap_or_else(|_| b.to_path_buf());
+        let mut probe = a.to_path_buf();
+        loop {
+            if fs::canonicalize(&probe).unwrap_or_else(|_| probe.clone()) == b {
+                return true;
+            }
+            if !probe.pop() {
+                return false;
+            }
+        }
+    };
+    let base = &instance.config.base;
+    // the Instance's own folders (Mods, profiles, Staging trees, Overwrite, run logs) and the base copy are never the
+    // destination; a folder of a tool beside them (raul keeps its own under `.raul`) may be
+    let owned = ["mods", "profiles", "staging", OVERWRITE_DIR, "run"];
+    if owned.iter().any(|f| inside(dest, &instance.root.join(f))) || inside(dest, base) {
+        return refuse(format!(
+            "{} is inside the Instance's mods, profiles, Staging trees, Overwrite or base copy; pick another folder",
+            dest.display()
+        ));
+    }
+    // The folder is replaced whole: it must not hold the Instance or the base copy.
+    if inside(&instance.root, dest) || inside(base, dest) {
+        return refuse(format!(
+            "{} holds the Instance or its base copy and would be replaced whole; pick an empty or new folder",
+            dest.display()
+        ));
+    }
+    let list = instance.profile_dir(profile).join("modlist.txt");
+    let bytes =
+        read_limited(&list).map_err(|e| StageError::Refused(format!("{}: {e}", list.display())))?;
+    let modlist = nvmod_formats::Modlist::parse(&nvmod_formats::text::decode(&bytes));
+    let mut left_out = Vec::new();
+    for name in without {
+        match modlist
+            .enabled_mods()
+            .find(|e| e.name.eq_ignore_ascii_case(name))
+        {
+            Some(entry) => left_out.push(entry.name.clone()),
+            None => {
+                return refuse(format!(
+                    "profile `{profile}` does not enable a Mod `{name}`"
+                ));
+            }
+        }
+    }
+    let plan = plan_without(instance, profile, without)?;
+    let protect = sweep::protected_globs(instance, profile);
+    let order = load_order(instance, profile)?;
+    // The new tree is built beside `dest` under a name of its own (never `dest` itself, whatever its extension).
+    let mut partial_name = dest.file_name().unwrap_or_default().to_os_string();
+    partial_name.push(".nvmod-partial");
+    let partial = dest.with_file_name(partial_name);
+    let _ = fs::remove_dir_all(&partial);
+    let failed = |why: String| {
+        let _ = fs::remove_dir_all(&partial);
+        StageError::Failed(format!(
+            "{why}; rolled back, {} is untouched",
+            dest.display()
+        ))
+    };
+    build(&plan, &partial.join("data"), options, &protect).map_err(failed)?;
+    let order: Vec<Slot> = order
+        .into_iter()
+        .filter(|slot| staged_file(&partial.join("data"), &slot.name).is_some())
+        .collect();
+    stamp::apply(&stamp::plan(&partial.join("data"), &order)).map_err(failed)?;
+    swap(&partial, dest).map_err(failed)?;
+    Ok(WithoutReport {
+        profile: profile.to_owned(),
+        tree: dest.join("data"),
+        left_out,
+        files: plan.files.len(),
+        plugins: order
+            .into_iter()
+            .filter(|s| s.active)
+            .map(|s| s.name)
+            .collect(),
+    })
 }
 
 /// Folder of the Instance that holds Overwrite, the highest layer.
