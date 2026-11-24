@@ -1,94 +1,48 @@
 # nvmod-rs
 
-`nvmod` manages mods for Fallout: New Vegas and Tale of Two Wastelands, in Rust, on Linux, Windows and macOS. It keeps
-an Instance (the game's mods, profiles and downloads in a Mod Organizer 2 style layout), installs mods from their
-archives (FOMOD installers included), stages each profile into a data folder the game reads, finds file conflicts,
-keeps the plugins and their load order, backs up saves and profiles, and checks the whole set with its content
-Doctor. Mods are installed into the Instance, not into the game folder.
+**nvmod installs and manages mods for Fallout: New Vegas and Tale of Two Wastelands**, on Linux, Windows and macOS.
+Your game folder stays as it is: mods live in a folder of their own, and the game sees them when you play.
 
-Players use it through [raul](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox), which links nvmod's
-libraries and is the only window. `nvmod` also works alone from the command line.
+<p align="center">
+  <img src="docs/images/how-it-works.svg" alt="A downloaded mod goes into nvmod-rs's own folder and the game sees it when you play; the game folder stays untouched" width="100%">
+</p>
 
-## Used from raul
+## What you see
 
-raul's **Mods** page is nvmod: install a mod from its archive, answer a FOMOD installer's questions in the window,
-turn mods on and off, change their priority, remove them, and undo any of it. raul takes an automatic snapshot of the
-profile before an install or a change to the list.
+nvmod is the **Mods** page of [raul](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox), the app that sets up New Vegas with your
+mods: your mods in a list,
+and a mod's installer asks its questions in the window.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/mods/mods-listed.png" alt="raul's Mods page: the mods with their priority and the selected mod's actions" width="49%">
   <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/mods/mods-install-questions.png" alt="Installing a mod with an installer: its questions in raul's window" width="49%">
 </p>
 
-The **Load order** page lists the plugins and sorts them with nvmod's sort, which uses
-[loot-rs](https://github.com/JorisJonkers-dev/loot-rs) and the LOOT masterlist. raul shows the moves and the
-masterlist's messages before anything changes. The Home page's load order check runs nvmod's Doctor.
+## What it does for you
+
+- 📦 **Installs mods** from their .zip or .7z files, installers included.
+- 🔀 **Turn mods on and off**, change which one wins, remove them, and undo any change.
+- ⚠️ **Finds problems**: two mods that change the same file, or a plugin that misses another one it needs.
+- 💾 **Backs up** your profiles and saves, and brings a profile over from Mod Organizer 2.
+
+<!-- Progress picture: docs/coverage/tally.svg goes here once the feature catalogue reaches this repository. -->
+
+## How it fits together
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/load-order/load-order-preview.png" alt="raul's Load order page: a preview of three moves with the masterlist's messages" width="80%">
+  <img src="docs/images/raul-parts.svg" alt="raul and its five parts: nv-rs the game engine, nvmod-rs mods (this project), loot-rs load order, lodwright-rs distant view, ttwright-rs Tale of Two Wastelands" width="100%">
 </p>
 
-raul's setup makes the Instance with nvmod's jobs, and every nvmod command is also available as `raul <command>`
-(`raul nvmod-help` lists them).
+nvmod, written in Rust, is one part of raul and only manages mods; raul runs the other steps. As its own project it is tested on its own.
 
-## On its own
+## Get it
 
-```sh
-nvmod init --base "<game folder>" --instance ~/fnv                 # a new Instance from a game copy
-nvmod import-mo2 --mo2 <MO2 folder> --instance ~/fnv --base "<game folder>"
-nvmod install <mod archive> --instance ~/fnv --interactive         # a FOMOD installer asks on the terminal
-nvmod mods list --instance ~/fnv
-nvmod stage --instance ~/fnv                                       # the profile's data folder
-nvmod sort --instance ~/fnv --fetch-masterlist                     # print the LOOT order; --apply writes it
-nvmod conflicts --instance ~/fnv
-nvmod doctor --instance ~/fnv
-nvmod rollback --instance ~/fnv                                    # undo the last change
-nvmod --help                                                       # every command
-```
+**[Download raul](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox/releases/latest)**: nvmod is built in.
+It also works on its own from the command line ([docs/USAGE.md](docs/USAGE.md)).
 
-Other commands handle profiles, plugins, downloads, saves, backups and Overwrite. Every command prints JSON with
-`--json`, so scripts never depend on a window. Programs link the `nvmod-api` crate: typed jobs with progress and
-cancel, the way raul calls them.
+## Learn more
 
-Each [release](https://github.com/JorisJonkers-dev/nvmod-rs/releases/latest) attaches the command for Linux x86-64,
-Windows x86-64 (portable) and macOS (one binary for Apple silicon and Intel), with `SHA256SUMS`, an SBOM and an
-artifact attestation; see [docs/releasing.md](docs/releasing.md).
+- [Using nvmod](docs/USAGE.md): raul's Mods and Load order pages, the commands and the downloads.
+- [More detail](docs/OVERVIEW.md): what it covers, working on it, the legal notice.
 
-## Why a separate project
-
-nvmod is one of the Components raul is made of, next to [nv-rs](https://github.com/JorisJonkers-dev/nv-rs),
-[loot-rs](https://github.com/JorisJonkers-dev/loot-rs), [lodwright-rs](https://github.com/JorisJonkers-dev/lodwright-rs)
-and [ttwright-rs](https://github.com/JorisJonkers-dev/ttwright-rs). Each does one job, is tested on its own and
-releases on its own schedule; raul links them into one program and ships one tested set. nvmod keeps mod management
-only: raul decides the order of the steps of a setup, runs Tale of Two Wastelands, LOD and the game, and owns the
-window (Toolbox [ADR-0019](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox/blob/main/docs/adr/0019-raul-orchestrates-nvmod-manages-mods.md)).
-
-## What it covers
-
-- the Instance, Profile and Mod model and its schema;
-- mod install, FOMOD, the mod life cycle, `meta.ini`, separators and categories;
-- the Staging tree, file and archive conflicts, and Overwrite;
-- Plugins and the Load order, including the minimal-change sort;
-- backups, saves, MO2 import, the downloads library and mod update rows;
-- the executables registry, as data;
-- the content Doctor: the NVSE plugin catalogue, readiness per category from a given `capabilities.json`, and the
-  opcode usage scan ([docs/doctor-readiness.md](docs/doctor-readiness.md), [docs/nvse-usage.md](docs/nvse-usage.md)).
-
-## Development
-
-`mise install`, then `task check` runs what the pipeline runs. On NixOS without a linker:
-`nix shell nixpkgs#gcc nixpkgs#lld -c cargo test` with `RUSTFLAGS="-Clink-self-contained=-linker"`. Heavy commands
-go through `capped` (see [`docs/PRACTICES.md`](docs/PRACTICES.md)). Test files are built in code by `nvmod-testkit`;
-no game or mod file is ever committed. Decisions are one file each in [`docs/decisions/`](docs/decisions/README.md);
-earlier ones are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
-
-## Legal notice
-
-nvmod contains no game files, no mod files and no code of a game: you need your own legally obtained copy of Fallout:
-New Vegas, and the mods you use stay under their own licences. The licence covers only the original work in this
-repository. Fallout and Fallout: New Vegas are trademarks of their respective owners; this project is not affiliated
-with or endorsed by them.
-
-## Licence
-
-GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+nvmod contains no game or mod files: you need your own copy of the game. Licence: GPL-3.0-only ([LICENSE](LICENSE)).
