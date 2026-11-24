@@ -277,11 +277,12 @@ pub fn stage_without(
     if !instance.profile_dir(profile).is_dir() {
         return refuse(format!("the Instance has no profile `{profile}`"));
     }
-    let under = |root: &Path| {
-        let root = fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
-        let mut probe = dest.to_path_buf();
+    // `a` is `b` or lies inside it, links followed where the path exists.
+    let inside = |a: &Path, b: &Path| {
+        let b = fs::canonicalize(b).unwrap_or_else(|_| b.to_path_buf());
+        let mut probe = a.to_path_buf();
         loop {
-            if fs::canonicalize(&probe).unwrap_or_else(|_| probe.clone()) == root {
+            if fs::canonicalize(&probe).unwrap_or_else(|_| probe.clone()) == b {
                 return true;
             }
             if !probe.pop() {
@@ -290,9 +291,17 @@ pub fn stage_without(
         }
     };
     let own = instance.staging_dir(profile);
-    if under(&own) || under(&instance.root.join("mods")) || under(&instance.config.base) {
+    let base = &instance.config.base;
+    if inside(dest, &own) || inside(dest, &instance.root.join("mods")) || inside(dest, base) {
         return refuse(format!(
             "{} is the profile's own Staging tree or inside the Instance's mods or base copy; pick another folder",
+            dest.display()
+        ));
+    }
+    // The folder is replaced whole: it must not hold the Instance or the base copy.
+    if inside(&instance.root, dest) || inside(base, dest) {
+        return refuse(format!(
+            "{} holds the Instance or its base copy and would be replaced whole; pick an empty or new folder",
             dest.display()
         ));
     }

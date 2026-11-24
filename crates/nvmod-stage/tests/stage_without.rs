@@ -119,6 +119,12 @@ fn it_refuses_a_mod_the_profile_does_not_enable_and_a_folder_of_the_instance() {
     assert!(refused(&["Far"], &own).contains("own Staging tree"));
     assert!(refused(&["Far"], &own.join("data")).contains("own Staging tree"));
     assert!(refused(&["Far"], &instance.root.join("mods/Rocks/x")).contains("mods"));
+    assert!(refused(&["Far"], dir.path()).contains("would be replaced whole"));
+    assert!(refused(&["Far"], &instance.root).contains("would be replaced whole"));
+    assert!(
+        instance.root.join("mods/Far/Far.esp").is_file(),
+        "nothing removed"
+    );
     assert!(
         !dir.path().join("x").exists(),
         "nothing written on a refusal"
