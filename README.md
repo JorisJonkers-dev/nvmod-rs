@@ -1,85 +1,94 @@
 # nvmod-rs
 
-`nvmod` is the mod-management Component of the stack, for Fallout: New Vegas and Tale of Two Wastelands, written in
-Rust. The product that players install is
-[Raul's Trusty Toolbox](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox) (`raul`); it links nvmod's libraries
-and shows its reports. `nvmod` also works alone from the command line, and it never fetches, finds or starts another
-Component.
+`nvmod` manages mods for Fallout: New Vegas and Tale of Two Wastelands, in Rust, on Linux, Windows and macOS. It keeps
+an Instance (the game's mods, profiles and downloads in a Mod Organizer 2 style layout), installs mods from their
+archives (FOMOD installers included), stages each profile into a data folder the game reads, finds file conflicts,
+keeps the plugins and their load order, backs up saves and profiles, and checks the whole set with its content
+Doctor. Mods are installed into the Instance, not into the game folder.
 
-**Systems.** Built and tested on Linux, Windows and macOS on every pull request (the known Windows and macOS test
-failures are #98). Each release attaches the command for Linux x86-64, Windows x86-64 and macOS (one binary for Apple
-silicon and Intel); see [docs/releasing.md](docs/releasing.md).
+Players use it through [raul](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox), which links nvmod's
+libraries and is the only window. `nvmod` also works alone from the command line.
 
-## Scope
+## Used from raul
 
-nvmod-rs keeps mod management:
+raul's **Mods** page is nvmod: install a mod from its archive, answer a FOMOD installer's questions in the window,
+turn mods on and off, change their priority, remove them, and undo any of it. raul takes an automatic snapshot of the
+profile before an install or a change to the list.
 
-- the Instance, Profile and Mod model and its schema;
-- mod install, FOMOD, the mod lifecycle, `meta.ini`, separators and categories;
-- the Staging tree, file and archive conflicts, and Overwrite;
-- Plugins and the Load order (it links [loot-rs](https://github.com/JorisJonkers-dev/loot-rs)), including the
-  minimal-change sort;
-- backups, saves, MO2 import, the Nexus client, the downloads library and mod update rows;
-- the executables registry, as data;
-- the content Doctor: the NVSE plugin catalogue, readiness per category from a given `capabilities.json`, and the
-  opcode usage scan.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/mods/mods-listed.png" alt="raul's Mods page: the mods with their priority and the selected mod's actions" width="49%">
+  <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/mods/mods-install-questions.png" alt="Installing a mod with an installer: its questions in raul's window" width="49%">
+</p>
 
-These move to the Toolbox, as decided in rauls-trusty-toolbox ADR-0007 and planned in its `docs/REORG.md`:
+The **Load order** page lists the plugins and sorts them with nvmod's sort, which uses
+[loot-rs](https://github.com/JorisJonkers-dev/loot-rs) and the LOOT masterlist. raul shows the moves and the
+masterlist's messages before anything changes. The Home page's load order check runs nvmod's Doctor.
 
-- setup (removed in #164; raul composes it from the mod-management jobs), `ttw` (removed in #165; raul runs TTW through ttwright), `lod` (removed in #166; raul runs LOD), the engine install (`install-nv-rs`, removed in #168), `run`,
-  `tools`, `verify` and `contracts`;
-- the subprocess Runner (`nvmod-runner`) and tool supply (`nvmod-tools`, `tools.lock.toml`).
+<p align="center">
+  <img src="https://raw.githubusercontent.com/JorisJonkers-dev/rauls-trusty-toolbox/main/crates/raul-gui/tests/snapshots/load-order/load-order-preview.png" alt="raul's Load order page: a preview of three moves with the masterlist's messages" width="80%">
+</p>
 
-The GUI is raul's alone (rauls-trusty-toolbox ADR-0019); nvmod has no GUI, view model or service seam.
+raul's setup makes the Instance with nvmod's jobs, and every nvmod command is also available as `raul <command>`
+(`raul nvmod-help` lists them).
 
-Each moved command is removed from nvmod when it moves; use `raul` for it from then on. Until then the commands work
-as documented.
+## On its own
 
-Licence: GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
-
-## Legal notice
-
-nvmod contains no game files, no mod files and no code of a game: you need your own legally obtained copy of Fallout:
-New Vegas, and the mods you use stay under their own licences. The licence above covers only the original work in this
-repository. Fallout and Fallout: New Vegas are trademarks of their respective owners; this project is not affiliated
-with or endorsed by them.
-
-## Status: milestone M1, the read-only NVSE doctor
-
-Nothing in this repository writes to a Mod Organizer 2 instance or to a game folder. The doctor reads:
-
-- NVSE plugin DLLs, **without running them**: PE header, bitness, large-address-aware flag, exports (is it an NVSE
-  plugin at all), the exported version struct, imported DLLs. The parser reads through bounded readers and is
-  fuzzed, because the files are untrusted.
-- A catalogue of NVSE plugins that this repository owns (`data/nvse-plugins.toml`, each entry with its provenance).
-- A Mod Organizer 2 instance directory: `ModOrganizer.ini`, a profile's `modlist.txt` and `plugins.txt`, and each
-  mod's `meta.ini`.
-
-```text
-nvmod pe <file.dll> [--json]                    inspect one PE file
-nvmod catalog [--json]                          list the plugin catalogue
-nvmod nvse-usage --instance <dir> [--json]      opcode usage of the active plugins' scripts (docs/nvse-usage.md)
-nvmod doctor --instance <dir> [--profile <name>] [--game <dir>] [--json] [--fail-on <severity>]
+```sh
+nvmod init --base "<game folder>" --instance ~/fnv                 # a new Instance from a game copy
+nvmod import-mo2 --mo2 <MO2 folder> --instance ~/fnv --base "<game folder>"
+nvmod install <mod archive> --instance ~/fnv --interactive         # a FOMOD installer asks on the terminal
+nvmod mods list --instance ~/fnv
+nvmod stage --instance ~/fnv                                       # the profile's data folder
+nvmod sort --instance ~/fnv --fetch-masterlist                     # print the LOOT order; --apply writes it
+nvmod conflicts --instance ~/fnv
+nvmod doctor --instance ~/fnv
+nvmod rollback --instance ~/fnv                                    # undo the last change
+nvmod --help                                                       # every command
 ```
 
-Every command prints JSON with `--json`, so scripts and the headless harness never depend on a GUI.
+Other commands handle profiles, plugins, downloads, saves, backups and Overwrite. Every command prints JSON with
+`--json`, so scripts never depend on a window. Programs link the `nvmod-api` crate: typed jobs with progress and
+cancel, the way raul calls them.
 
-## Layout
+Each [release](https://github.com/JorisJonkers-dev/nvmod-rs/releases/latest) attaches the command for Linux x86-64,
+Windows x86-64 (portable) and macOS (one binary for Apple silicon and Intel), with `SHA256SUMS`, an SBOM and an
+artifact attestation; see [docs/releasing.md](docs/releasing.md).
 
-| Crate | Role |
-| --- | --- |
-| `nvmod-core` | Severity, findings, the case-insensitive file index |
-| `nvmod-pe` | Safe PE inspector and NVSE plugin metadata (`unsafe_code = "forbid"`) |
-| `nvmod-testkit` | Builds synthetic PE files in code; no real game or mod file is ever committed |
-| `nvmod-catalog` | Loads and resolves `data/nvse-plugins.toml` |
-| `nvmod-formats` | Readers for the MO2 instance (`modlist.txt`, `plugins.txt`, `meta.ini`, `ModOrganizer.ini`) |
-| `nvmod-doctor` | The checks, composed into one report |
-| `nvmod-cli` | The `nvmod` binary |
+## Why a separate project
+
+nvmod is one of the Components raul is made of, next to [nv-rs](https://github.com/JorisJonkers-dev/nv-rs),
+[loot-rs](https://github.com/JorisJonkers-dev/loot-rs), [lodwright-rs](https://github.com/JorisJonkers-dev/lodwright-rs)
+and [ttwright-rs](https://github.com/JorisJonkers-dev/ttwright-rs). Each does one job, is tested on its own and
+releases on its own schedule; raul links them into one program and ships one tested set. nvmod keeps mod management
+only: raul decides the order of the steps of a setup, runs Tale of Two Wastelands, LOD and the game, and owns the
+window (Toolbox [ADR-0019](https://github.com/JorisJonkers-dev/rauls-trusty-toolbox/blob/main/docs/adr/0019-raul-orchestrates-nvmod-manages-mods.md)).
+
+## What it covers
+
+- the Instance, Profile and Mod model and its schema;
+- mod install, FOMOD, the mod life cycle, `meta.ini`, separators and categories;
+- the Staging tree, file and archive conflicts, and Overwrite;
+- Plugins and the Load order, including the minimal-change sort;
+- backups, saves, MO2 import, the downloads library and mod update rows;
+- the executables registry, as data;
+- the content Doctor: the NVSE plugin catalogue, readiness per category from a given `capabilities.json`, and the
+  opcode usage scan ([docs/doctor-readiness.md](docs/doctor-readiness.md), [docs/nvse-usage.md](docs/nvse-usage.md)).
 
 ## Development
 
 `mise install`, then `task check` runs what the pipeline runs. On NixOS without a linker:
 `nix shell nixpkgs#gcc nixpkgs#lld -c cargo test` with `RUSTFLAGS="-Clink-self-contained=-linker"`. Heavy commands
-go through `capped` (see [`docs/PRACTICES.md`](docs/PRACTICES.md)).
-Test fixtures are built in code by `nvmod-testkit`; there is no fixture crate (the setup and TTW fixtures went with those commands). Decisions and the questions the owner should
-revisit are one file each in [`docs/decisions/`](docs/decisions/README.md); earlier ones are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+go through `capped` (see [`docs/PRACTICES.md`](docs/PRACTICES.md)). Test files are built in code by `nvmod-testkit`;
+no game or mod file is ever committed. Decisions are one file each in [`docs/decisions/`](docs/decisions/README.md);
+earlier ones are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+
+## Legal notice
+
+nvmod contains no game files, no mod files and no code of a game: you need your own legally obtained copy of Fallout:
+New Vegas, and the mods you use stay under their own licences. The licence covers only the original work in this
+repository. Fallout and Fallout: New Vegas are trademarks of their respective owners; this project is not affiliated
+with or endorsed by them.
+
+## Licence
+
+GPL-3.0-only (see [`LICENSE`](LICENSE)). The reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md).
