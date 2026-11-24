@@ -149,7 +149,7 @@ fn a_second_build_replaces_the_tree_whole() {
         !dest.join("data/far.esp").exists(),
         "no file of the last tree is left"
     );
-    assert!(!dest.with_extension("partial").exists());
+    assert!(!dir.path().join("again.nvmod-partial").exists());
 }
 
 #[test]
@@ -170,4 +170,20 @@ fn mods_that_share_a_folder_in_another_case_meet_in_one_folder_and_hidden_files_
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
     assert!(!names.iter().any(|n| n.starts_with("c.dll")), "{names:?}");
+}
+
+#[test]
+fn a_folder_whose_name_ends_in_partial_is_built_like_any_other() {
+    let (_base, dir, instance) = scratch();
+    let dest = dir.path().join("trees.partial");
+    stage_without(&instance, "Default", &[], &dest, Options::default()).unwrap();
+    let report = stage_without(
+        &instance,
+        "Default",
+        &["Far".to_owned()],
+        &dest,
+        Options::default(),
+    )
+    .unwrap();
+    assert_eq!(read(&report.tree.join("meshes/rock.nif")), b"rocks rock");
 }

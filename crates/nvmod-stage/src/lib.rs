@@ -325,7 +325,11 @@ pub fn stage_without(
     }
     let plan = plan_without(instance, profile, without)?;
     let protect = sweep::protected_globs(instance, profile);
-    let partial = dest.with_extension("partial");
+    let order = load_order(instance, profile)?;
+    // The new tree is built beside `dest` under a name of its own (never `dest` itself, whatever its extension).
+    let mut partial_name = dest.file_name().unwrap_or_default().to_os_string();
+    partial_name.push(".nvmod-partial");
+    let partial = dest.with_file_name(partial_name);
     let _ = fs::remove_dir_all(&partial);
     let failed = |why: String| {
         let _ = fs::remove_dir_all(&partial);
@@ -335,7 +339,7 @@ pub fn stage_without(
         ))
     };
     build(&plan, &partial.join("data"), options, &protect).map_err(failed)?;
-    let order: Vec<Slot> = load_order(instance, profile)?
+    let order: Vec<Slot> = order
         .into_iter()
         .filter(|slot| staged_file(&partial.join("data"), &slot.name).is_some())
         .collect();
