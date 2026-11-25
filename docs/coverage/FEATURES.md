@@ -211,7 +211,7 @@ Generated on main by tally from `catalogue/` (docs/TESTING.md, "Feature catalogu
 | Delete a Profile into a trash that rollback can undo | `instance.profiles.delete_to_trash` | covered | `crates/nvmod-cli/tests/profile_ops.rs::delete_moves_the_profile_to_the_trash_and_rollback_brings_it_back` |
 | Select the Profile that commands use by default | `instance.profiles.select` | covered | `crates/nvmod-cli/tests/profile_ops.rs::select_records_the_profile_in_the_instance_file_and_decides_the_default` |
 | The selected Profile cannot be deleted or renamed | `instance.profiles.selected_protected` | covered | `crates/nvmod-cli/tests/profile_ops.rs::the_selected_profile_cannot_be_deleted_or_renamed` |
-| Profile switches (LocalSaves, LocalSettings, AutomaticArchiveInvalidation) | `instance.profiles.settings` | covered | `crates/nvmod-cli/tests/profile_ops.rs::set_edits_one_line_and_the_reader_returns_it`, `crates/nvmod-cli/tests/profile_ops.rs::set_refuses_an_unknown_key_or_value_with_the_usage_exit` |
+| Profile switches (LocalSaves, LocalSettings, AutomaticArchiveInvalidation) | `instance.profiles.settings` | covered | `crates/nvmod-cli/tests/profile_ops.rs::set_edits_one_line_and_the_reader_returns_it` |
 | Unusable Profile names are refused with a reason | `instance.profiles.name_rules` | covered | `crates/nvmod-instance/src/profile_name.rs::unusable_names_are_refused_with_a_reason` |
 | An Instance targets vanilla or nv-rs | `instance.profiles.target_switch` | covered | `crates/nvmod-api/tests/jobs.rs::target_set_switches_the_instance_to_nv_rs` |
 

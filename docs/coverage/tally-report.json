@@ -1782,8 +1782,7 @@
               "origin": "ours",
               "state": "covered",
               "tests": [
-                "crates/nvmod-cli/tests/profile_ops.rs::set_edits_one_line_and_the_reader_returns_it",
-                "crates/nvmod-cli/tests/profile_ops.rs::set_refuses_an_unknown_key_or_value_with_the_usage_exit"
+                "crates/nvmod-cli/tests/profile_ops.rs::set_edits_one_line_and_the_reader_returns_it"
               ],
               "platforms": {
                 "linux": true,
