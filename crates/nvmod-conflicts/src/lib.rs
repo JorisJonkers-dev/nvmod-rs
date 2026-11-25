@@ -565,7 +565,6 @@ mod tests {
 
     #[test]
     fn three_hundred_mods_over_fifty_thousand_paths_are_fast() {
-        let start = Instant::now();
         let layers: Vec<Layer> = (0..300)
             .map(|m| {
                 let files: Vec<String> = (0..50_000)
@@ -579,8 +578,12 @@ mod tests {
                 }
             })
             .collect();
+        // Only the analysis is timed: building the 1.5 million fixture paths in a debug build took most of the 10 s on
+        // the macOS runner and is not what the bound is about.
+        let start = Instant::now();
         let r = analyze("P", &layers);
+        let took = start.elapsed();
         assert!(!r.conflicts.is_empty());
-        assert!(start.elapsed().as_secs() < 10, "took {:?}", start.elapsed());
+        assert!(took.as_secs() < 10, "took {took:?}");
     }
 }

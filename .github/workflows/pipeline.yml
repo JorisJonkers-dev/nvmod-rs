@@ -238,8 +238,7 @@ jobs:
             echo "::notice title=Feature catalogue::documentation only: the tests did not run, so no covered count and no ratchet"
           fi
           # Pull requests never change the generated reports, so none can lower the bar the ratchet measures against.
-          # (A report file that main does not have yet may be added once, as the first copy of the picture the README shows.)
-          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --name-only --diff-filter=MDRT "$BASE" HEAD -- docs/coverage | grep -q .; then
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --name-only "$BASE" HEAD -- docs/coverage | grep -q .; then
             echo "::error title=Feature catalogue::docs/coverage/ is generated on main; leave it out of the pull request"; exit 1
           fi
           # The ratchet measures against the report of the base revision (main before this change).
