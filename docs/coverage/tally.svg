@@ -1,143 +1,150 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="774" viewBox="0 0 800 774" role="img" aria-label="nvmod-rs: All areas 292 of 292 implemented, 0 covered; Library and command line 21 of 21 implemented, 0 covered; Doctor and verification 41 of 41 implemented, 0 covered; File readers 23 of 23 implemented, 0 covered; Instance and Profiles 20 of 20 implemented, 0 covered; Mods 55 of 55 implemented, 0 covered; Plugins and load order 25 of 25 implemented, 0 covered; Running programs 24 of 24 implemented, 0 covered; Backups, saves and import 27 of 27 implemented, 0 covered; Staging tree and conflicts 30 of 30 implemented, 0 covered; External tools and contracts 26 of 26 implemented, 0 covered">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="774" viewBox="0 0 800 774" role="img" aria-label="nvmod-rs: All areas 292 of 292 implemented, 258 covered; Library and command line 21 of 21 implemented, 19 covered; Doctor and verification 41 of 41 implemented, 41 covered; File readers 23 of 23 implemented, 22 covered; Instance and Profiles 20 of 20 implemented, 20 covered; Mods 55 of 55 implemented, 55 covered; Plugins and load order 25 of 25 implemented, 25 covered; Running programs 24 of 24 implemented, 12 covered; Backups, saves and import 27 of 27 implemented, 23 covered; Staging tree and conflicts 30 of 30 implemented, 29 covered; External tools and contracts 26 of 26 implemented, 12 covered">
   <title>nvmod-rs · feature catalogue</title>
   <rect x="0" y="0" width="800" height="774" rx="10" fill="#14110b"/>
   <text x="20" y="30" font-family="Consolas, 'Courier New', monospace" font-size="15" fill="#f2c14e">NVMOD-RS · FEATURE CATALOGUE</text>
   <text x="20" y="58" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">All areas</text>
-  <text x="780" y="58" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">292 of 292 implemented · 0 covered</text>
+  <text x="780" y="58" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">292 of 292 implemented · 258 covered</text>
   <clipPath id="c0"><rect x="20" y="66" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="66" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="66" width="760" height="12" fill="#a77d2a" clip-path="url(#c0)"/>
+  <rect x="20" y="66" width="672" height="12" fill="#f2c14e" clip-path="url(#c0)"/>
+  <rect x="692" y="66" width="88" height="12" fill="#a77d2a" clip-path="url(#c0)"/>
   <rect x="20" y="66" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="85" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="85" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">292 implemented, not covered (100.0%)</text>
-  <rect x="443" y="85" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="459" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="36" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">258 covered (88.4%)</text>
+  <rect x="182" y="85" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="198" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">34 implemented, not covered (11.6%)</text>
+  <rect x="449" y="85" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="465" y="94" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="780" y="94" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 gated · 4 n/a or deferred</text>
   <text x="20" y="122" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Library and command line</text>
-  <text x="780" y="122" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">21 of 21 implemented · 0 covered</text>
+  <text x="780" y="122" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">21 of 21 implemented · 19 covered</text>
   <clipPath id="c1"><rect x="20" y="130" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="130" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="130" width="760" height="12" fill="#a77d2a" clip-path="url(#c1)"/>
+  <rect x="20" y="130" width="688" height="12" fill="#f2c14e" clip-path="url(#c1)"/>
+  <rect x="708" y="130" width="72" height="12" fill="#a77d2a" clip-path="url(#c1)"/>
   <rect x="20" y="130" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="149" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="149" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">21 implemented, not covered (100.0%)</text>
-  <rect x="436" y="149" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="452" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="36" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">19 covered (90.5%)</text>
+  <rect x="175" y="149" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">2 implemented, not covered (9.5%)</text>
+  <rect x="429" y="149" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="445" y="158" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="780" y="158" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 n/a or deferred</text>
   <text x="20" y="186" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Doctor and verification</text>
-  <text x="780" y="186" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">41 of 41 implemented · 0 covered</text>
+  <text x="780" y="186" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">41 of 41 implemented · 41 covered</text>
   <clipPath id="c2"><rect x="20" y="194" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="194" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="194" width="760" height="12" fill="#a77d2a" clip-path="url(#c2)"/>
+  <rect x="20" y="194" width="760" height="12" fill="#f2c14e" clip-path="url(#c2)"/>
   <rect x="20" y="194" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="213" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="222" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="213" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="222" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">41 implemented, not covered (100.0%)</text>
+  <text x="36" y="222" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">41 covered (100.0%)</text>
+  <rect x="182" y="213" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="198" y="222" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 implemented, not covered (0.0%)</text>
   <rect x="436" y="213" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
   <text x="452" y="222" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="20" y="250" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">File readers</text>
-  <text x="780" y="250" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">23 of 23 implemented · 0 covered</text>
+  <text x="780" y="250" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">23 of 23 implemented · 22 covered</text>
   <clipPath id="c3"><rect x="20" y="258" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="258" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="258" width="760" height="12" fill="#a77d2a" clip-path="url(#c3)"/>
+  <rect x="20" y="258" width="727" height="12" fill="#f2c14e" clip-path="url(#c3)"/>
+  <rect x="747" y="258" width="33" height="12" fill="#a77d2a" clip-path="url(#c3)"/>
   <rect x="20" y="258" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="277" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="277" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">23 implemented, not covered (100.0%)</text>
-  <rect x="436" y="277" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="452" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="36" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">22 covered (95.7%)</text>
+  <rect x="175" y="277" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 implemented, not covered (4.3%)</text>
+  <rect x="429" y="277" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="445" y="286" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="780" y="286" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 n/a or deferred</text>
   <text x="20" y="314" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Instance and Profiles</text>
-  <text x="780" y="314" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">20 of 20 implemented · 0 covered</text>
+  <text x="780" y="314" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">20 of 20 implemented · 20 covered</text>
   <clipPath id="c4"><rect x="20" y="322" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="322" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="322" width="760" height="12" fill="#a77d2a" clip-path="url(#c4)"/>
+  <rect x="20" y="322" width="760" height="12" fill="#f2c14e" clip-path="url(#c4)"/>
   <rect x="20" y="322" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="341" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="350" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="341" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="350" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">20 implemented, not covered (100.0%)</text>
+  <text x="36" y="350" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">20 covered (100.0%)</text>
+  <rect x="182" y="341" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="198" y="350" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 implemented, not covered (0.0%)</text>
   <rect x="436" y="341" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
   <text x="452" y="350" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="20" y="378" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Mods</text>
-  <text x="780" y="378" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">55 of 55 implemented · 0 covered</text>
+  <text x="780" y="378" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">55 of 55 implemented · 55 covered</text>
   <clipPath id="c5"><rect x="20" y="386" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="386" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="386" width="760" height="12" fill="#a77d2a" clip-path="url(#c5)"/>
+  <rect x="20" y="386" width="760" height="12" fill="#f2c14e" clip-path="url(#c5)"/>
   <rect x="20" y="386" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="405" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="414" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="405" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="414" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">55 implemented, not covered (100.0%)</text>
+  <text x="36" y="414" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">55 covered (100.0%)</text>
+  <rect x="182" y="405" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="198" y="414" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 implemented, not covered (0.0%)</text>
   <rect x="436" y="405" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
   <text x="452" y="414" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="780" y="414" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">2 n/a or deferred</text>
   <text x="20" y="442" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Plugins and load order</text>
-  <text x="780" y="442" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">25 of 25 implemented · 0 covered</text>
+  <text x="780" y="442" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">25 of 25 implemented · 25 covered</text>
   <clipPath id="c6"><rect x="20" y="450" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="450" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="450" width="760" height="12" fill="#a77d2a" clip-path="url(#c6)"/>
+  <rect x="20" y="450" width="760" height="12" fill="#f2c14e" clip-path="url(#c6)"/>
   <rect x="20" y="450" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="469" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="478" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="469" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="478" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">25 implemented, not covered (100.0%)</text>
+  <text x="36" y="478" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">25 covered (100.0%)</text>
+  <rect x="182" y="469" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="198" y="478" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 implemented, not covered (0.0%)</text>
   <rect x="436" y="469" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
   <text x="452" y="478" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="20" y="506" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Running programs</text>
-  <text x="780" y="506" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">24 of 24 implemented · 0 covered</text>
+  <text x="780" y="506" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">24 of 24 implemented · 12 covered</text>
   <clipPath id="c7"><rect x="20" y="514" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="514" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="514" width="760" height="12" fill="#a77d2a" clip-path="url(#c7)"/>
+  <rect x="20" y="514" width="380" height="12" fill="#f2c14e" clip-path="url(#c7)"/>
+  <rect x="400" y="514" width="380" height="12" fill="#a77d2a" clip-path="url(#c7)"/>
   <rect x="20" y="514" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="533" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="533" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">24 implemented, not covered (100.0%)</text>
-  <rect x="436" y="533" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="452" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="36" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">12 covered (50.0%)</text>
+  <rect x="175" y="533" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">12 implemented, not covered (50.0%)</text>
+  <rect x="442" y="533" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="458" y="542" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="780" y="542" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 gated</text>
   <text x="20" y="570" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Backups, saves and import</text>
-  <text x="780" y="570" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">27 of 27 implemented · 0 covered</text>
+  <text x="780" y="570" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">27 of 27 implemented · 23 covered</text>
   <clipPath id="c8"><rect x="20" y="578" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="578" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="578" width="760" height="12" fill="#a77d2a" clip-path="url(#c8)"/>
+  <rect x="20" y="578" width="647" height="12" fill="#f2c14e" clip-path="url(#c8)"/>
+  <rect x="667" y="578" width="113" height="12" fill="#a77d2a" clip-path="url(#c8)"/>
   <rect x="20" y="578" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="597" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="606" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="597" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="606" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">27 implemented, not covered (100.0%)</text>
+  <text x="36" y="606" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">23 covered (85.2%)</text>
+  <rect x="175" y="597" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="606" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">4 implemented, not covered (14.8%)</text>
   <rect x="436" y="597" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
   <text x="452" y="606" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="20" y="634" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">Staging tree and conflicts</text>
-  <text x="780" y="634" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">30 of 30 implemented · 0 covered</text>
+  <text x="780" y="634" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">30 of 30 implemented · 29 covered</text>
   <clipPath id="c9"><rect x="20" y="642" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="642" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="642" width="760" height="12" fill="#a77d2a" clip-path="url(#c9)"/>
+  <rect x="20" y="642" width="735" height="12" fill="#f2c14e" clip-path="url(#c9)"/>
+  <rect x="755" y="642" width="25" height="12" fill="#a77d2a" clip-path="url(#c9)"/>
   <rect x="20" y="642" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="661" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="661" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">30 implemented, not covered (100.0%)</text>
-  <rect x="436" y="661" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="452" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="36" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">29 covered (96.7%)</text>
+  <rect x="175" y="661" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">1 implemented, not covered (3.3%)</text>
+  <rect x="429" y="661" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="445" y="670" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
   <text x="20" y="698" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#d9c9a3">External tools and contracts</text>
-  <text x="780" y="698" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">26 of 26 implemented · 0 covered</text>
+  <text x="780" y="698" text-anchor="end" font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#f2c14e">26 of 26 implemented · 12 covered</text>
   <clipPath id="c10"><rect x="20" y="706" width="760" height="12" rx="4"/></clipPath>
   <rect x="20" y="706" width="760" height="12" rx="4" fill="#2b2418"/>
-  <rect x="20" y="706" width="760" height="12" fill="#a77d2a" clip-path="url(#c10)"/>
+  <rect x="20" y="706" width="351" height="12" fill="#f2c14e" clip-path="url(#c10)"/>
+  <rect x="371" y="706" width="409" height="12" fill="#a77d2a" clip-path="url(#c10)"/>
   <rect x="20" y="706" width="760" height="12" rx="4" fill="none" stroke="#5c4a26" stroke-width="1"/>
   <rect x="20" y="725" width="10" height="10" fill="#f2c14e" stroke="#5c4a26" stroke-width="1"/>
-  <text x="36" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 covered (0.0%)</text>
-  <rect x="162" y="725" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
-  <text x="178" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">26 implemented, not covered (100.0%)</text>
-  <rect x="436" y="725" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
-  <text x="452" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
-  <text x="20" y="760" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#5c4a26">no test results given: nothing is covered yet · tally 0.5.0</text>
+  <text x="36" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">12 covered (46.2%)</text>
+  <rect x="175" y="725" width="10" height="10" fill="#a77d2a" stroke="#5c4a26" stroke-width="1"/>
+  <text x="191" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">14 implemented, not covered (53.8%)</text>
+  <rect x="442" y="725" width="10" height="10" fill="#2b2418" stroke="#5c4a26" stroke-width="1"/>
+  <text x="458" y="734" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#d9c9a3">0 missing (0.0%)</text>
+  <text x="20" y="760" font-family="Consolas, 'Courier New', monospace" font-size="11" fill="#5c4a26">covered: a tagged test passed on Linux, Windows and macOS · tally 0.5.0</text>
 </svg>

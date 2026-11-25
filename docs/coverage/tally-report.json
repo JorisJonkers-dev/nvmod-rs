@@ -1,0 +1,4934 @@
+{
+  "schema": "tally-report.v1",
+  "tool": "tally 0.5.0",
+  "repo": "nvmod-rs",
+  "results": true,
+  "totals": {
+    "total": 292,
+    "missing": 0,
+    "implemented": 292,
+    "tagged": 291,
+    "passing": 291,
+    "covered": 258,
+    "gated": 1,
+    "not_applicable": 2,
+    "deferred": 2
+  },
+  "headline": {
+    "title": "All areas",
+    "counts": {
+      "total": 292,
+      "missing": 0,
+      "implemented": 292,
+      "tagged": 291,
+      "passing": 291,
+      "covered": 258,
+      "gated": 1,
+      "not_applicable": 2,
+      "deferred": 2
+    }
+  },
+  "areas": [
+    {
+      "id": "api",
+      "title": "Library and command line",
+      "counts": {
+        "total": 21,
+        "missing": 0,
+        "implemented": 21,
+        "tagged": 21,
+        "passing": 21,
+        "covered": 19,
+        "gated": 0,
+        "not_applicable": 1,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "api.cli",
+          "title": "The nvmod command",
+          "origin": "ours",
+          "counts": {
+            "total": 11,
+            "missing": 0,
+            "implemented": 11,
+            "tagged": 11,
+            "passing": 11,
+            "covered": 9,
+            "gated": 0,
+            "not_applicable": 1,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "api.cli.version",
+              "title": "--version prints the package version",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::version_prints_the_package_version"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.help",
+              "title": "No arguments print the help, which lists the exit codes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::the_help_lists_the_exit_codes",
+                "crates/nvmod-cli/tests/cli.rs::no_arguments_print_the_help"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.unknown_command",
+              "title": "An unknown command is a usage error",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::an_unknown_command_is_a_usage_error"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.removed_commands",
+              "title": "Removed commands are unknown commands",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/baseline.rs::removed_commands_are_unknown_commands"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "api.cli.transcripts_replay",
+              "title": "Recorded command transcripts replay against the build",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/baseline.rs::every_transcript_replays_against_the_build"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "api.cli.option_parsing",
+              "title": "An unknown option or a missing value is an error",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/src/args.rs::unknown_options_and_missing_values_are_errors"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.run_log",
+              "title": "Each command leaves a redacted run log and keeps its output",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/runlog.rs::a_command_on_an_instance_leaves_a_redacted_log_and_keeps_its_output"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.run_log_redaction",
+              "title": "A planted token and an outside path never reach the run log",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-runlog/tests/canary.rs::a_planted_token_and_an_outside_path_never_reach_the_run_log"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.run_log_rotation",
+              "title": "The twenty-first run removes the oldest log",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-runlog/tests/rotation.rs::the_twenty_first_run_removes_the_oldest"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.log_level",
+              "title": "--log-level is taken out wherever it stands",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/src/logging.rs::the_level_option_is_taken_out_wherever_it_is"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.secret_never_prints",
+              "title": "A secret never prints its value",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-runlog/src/secret.rs::a_secret_never_prints_its_value"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.cli.run_outside_cli",
+              "title": "Every command is available as a library call and through raul",
+              "origin": "ours",
+              "state": "n/a",
+              "tests": []
+            }
+          ]
+        },
+        {
+          "id": "api.jobs",
+          "title": "The nvmod-api jobs",
+          "origin": "ours",
+          "counts": {
+            "total": 10,
+            "missing": 0,
+            "implemented": 10,
+            "tagged": 10,
+            "passing": 10,
+            "covered": 10,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "api.jobs.typed_jobs",
+              "title": "Typed jobs for the Mods list and change, sort, plugins, install, saves, backup, stage and profile",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::mods_list_gives_the_mods_in_priority_order",
+                "crates/nvmod-api/tests/jobs.rs::plugins_list_gives_the_plugins",
+                "crates/nvmod-api/tests/jobs.rs::stage_builds_the_tree_of_a_profile"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.progress_events",
+              "title": "Jobs report progress events",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::sort_proposes_an_order_and_reports_loot_rs_progress",
+                "crates/nvmod-api/tests/jobs.rs::the_first_progress_event_is_reading_the_masterlist"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.cancel_before_start",
+              "title": "A used cancel token stops every job before it touches the Instance",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_cancel_token_already_used_stops_every_job_before_it_touches_the_instance"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.cancel_is_a_result",
+              "title": "A cancelled job is a result and writes nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_cancelled_sort_is_a_result_and_writes_nothing",
+                "crates/nvmod-api/tests/jobs.rs::a_sort_cancelled_while_loot_rs_runs_is_a_result_and_writes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.copyable_refusals",
+              "title": "A refusal carries copyable text",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_missing_masterlist_is_a_refusal_with_copyable_text",
+                "crates/nvmod-api/tests/tree.rs::a_refusal_copies_as_text_without_a_command_line"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.json_requests",
+              "title": "Every request round-trips through JSON and takes documented defaults",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_request_without_its_optional_fields_takes_the_documented_defaults",
+                "crates/nvmod-api/tests/jobs.rs::every_request_round_trips_through_json"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.stable_error_codes",
+              "title": "An error kind has a stable code",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::an_error_kind_has_a_stable_code"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.api_version",
+              "title": "The API version is the release version",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::the_api_version_is_the_release_version"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.scoped_cancel",
+              "title": "A process-wide cancel does not stop a job with its own token",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/cancel_scope.rs::a_process_wide_request_does_not_stop_a_job_with_its_own_token"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "api.jobs.doctor_job",
+              "title": "The Doctor job checks a game copy or an Instance and honours fail-on",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/doctor.rs::a_base_copy_is_checked_and_reported_without_writing",
+                "crates/nvmod-api/tests/doctor.rs::a_mod_organizer_instance_is_checked_and_the_fail_on_severity_decides_found"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "doctor",
+      "title": "Doctor and verification",
+      "counts": {
+        "total": 41,
+        "missing": 0,
+        "implemented": 41,
+        "tagged": 41,
+        "passing": 41,
+        "covered": 41,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "doctor.base",
+          "title": "Checking a game copy",
+          "origin": "ours",
+          "counts": {
+            "total": 6,
+            "missing": 0,
+            "implemented": 6,
+            "tagged": 6,
+            "passing": 6,
+            "covered": 6,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "doctor.base.steam_copy",
+              "title": "A Steam game copy gets a clean report",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::a_steam_base_copy_gets_a_clean_report"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.base.gog_copy",
+              "title": "A GOG game copy gets a clean report",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::a_gog_base_copy_gets_a_clean_report"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.base.epic_refused",
+              "title": "An Epic game copy is refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::an_epic_base_copy_is_refused_with_a_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.base.four_gb_patch",
+              "title": "A 4 GB patched executable is accepted",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::a_4gb_patched_executable_is_accepted"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.base.missing_files",
+              "title": "A missing executable or Data folder is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::a_missing_executable_or_data_folder_is_reported"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.base.one_target",
+              "title": "doctor needs exactly one of --base and --instance",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::doctor_needs_exactly_one_of_base_and_instance"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "doctor.checks",
+          "title": "Checks of an Instance",
+          "origin": "ours",
+          "counts": {
+            "total": 16,
+            "missing": 0,
+            "implemented": 16,
+            "tagged": 16,
+            "passing": 16,
+            "covered": 16,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "doctor.checks.healthy",
+              "title": "A healthy setup has no warnings or errors",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-doctor/tests/doctor.rs::a_healthy_setup_has_no_warnings_or_errors"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.bad_plugin_files",
+              "title": "Bad plugin files are each named",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-doctor/tests/doctor.rs::bad_plugin_files_are_each_named"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.shadowed_dll",
+              "title": "A DLL in two Mods is reported as shadowed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-doctor/tests/doctor.rs::a_dll_in_two_mods_is_reported_as_shadowed_and_the_first_mod_wins"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.catalogue_rules",
+              "title": "Catalogue rules: requirements, conflicts, replacements and ini settings",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-doctor/tests/doctor.rs::catalogue_rules_requirements_conflicts_replacements_and_inis"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.missing_master_wrong_order",
+              "title": "A missing master and a wrong load order are reported, and a sort fixes them",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::after_a_sort_the_doctor_finds_neither_a_missing_master_nor_a_wrong_order",
+                "crates/nvmod-cli/tests/sort.rs::the_doctor_reports_a_missing_master_and_a_wrong_load_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.file_times",
+              "title": "File times that no longer encode the order are noticed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::the_doctor_notices_file_times_that_no_longer_encode_the_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.profile_problems",
+              "title": "Problems of a Profile are reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-doctor/tests/doctor.rs::profile_problems_are_reported"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.ttw_ini_values",
+              "title": "A TTW Profile with the game's default ini gets one finding per key",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::a_ttw_profile_with_the_game_default_ini_gets_one_finding_per_key"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.no_staging_tree",
+              "title": "The Doctor says when no Staging tree was built",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::the_doctor_says_when_no_staging_tree_was_built"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.lowercase_collisions",
+              "title": "Mods whose files collide after lower-casing are reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::the_doctor_reports_mods_whose_files_collide_after_lowercasing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.unswept_tree",
+              "title": "A tree a program wrote into and nobody swept is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::the_doctor_reports_an_unswept_tree"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.lock_violation",
+              "title": "A lock that a sort would violate is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::the_doctor_reports_a_lock_that_sort_would_violate"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.base_masters_repair",
+              "title": "Base masters a Profile lacks are named and the repair fixes it",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base_masters.rs::the_doctor_names_base_masters_an_existing_profile_does_not_list_and_the_repair_fixes_it"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.fail_on_threshold",
+              "title": "--fail-on sets the severity that makes the exit code non-zero",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::text_output_and_the_fail_on_threshold"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.json_report",
+              "title": "--json prints the report as stable JSON",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::the_json_report_matches_the_golden_file"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.checks.old_instance_read_only",
+              "title": "The Doctor opens a schema 1 Instance without writing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/instance_schema.rs::the_doctor_opens_a_schema_1_instance_without_writing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "doctor.nvse",
+          "title": "NVSE plugins and the catalogue",
+          "origin": "ours",
+          "counts": {
+            "total": 14,
+            "missing": 0,
+            "implemented": 14,
+            "tagged": 14,
+            "passing": 14,
+            "covered": 14,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "doctor.nvse.pe_inspection",
+              "title": "pe inspects a plugin DLL without running it",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::pe_describes_a_plugin_as_text_and_as_json"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.pe_not_a_plugin",
+              "title": "pe says when a file is not an NVSE plugin",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::pe_says_when_a_file_is_not_an_nvse_plugin"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.catalogue_listing",
+              "title": "catalog lists the plugin catalogue",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/cli.rs::catalog_lists_plugins_as_text_and_json"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.catalogue_provenance",
+              "title": "Every catalogue entry carries its provenance",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-catalog/src/lib.rs::the_shipped_catalogue_is_valid_and_every_entry_has_provenance"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.overlay",
+              "title": "A player's catalogue.d overlay adds entries marked as the player's",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-catalog/src/overlay.rs::an_overlay_entry_is_recognised_and_marked_as_user"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.overlay_cannot_shadow",
+              "title": "An overlay never shadows a shipped entry or claims more than external",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-catalog/src/overlay.rs::an_overlay_cannot_claim_more_than_external",
+                "crates/nvmod-catalog/src/overlay.rs::an_overlay_never_shadows_a_shipped_entry"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.overlay_caps",
+              "title": "An overlay is bounded in entries, size and count",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-catalog/src/overlay.rs::the_entry_cap_is_enforced"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.vanilla_needs_dll",
+              "title": "On the vanilla target the extender DLL is required",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::on_the_vanilla_target_the_extender_dll_is_required_and_nothing_is_built_in"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.nv_rs_builtin_redundant",
+              "title": "On nv-rs a plugin DLL that is built in is redundant",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::on_nv_rs_a_plugin_dll_that_is_built_in_is_redundant"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.nv_rs_absent_plugin",
+              "title": "On nv-rs a plugin the catalogue marks absent cannot load",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::on_nv_rs_a_plugin_the_catalogue_marks_absent_is_unable_to_load_by_name"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.readiness",
+              "title": "Readiness per category from the catalogue and nv-rs's capabilities.json",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::readiness_counts_each_category_from_the_catalogue_and_the_capabilities"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.opcode_usage",
+              "title": "nvse-usage counts the opcodes the active plugins' scripts use",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/nvse_usage.rs::planted_opcodes_are_counted_with_plugins_and_status"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.opcode_usage_privacy",
+              "title": "nvse-usage prints only opcode names, counts and plugin files",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/nvse_usage.rs::only_opcodes_names_counts_and_plugin_files_reach_the_output"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.nvse.extender_version",
+              "title": "On the vanilla target the extender DLL is checked against the catalogue version",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/builtin.rs::on_the_vanilla_target_the_extender_dll_is_checked_against_the_catalogue_version"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "doctor.verify",
+          "title": "verify",
+          "origin": "ours",
+          "counts": {
+            "total": 5,
+            "missing": 0,
+            "implemented": 5,
+            "tagged": 5,
+            "passing": 5,
+            "covered": 5,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "doctor.verify.clean",
+              "title": "A clean Instance exits 0 with the Doctor report and the launch plan",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/verify.rs::a_clean_instance_exits_0_and_prints_the_doctor_report_and_the_launch_plan"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.verify.doctor_error_exit",
+              "title": "A Doctor error is exit 3 and the report still prints",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/verify.rs::a_doctor_error_is_exit_3_and_the_report_still_prints"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.verify.engine_matches_record",
+              "title": "An nv-rs that matches its install record is verified",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/verify.rs::an_nv_rs_that_matches_its_record_is_verified"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.verify.engine_changed",
+              "title": "An nv-rs changed after its install fails verification",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/verify.rs::an_nv_rs_changed_after_its_install_is_a_verification_failure"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "doctor.verify.writes_nothing",
+              "title": "verify writes nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/verify.rs::verify_writes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "formats",
+      "title": "File readers",
+      "counts": {
+        "total": 23,
+        "missing": 0,
+        "implemented": 23,
+        "tagged": 23,
+        "passing": 23,
+        "covered": 22,
+        "gated": 0,
+        "not_applicable": 1,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "formats.archives",
+          "title": "BSA archives",
+          "origin": "ours",
+          "counts": {
+            "total": 5,
+            "missing": 0,
+            "implemented": 5,
+            "tagged": 5,
+            "passing": 5,
+            "covered": 5,
+            "gated": 0,
+            "not_applicable": 1,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "formats.archives.read_names",
+              "title": "Names are lower-cased with forward slashes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-bsa/tests/reader.rs::names_are_lowercased_and_use_slashes"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.archives.compression",
+              "title": "The compression flag and the toggle bit decide compressed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-bsa/tests/reader.rs::the_compression_flag_and_the_toggle_bit_decide_compressed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.archives.bad_header_refused",
+              "title": "A wrong signature or version, truncated input and oversized counts are refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-bsa/tests/reader.rs::a_wrong_signature_or_version_is_named",
+                "crates/nvmod-bsa/tests/reader.rs::oversized_counts_are_refused",
+                "crates/nvmod-bsa/tests/reader.rs::truncated_input_is_refused_at_every_length"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.archives.large_archive_cheap",
+              "title": "A two-gigabyte class archive costs only its directory",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-bsa/tests/reader.rs::a_two_gigabyte_class_archive_costs_only_its_directory"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.archives.never_panics",
+              "title": "Mutated archives never panic",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-bsa/tests/reader.rs::mutated_archives_never_panic"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.archives.packing",
+              "title": "Writing BSA archives",
+              "origin": "ours",
+              "state": "n/a",
+              "tests": []
+            }
+          ]
+        },
+        {
+          "id": "formats.files",
+          "title": "Text, ini and binary file readers",
+          "origin": "ours",
+          "counts": {
+            "total": 11,
+            "missing": 0,
+            "implemented": 11,
+            "tagged": 11,
+            "passing": 11,
+            "covered": 10,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "formats.files.plugin_lists",
+              "title": "plugins.txt is read with names, comments, stars and a code page",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/plugins.rs::a_code_page_name_is_decoded"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.locked_order",
+              "title": "The locked-order file round-trips with its header and CRLF",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/lockedorder.rs::a_file_round_trips_with_its_header_and_crlf",
+                "crates/nvmod-formats/src/lockedorder.rs::bad_lines_and_non_utf8_are_refused"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.ini_reader",
+              "title": "Ini sections, keys and Qt strings are read",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/ini.rs::qt_strings",
+                "crates/nvmod-formats/src/ini.rs::sections_keys_and_wrappers"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.meta_ini_edit",
+              "title": "Setting a key changes only its line",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/metaini.rs::setting_a_key_changes_only_its_line"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.save_game",
+              "title": "A save game is read; truncation is an error, not a panic",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/savegame.rs::a_synthetic_save_is_read",
+                "crates/nvmod-formats/src/savegame.rs::every_truncation_is_an_error_not_a_panic"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.script_scan",
+              "title": "Scripts of a plugin are scanned for opcodes, including compressed records",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/scripts.rs::a_compressed_record_is_read",
+                "crates/nvmod-formats/src/scripts.rs::statements_expressions_and_nested_arguments_are_counted"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.text_code_pages",
+              "title": "Text is UTF-8 or Windows-1252, and encoding refuses what the code page lacks",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/text.rs::encoding_is_the_inverse_of_decoding_and_refuses_what_the_code_page_lacks",
+                "crates/nvmod-formats/src/text.rs::invalid_utf8_is_read_as_windows_1252"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.version_order",
+              "title": "Dotted, suffixed and date versions order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/version.rs::dotted_suffixed_and_date_versions_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.wine_paths",
+              "title": "A Windows drive path maps to a host path",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/winpath.rs::other_drives_need_a_mapping",
+                "crates/nvmod-formats/src/winpath.rs::z_maps_to_the_root_in_either_slash_style"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.categories_dat",
+              "title": "categories.dat names are read and its bytes survive",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/categories.rs::names_are_read_and_the_bytes_survive"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.files.scan_bounded",
+              "title": "A directory scan does not follow symlinks and bounds its depth",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-formats/src/scan.rs::symlinks_are_not_followed_and_depth_is_bounded"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "formats.pe",
+          "title": "PE files",
+          "origin": "ours",
+          "counts": {
+            "total": 7,
+            "missing": 0,
+            "implemented": 7,
+            "tagged": 7,
+            "passing": 7,
+            "covered": 7,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "formats.pe.plugin_exports",
+              "title": "An NVSE plugin is recognised with its exports and imports",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::an_nvse_plugin_is_recognised_with_its_exports_and_imports"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.version_struct",
+              "title": "The plugin's version struct is read from its exported data",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::the_version_struct_is_read_from_the_exported_data"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.large_address_flag",
+              "title": "The version resource and the large-address-aware flag are read",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::the_version_resource_and_the_large_address_flag_are_read"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.sixty_four_bit",
+              "title": "A 64-bit DLL is read but is not a 32-bit image",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::a_64_bit_dll_is_read_but_is_not_a_32_bit_x86_image"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.damaged_tables",
+              "title": "A damaged table is an issue and the rest still reads",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::a_damaged_export_table_is_an_issue_and_the_rest_still_reads"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.not_pe_refused",
+              "title": "A file that is not a PE file is refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/inspect.rs::files_that_are_not_pe_files_are_refused_with_a_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "formats.pe.hostile_input_bounded",
+              "title": "Hostile input never panics and reads stay inside the file",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-pe/tests/properties.rs::arbitrary_bytes_never_panic",
+                "crates/nvmod-pe/tests/properties.rs::changing_any_bytes_of_a_valid_file_never_panics_and_reads_stay_in_the_file"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "instance",
+      "title": "Instance and Profiles",
+      "counts": {
+        "total": 20,
+        "missing": 0,
+        "implemented": 20,
+        "tagged": 20,
+        "passing": 20,
+        "covered": 20,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "instance.init",
+          "title": "Creating an Instance",
+          "origin": "ours",
+          "counts": {
+            "total": 6,
+            "missing": 0,
+            "implemented": 6,
+            "tagged": 6,
+            "passing": 6,
+            "covered": 6,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "instance.init.init_from_base",
+              "title": "init builds an Instance from a game copy",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::init_builds_an_instance_skeleton_the_doctor_accepts"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.init.init_refuses_unsupported_base",
+              "title": "init refuses an unsupported game copy and writes nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::init_refuses_an_unsupported_base_and_writes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.init.init_never_overwrites",
+              "title": "init never overwrites an Instance, nor makes one inside the game folder",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::init_refuses_to_overwrite_an_instance_and_one_inside_the_base"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.init.storefronts",
+              "title": "Steam and GOG game copies are supported; others are refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-instance/src/storefront.rs::each_fixture_is_detected_and_only_steam_and_gog_are_supported"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.init.game_folder_untouched",
+              "title": "The game folder is never written to",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base.rs::doctor_never_writes_to_the_base_copy",
+                "crates/nvmod-cli/tests/stage.rs::staging_never_changes_the_base_copy_or_the_mods"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.init.base_masters_listed",
+              "title": "A new Profile lists the game's masters that are present, in game order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/base_masters.rs::a_new_profile_lists_every_master_of_the_base_copy_active_and_in_game_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "instance.model",
+          "title": "Instance file and schemas",
+          "origin": "ours",
+          "counts": {
+            "total": 5,
+            "missing": 0,
+            "implemented": 5,
+            "tagged": 5,
+            "passing": 5,
+            "covered": 5,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "instance.model.current_schema",
+              "title": "An Instance file carries a schema version and round-trips",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-core/src/model.rs::a_current_instance_round_trips",
+                "crates/nvmod-instance/src/instance.rs::create_then_open_round_trips"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.model.schema_migration",
+              "title": "A schema 1 Instance migrates on its first write, with a backup",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/instance_schema.rs::a_schema_1_instance_is_migrated_by_the_first_write_with_a_backup",
+                "crates/nvmod-instance/src/instance.rs::a_schema_1_file_opens_read_only_and_migrates_on_open_with_a_backup"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.model.newer_schema_refused",
+              "title": "An Instance file from a newer nvmod is refused and left alone",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/instance_schema.rs::a_newer_schema_is_refused_with_exit_2_and_a_reason_and_left_alone",
+                "crates/nvmod-core/src/model.rs::a_newer_instance_is_refused_with_a_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.model.json_schemas",
+              "title": "The JSON schemas of the Instance and Profile are checked in and match the code",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-core/src/model.rs::the_checked_in_instance_schema_is_the_generated_one",
+                "crates/nvmod-core/src/model.rs::the_checked_in_profile_schema_is_the_generated_one"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.model.windows_paths",
+              "title": "Windows paths in an Instance map to this machine",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/tests/instance.rs::the_instance_is_read_with_its_paths_mapped_to_this_machine"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "instance.profiles",
+          "title": "Profiles",
+          "origin": "ours",
+          "counts": {
+            "total": 9,
+            "missing": 0,
+            "implemented": 9,
+            "tagged": 9,
+            "passing": 9,
+            "covered": 9,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "instance.profiles.create",
+              "title": "Create a Profile",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::profile_create_makes_an_empty_profile_with_the_master_as_its_only_plugin"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.copy",
+              "title": "Copy a Profile, with or without its saves",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::copy_with_saves_makes_an_equal_tree_and_leaves_the_original_alone",
+                "crates/nvmod-cli/tests/profile_ops.rs::copy_without_saves_leaves_the_saves_out"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.rename",
+              "title": "Rename a Profile",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::rename_moves_the_profile_and_is_undone_by_rollback"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.delete_to_trash",
+              "title": "Delete a Profile into a trash that rollback can undo",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::delete_moves_the_profile_to_the_trash_and_rollback_brings_it_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.select",
+              "title": "Select the Profile that commands use by default",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::select_records_the_profile_in_the_instance_file_and_decides_the_default"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.selected_protected",
+              "title": "The selected Profile cannot be deleted or renamed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::the_selected_profile_cannot_be_deleted_or_renamed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.settings",
+              "title": "Profile switches (LocalSaves, LocalSettings, AutomaticArchiveInvalidation)",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::set_edits_one_line_and_the_reader_returns_it",
+                "crates/nvmod-cli/tests/profile_ops.rs::set_refuses_an_unknown_key_or_value_with_the_usage_exit"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.name_rules",
+              "title": "Unusable Profile names are refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-instance/src/profile_name.rs::unusable_names_are_refused_with_a_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "instance.profiles.target_switch",
+              "title": "An Instance targets vanilla or nv-rs",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::target_set_switches_the_instance_to_nv_rs"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mods",
+      "title": "Mods",
+      "counts": {
+        "total": 55,
+        "missing": 0,
+        "implemented": 55,
+        "tagged": 55,
+        "passing": 55,
+        "covered": 55,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 2
+      },
+      "groups": [
+        {
+          "id": "mods.downloads",
+          "title": "The downloads library",
+          "origin": "ours",
+          "counts": {
+            "total": 6,
+            "missing": 0,
+            "implemented": 6,
+            "tagged": 6,
+            "passing": 6,
+            "covered": 6,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 2
+          },
+          "items": [
+            {
+              "id": "mods.downloads.list",
+              "title": "List the downloaded archives with their state",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/downloads.rs::list_json_matches_its_schema_and_names_with_brackets_work"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.show_hash",
+              "title": "Show one archive, with optional hashes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/downloads.rs::show_with_hash_and_a_path_inside_the_folder"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.install_from_library",
+              "title": "Install from the library marks the archive installed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/downloads.rs::installing_from_the_library_equals_installing_the_path_plus_the_meta_update",
+                "crates/nvmod-cli/tests/downloads.rs::install_marks_the_meta_and_hide_unhide_forget_work"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.unmatched",
+              "title": "List archives with no Mod and Mods with no archive",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-downloads/tests/library.rs::unmatched_lists_archives_with_no_mod_and_mods_with_no_archive"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.forget_to_trash",
+              "title": "Forgetting an archive moves it and its meta to the trash",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-downloads/tests/library.rs::forgetting_moves_the_archive_and_its_meta_to_the_trash"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.other_folder",
+              "title": "The downloads folder can be another one",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/downloads.rs::the_downloads_option_names_another_folder"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.downloads.nexus_download",
+              "title": "Download a mod from Nexus",
+              "origin": "ours",
+              "state": "deferred",
+              "tests": []
+            },
+            {
+              "id": "mods.downloads.update_rows",
+              "title": "Show which Mods have a newer version",
+              "origin": "ours",
+              "state": "deferred",
+              "tests": []
+            }
+          ]
+        },
+        {
+          "id": "mods.fomod",
+          "title": "FOMOD installers",
+          "origin": "ours",
+          "counts": {
+            "total": 11,
+            "missing": 0,
+            "implemented": 11,
+            "tagged": 11,
+            "passing": 11,
+            "covered": 11,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "mods.fomod.inferred_choices",
+              "title": "A FOMOD with inferable choices installs without questions",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_fomod_with_inferable_choices_installs_without_questions"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.questions",
+              "title": "A choice that cannot be inferred becomes a question and nothing is written",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_fomod_choice_that_cannot_be_inferred_is_put_as_a_question_and_nothing_is_written"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.answers_file",
+              "title": "An answers file completes the install",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::an_answers_file_completes_the_install"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.bad_answers_refused",
+              "title": "Bad answers are refused and change nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::bad_answers_are_refused_and_change_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.terminal_session",
+              "title": "A terminal session asks the questions and saves the answers",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/fomod_interactive.rs::a_scripted_stdin_session_installs_exactly_the_planned_files_and_saves_the_answers"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.reinstall_reconfigure",
+              "title": "reinstall replays the answers and reconfigure changes only what one changed answer touches",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/fomod_interactive.rs::reinstall_replays_and_reconfigure_with_one_changed_answer_changes_only_those_files"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.same_answers_same_plan",
+              "title": "The same answers always give the same plan",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/fomod_interactive.rs::the_same_answers_always_yield_the_same_plan"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.destination_escape_refused",
+              "title": "A destination that climbs out of the Mod folder is refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/fomod_interactive.rs::a_destination_that_climbs_out_of_the_mod_folder_is_refused_and_writes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.event_stream",
+              "title": "The step-by-step event stream follows its published schema",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::the_fomod_stream_gives_the_step_then_the_plan_and_the_events_follow_the_schema"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.conditional_steps",
+              "title": "A step shown only by a flag is skipped or asked about",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-modinstall/src/fomod.rs::a_step_shown_only_by_a_flag_is_skipped_or_asked_about"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.fomod.xml_encodings",
+              "title": "FOMOD XML in UTF-16 or with a byte-order mark is read",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-modinstall/src/fomod.rs::xml_in_utf16_or_with_a_byte_order_mark_is_read"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "mods.install",
+          "title": "Installing a mod",
+          "origin": "ours",
+          "counts": {
+            "total": 14,
+            "missing": 0,
+            "implemented": 14,
+            "tagged": 14,
+            "passing": 14,
+            "covered": 14,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "mods.install.archive",
+              "title": "A plain archive is installed enabled at the highest priority and staged",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_plain_archive_is_placed_enabled_at_highest_priority_and_staged"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.archive_formats",
+              "title": "Zip, 7z, tar and compressed tar archives are read in process",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-modinstall/src/extract.rs::every_supported_format_is_read_in_process_and_rar_is_not"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.tar",
+              "title": "A tar archive installs",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_tar_archive_installs_too"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.folder",
+              "title": "A folder installs like an archive and is left as it was",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_folder_is_installed_like_an_archive_and_left_as_it_was"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.wrapper_stripped",
+              "title": "A wrapper folder or a Data folder is stripped",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_wrapper_folder_and_a_data_folder_are_stripped"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.rar_refused",
+              "title": "A RAR archive is refused with advice and nothing is written",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_rar_archive_is_refused_with_advice_and_nothing_is_written"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.nexus_provenance",
+              "title": "A Nexus-named archive writes its provenance into meta.ini",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_nexus_named_archive_writes_its_provenance_into_meta_ini"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.duplicate_name_refused",
+              "title": "An existing Mod name is refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::an_existing_mod_name_is_refused_and_nothing_changes"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.plugin_lists_encoding",
+              "title": "plugins.txt is written in the Windows code page, loadorder.txt in UTF-8",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::plugins_txt_is_written_in_the_windows_code_page_and_loadorder_in_utf8"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.hostile_archives_refused",
+              "title": "Hostile archives (traversal, absolute paths, links, bombs) are refused and change nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::hostile_archives_are_refused_and_change_nothing",
+                "crates/nvmod-modinstall/tests/in_process_archives.rs::traversal_is_refused_and_nothing_leaves_dest"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.extraction_limits",
+              "title": "Entry count, size, ratio, depth and time limits bound every extraction",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::every_extraction_limit_refuses_with_exit_2_names_itself_and_leaves_the_instance_alone",
+                "crates/nvmod-modinstall/tests/bounded_extraction.rs::an_expansion_bomb_is_refused_and_a_ratio_just_over_it_is_not"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.dry_run",
+              "title": "A dry run lists the changes and writes nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::dry_run_lists_the_changes_and_writes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.rollback",
+              "title": "rollback undoes the last change",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::rollback_restores_the_previous_state_and_removes_the_mod"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.install.failed_step_rolls_back",
+              "title": "A failed step rolls back by itself",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/install.rs::a_failed_step_rolls_back_by_itself_with_exit_4"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "mods.lifecycle",
+          "title": "The life of a Mod",
+          "origin": "ours",
+          "counts": {
+            "total": 18,
+            "missing": 0,
+            "implemented": 18,
+            "tagged": 18,
+            "passing": 18,
+            "covered": 18,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "mods.lifecycle.list_priority",
+              "title": "List the Mods in priority order, with their categories",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_mods_list_with_a_category_keeps_only_that_category",
+                "crates/nvmod-cli/tests/mods.rs::list_prints_the_priority_order_as_json_and_text"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.enable_disable",
+              "title": "Turn Mods on and off",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods.rs::disable_and_enable_edit_only_modlist_stage_again_and_roll_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.reorder",
+              "title": "Change which Mod wins",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods.rs::reorder_moves_one_entry",
+                "crates/nvmod-cli/tests/mods_life.rs::reordering_across_separators_keeps_the_separator_lines"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.remove",
+              "title": "Remove a Mod; rollback brings it back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::remove_then_rollback_restores_every_file_and_list_line"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.remove_dependants",
+              "title": "Removing a Mod other plugins need names the dependants and needs --force",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::removing_a_mod_other_plugins_need_names_the_dependants_and_needs_force"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.rename",
+              "title": "Rename a Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::rename_updates_the_folder_and_the_line_and_refuses_an_existing_name"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.create",
+              "title": "Create an empty Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::create_makes_an_empty_mod_at_the_place_and_roll_back_removes_it"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.clone",
+              "title": "Clone a Mod, optionally with hard links",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::a_clone_with_another_name_is_listed_disabled_below_the_original_and_can_hard_link"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.hide_unhide",
+              "title": "Hide and unhide one file of a Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::hide_and_unhide_round_trip_a_file_and_the_staging_tree_follows"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.notes",
+              "title": "Notes on a Mod are kept in meta.ini",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::a_note_is_written_to_meta_ini_and_rolled_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.separators",
+              "title": "Separators in MO2's form",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::a_separator_has_mo2s_form_and_removing_it_leaves_the_other_lines"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.categories",
+              "title": "Categories are set, listed and filtered",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::categories_are_set_listed_filtered_and_the_file_is_untouched"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.disable_deactivates_plugins",
+              "title": "Disabling a Mod takes out the plugins only it provides, never base plugins",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_disable_plugins.rs::disabling_a_mod_that_ships_base_masters_takes_out_only_what_no_one_else_provides"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.enable_restores_plugins",
+              "title": "Enabling a Mod puts back the plugins its disable took out",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_disable_plugins.rs::disable_then_enable_is_the_identity_on_the_profile_files_and_the_plugin_report"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.running_game_refuses_change",
+              "title": "A running game of the Instance refuses a change, not a dry run",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::a_running_game_of_the_instance_refuses_a_change_but_not_a_dry_run"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.failed_step_restores",
+              "title": "A failing step puts everything back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/mods_life.rs::a_failing_step_puts_everything_back_and_exits_4"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.modlist_format",
+              "title": "modlist.txt prefixes, separators and foreign entries are read as MO2 writes them",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/src/modlist.rs::prefixes_separators_and_foreign_entries_are_read"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.lifecycle.meta_ini_kept",
+              "title": "meta.ini comes back byte for byte when nothing changed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-formats/tests/metaini.rs::parse_then_write_is_byte_identical"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "mods.overwrite",
+          "title": "The Overwrite folder",
+          "origin": "ours",
+          "counts": {
+            "total": 6,
+            "missing": 0,
+            "implemented": 6,
+            "tagged": 6,
+            "passing": 6,
+            "covered": 6,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "mods.overwrite.list",
+              "title": "List the files in Overwrite with the Mods that hold the same path",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::list_shows_each_file_with_the_mods_that_provide_the_same_path"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.overwrite.create_mod",
+              "title": "Move all or matching files into a new Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::create_mod_with_a_glob_moves_only_matches_and_keeps_the_folders"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.overwrite.move_into_mod",
+              "title": "Move a file or folder into a Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::move_puts_a_folder_into_a_mod_and_refuses_a_name_the_mod_has"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.overwrite.delete_to_trash",
+              "title": "Delete into a trash that rollback can undo",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::delete_moves_to_the_trash_and_rollback_brings_it_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.overwrite.sync",
+              "title": "sync moves what has one provider and refuses an ambiguous file",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::sync_moves_what_has_one_provider_and_refuses_an_ambiguous_one_without_to"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "mods.overwrite.failure_puts_back",
+              "title": "A failure in the middle puts everything back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/overwrite.rs::a_failure_in_the_middle_puts_everything_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plugins",
+      "title": "Plugins and load order",
+      "counts": {
+        "total": 25,
+        "missing": 0,
+        "implemented": 25,
+        "tagged": 25,
+        "passing": 25,
+        "covered": 25,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "plugins.order",
+          "title": "Plugins",
+          "origin": "ours",
+          "counts": {
+            "total": 12,
+            "missing": 0,
+            "implemented": 12,
+            "tagged": 12,
+            "passing": 12,
+            "covered": 12,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "plugins.order.list",
+              "title": "List plugins with position, masters and provider",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::list_shows_position_masters_provider_and_the_forced_plugin"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.enable_with_masters",
+              "title": "Enabling a plugin whose master is inactive is refused unless --with-masters",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::enabling_a_plugin_whose_master_is_inactive_is_refused_unless_with_masters"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.missing_master_refused",
+              "title": "A master that is not installed cannot be enabled",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::a_master_that_is_not_installed_cannot_be_enabled_even_with_masters"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.disable_names_dependants",
+              "title": "Disabling a master an active plugin needs names the dependants",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::disabling_a_master_that_an_active_plugin_needs_names_the_dependants"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.forced_plugins",
+              "title": "The game's own plugins are forced first and cannot be moved, disabled or locked",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::forced_primary_plugins_cannot_be_moved_disabled_or_locked"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.ttw_forced_plugins",
+              "title": "The Tale of Two Wastelands primary plugins are forced first for a TTW Profile",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::ttw_primary_plugins_are_forced_first_for_a_ttw_profile",
+                "crates/nvmod-loadorder/src/lib.rs::the_ttw_list_is_forced_only_when_the_list_has_the_ttw_master"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.move_plugin",
+              "title": "Move a plugin, never breaking master order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::move_changes_both_lists_and_refuses_to_break_master_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.lock_unlock",
+              "title": "Lock a plugin to a position, and unlock it",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::locks_are_written_kept_for_absent_plugins_and_rolled_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.lock_survives_sort",
+              "title": "A locked plugin keeps its position after a sort",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::a_locked_plugin_keeps_its_position_after_sort_apply",
+                "crates/nvmod-loadorder/src/lib.rs::a_locked_plugin_goes_back_to_its_position_after_a_sort"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.code_page",
+              "title": "plugins.txt is Windows-1252; a name the code page lacks is refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::plugins_txt_is_windows_1252_and_a_name_the_code_page_lacks_is_refused"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.lists_round_trip",
+              "title": "CRLF and the header round-trip, and both lists roll back byte for byte",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::crlf_and_the_header_round_trip",
+                "crates/nvmod-cli/tests/plugins.rs::plugins_txt_and_loadorder_txt_roll_back_byte_for_byte_after_one_step"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.order.file_times_restamped",
+              "title": "A move restamps the plugin file times of a staged Profile",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/plugins.rs::a_move_restamps_the_plugin_file_times_of_a_staged_profile"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "plugins.sort",
+          "title": "Sorting the load order",
+          "origin": "ours",
+          "counts": {
+            "total": 13,
+            "missing": 0,
+            "implemented": 13,
+            "tagged": 13,
+            "passing": 13,
+            "covered": 13,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "plugins.sort.proposal_only",
+              "title": "sort prints a proposal and writes nothing without --apply",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::the_proposal_is_printed_and_nothing_is_written_without_apply"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.apply",
+              "title": "--apply writes both lists and encodes the order in file times",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::apply_writes_both_lists_and_encodes_the_order_in_file_times"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.idempotent",
+              "title": "Applying twice gives the same order and changes nothing",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::running_apply_twice_gives_the_same_order_and_changes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.rollback",
+              "title": "rollback undoes a sort",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::rollback_undoes_the_sort"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.minimal_mode",
+              "title": "--mode minimal moves only what a rule forces",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::the_minimal_mode_moves_only_what_a_rule_forces_and_names_its_mode"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.contradicting_rules_refused",
+              "title": "Rules that contradict each other are refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::rules_that_contradict_each_other_are_refused"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.pinned_masterlist",
+              "title": "The pinned LOOT masterlist is fetched, verified, stored and used",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/masterlist.rs::the_pinned_masterlist_is_fetched_verified_stored_and_used"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.masterlist_checksum",
+              "title": "A masterlist that does not match its checksum is not used",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/masterlist.rs::a_masterlist_that_does_not_match_its_checksum_exits_3_and_is_not_used"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.requirement_messages",
+              "title": "A plugin's requirement on an extender is one error line, or a note on nv-rs",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort_requirements.rs::on_nv_rs_a_built_in_extender_is_a_note_with_its_coverage_and_the_rest_keeps_its_message",
+                "crates/nvmod-cli/tests/sort_requirements.rs::on_vanilla_each_requirement_is_one_error_line_and_nothing_is_built_in"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.keep_order",
+              "title": "keep-order stamps the file times and leaves the order alone",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::keep_order_stamps_the_times_and_leaves_the_order_alone"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.progress_stages",
+              "title": "A sort reports each stage of loot-rs with counts",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/jobs.rs::a_sort_reports_every_stage_with_counts_and_a_stable_label"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.run_fixes_times",
+              "title": "A run fixes plugin times that do not follow the load order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::run_fixes_plugin_times_that_do_not_follow_the_load_order_before_the_game_starts"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "plugins.sort.needs_staging",
+              "title": "A Profile without a Staging tree is refused with the stage command",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sort.rs::a_profile_without_a_staging_tree_is_refused_with_the_stage_command"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Running programs",
+      "counts": {
+        "total": 24,
+        "missing": 0,
+        "implemented": 24,
+        "tagged": 23,
+        "passing": 23,
+        "covered": 12,
+        "gated": 1,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "run.launch",
+          "title": "Starting the game and other programs",
+          "origin": "ours",
+          "counts": {
+            "total": 11,
+            "missing": 0,
+            "implemented": 11,
+            "tagged": 10,
+            "passing": 10,
+            "covered": 1,
+            "gated": 1,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "run.launch.dry_run_plan",
+              "title": "A dry run prints the plan and changes nothing",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::dry_run_prints_the_plan_and_changes_nothing"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.proton",
+              "title": "On Linux the game runs through Proton with the prefix, app id and staged data",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::run_goes_through_proton_with_the_prefix_app_id_folder_and_staged_data"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.nv_rs_native",
+              "title": "On an nv-rs Instance the game runs natively and nothing is copied",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback",
+                "crates/nvmod-cli/tests/run.rs::nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.named_program",
+              "title": "Only the program that is named is started",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::a_named_program_is_planned_and_the_dry_run_writes_nothing",
+                "crates/nvmod-run/src/native.rs::only_a_named_program_is_found_and_the_refusals_name_no_command"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.launch.game_agrees_with_verify",
+              "title": "The game entry agrees with verify",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::the_game_entry_agrees_with_verify"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.instance_lock",
+              "title": "A live lock refuses every writing command; a dead one is taken over",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::a_live_lock_refuses_every_writing_command_and_a_dead_one_is_taken_over"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.detached_run_locks",
+              "title": "A detached run keeps the Instance locked until the program ends",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::a_detached_run_keeps_the_instance_locked_until_the_program_ends"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.profile_placed_collected",
+              "title": "The Profile is placed in the prefix before the start and collected after",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::the_profile_is_placed_in_the_prefix_before_the_start_and_collected_after"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.callers_launcher",
+              "title": "A launcher of the caller starts the program and nothing else does",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::a_launcher_of_the_callers_starts_the_program_and_nothing_else_does"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.mo2_running_refuses",
+              "title": "A running Mod Organizer refuses the run",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::a_running_mo2_refuses_the_run"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.launch.real_game_start",
+              "title": "Starting the real game on a real install",
+              "origin": "ours",
+              "state": "gated",
+              "tests": []
+            }
+          ]
+        },
+        {
+          "id": "run.prefix",
+          "title": "Placing a Profile in the game's prefix",
+          "origin": "ours",
+          "counts": {
+            "total": 10,
+            "missing": 0,
+            "implemented": 10,
+            "tagged": 10,
+            "passing": 10,
+            "covered": 10,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "run.prefix.apply_places_profile",
+              "title": "apply places the Profile in the prefix",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_apply.rs::apply_reports_json_and_places_the_profile"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.local_settings",
+              "title": "LocalSettings places the five inis and off puts the player's own back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::local_settings_place_the_five_inis_and_off_puts_the_users_own_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.initweaks_merge",
+              "title": "Ini tweaks of the Mods merge in priority order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::initweaks_merge_in_priority_order_with_the_profile_tweaks_last"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.local_saves_redirect",
+              "title": "LocalSaves redirects the save folder and restores it byte for byte",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::local_saves_redirect_and_restore_byte_for_byte"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.apply_idempotent",
+              "title": "Applying twice changes nothing and A, B, A leaves the prefix as the first A",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::applying_twice_changes_nothing_and_a_b_a_leaves_the_prefix_as_the_first_a"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.finish_collects",
+              "title": "finish collects what the game wrote",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_apply.rs::finish_collects_what_the_game_wrote"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.cut_off_run_recovered",
+              "title": "A run that was cut off is put back by the next one",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::a_run_that_was_cut_off_is_put_back_by_the_next_one"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.archive_invalidation",
+              "title": "The invalidation archive reaches a staged tree",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_apply.rs::the_invalidation_archive_reaches_a_staged_tree"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.dry_run",
+              "title": "A dry run writes nothing and a missing prefix is refused",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_apply.rs::a_dry_run_writes_nothing_and_a_missing_prefix_is_refused"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.prefix.nothing_outside",
+              "title": "Nothing is written outside the Instance and the named prefix",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-profile/tests/apply.rs::nothing_is_written_outside_the_instance_and_the_named_prefix"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "run.registry",
+          "title": "Programs registry",
+          "origin": "ours",
+          "counts": {
+            "total": 3,
+            "missing": 0,
+            "implemented": 3,
+            "tagged": 3,
+            "passing": 3,
+            "covered": 1,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "run.registry.add_edit_remove",
+              "title": "exec add, edit and remove round-trip",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::exec_add_edit_and_remove_round_trip"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "run.registry.unique_titles",
+              "title": "Titles are unique ignoring case and not reserved",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-run/src/registry.rs::titles_are_unique_without_case_and_not_reserved"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "run.registry.import_mapped_paths",
+              "title": "import lists mapped paths and refuses other drives",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/run.rs::import_lists_mapped_paths_and_refuses_other_drives_with_a_finding"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Backups, saves and import",
+      "counts": {
+        "total": 27,
+        "missing": 0,
+        "implemented": 27,
+        "tagged": 27,
+        "passing": 27,
+        "covered": 23,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "safety.backup",
+          "title": "Profile backups",
+          "origin": "ours",
+          "counts": {
+            "total": 8,
+            "missing": 0,
+            "implemented": 8,
+            "tagged": 8,
+            "passing": 8,
+            "covered": 8,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "safety.backup.round_trip",
+              "title": "Create, change, restore gives the files back byte for byte",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::create_change_restore_gives_the_files_back_byte_for_byte"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.saves_on_request",
+              "title": "Saves are in a snapshot only on request",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::snapshots_are_real_copies_of_text_and_inis_and_saves_only_on_request"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.damaged_refused",
+              "title": "A damaged snapshot is refused and nothing changes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::a_damaged_snapshot_is_refused_with_exit_3_and_nothing_changes"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.failed_restore_puts_back",
+              "title": "A failed restore puts the Profile back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::a_failed_restore_puts_the_profile_back_and_exits_4"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.refused_while_running",
+              "title": "A restore is refused while a run of the Instance is alive",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::restore_refuses_while_a_run_of_the_instance_is_alive_and_ignores_other_games"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.automatic_snapshot",
+              "title": "An automatic snapshot is taken when the last one is older than the interval",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::the_automatic_snapshot_is_taken_when_the_last_one_is_older_than_the_interval"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.retention",
+              "title": "prune keeps the newest and one per day",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-backup/src/retention.rs::forty_snapshots_keep_the_newest_five_and_one_per_day_for_fourteen_days",
+                "crates/nvmod-cli/tests/backup.rs::prune_keeps_the_newest_and_one_per_day"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.backup.mo2_backups",
+              "title": "Mod Organizer's own timestamped backups are listed and restorable",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/backup.rs::mo2s_own_timestamped_backups_are_listed_and_restorable"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "safety.import",
+          "title": "Importing from Mod Organizer 2",
+          "origin": "ours",
+          "counts": {
+            "total": 7,
+            "missing": 0,
+            "implemented": 7,
+            "tagged": 7,
+            "passing": 7,
+            "covered": 6,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "safety.import.same_mods_same_order",
+              "title": "An MO2 instance imports with the same Mods and load order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::the_example_instance_imports_with_the_same_mods_and_load_order"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.import.unmapped_listed",
+              "title": "What cannot be mapped is listed",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::what_cannot_be_mapped_is_listed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.import.code_page",
+              "title": "plugins.txt is decoded in the Windows code page",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::plugins_txt_is_decoded_in_the_windows_code_page"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.import.disagreement_refused",
+              "title": "Disagreeing plugin lists are reported per plugin and nothing is written",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::a_different_order_in_the_two_lists_is_reported_per_plugin",
+                "crates/nvmod-cli/tests/import_mo2.rs::a_plugin_missing_from_loadorder_is_one_disagreement_and_nothing_is_written"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.import.hard_links",
+              "title": "Mods are hard linked unless copying is asked for",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::mods_are_hard_linked_unless_copying_is_asked_for"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "safety.import.imported_instance_works",
+              "title": "The imported Instance stages and passes the Doctor",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/import_mo2.rs::the_imported_instance_stages_and_passes_the_doctor"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.import.mo2_untouched",
+              "title": "The Mod Organizer folder is never touched",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/profile_ops.rs::an_imported_profile_can_be_copied_renamed_and_selected_and_mo2_is_untouched"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "safety.saves",
+          "title": "Saves",
+          "origin": "ours",
+          "counts": {
+            "total": 7,
+            "missing": 0,
+            "implemented": 7,
+            "tagged": 7,
+            "passing": 7,
+            "covered": 7,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "safety.saves.list",
+              "title": "List saves with their plugin counts; unreadable ones are listed as such",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/saves.rs::list_shows_saves_with_plugin_counts_and_unreadable_ones"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.backup_restore",
+              "title": "Back up, delete and restore round-trips",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/saves.rs::backup_delete_restore_round_trips_through_the_commands",
+                "crates/nvmod-saves/tests/saves.rs::backup_then_delete_then_restore_is_byte_identical"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.restore_never_deletes",
+              "title": "A restore backs up what is there and never deletes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-saves/tests/saves.rs::restore_backs_up_what_is_there_and_never_deletes"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.transfer",
+              "title": "Transfer saves with their cosaves between Profiles",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/saves.rs::transfer_refuses_without_the_cosave_and_force_copies"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.check_missing_plugin",
+              "title": "check reports a save that needs a plugin the Profile lacks",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/saves.rs::check_exits_1_for_a_save_that_needs_a_missing_plugin"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.checksums",
+              "title": "checksum lists the hashes of the saves",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/saves.rs::checksum_lists_hashes_and_a_shared_profile_needs_a_prefix"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.saves.local_saves_folder",
+              "title": "The save folder follows the LocalSaves switch",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-saves/tests/saves.rs::the_save_folder_follows_local_saves"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "safety.undo",
+          "title": "Undo and interruption",
+          "origin": "ours",
+          "counts": {
+            "total": 5,
+            "missing": 0,
+            "implemented": 5,
+            "tagged": 5,
+            "passing": 5,
+            "covered": 2,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "safety.undo.old_journal",
+              "title": "A journal in the old format is still rolled back",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-journal/tests/old_journal.rs::an_install_journal_in_the_old_format_is_rolled_back"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.undo.schema_rollback",
+              "title": "rollback restores a schema 1 file byte for byte",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/instance_schema.rs::rollback_restores_the_schema_1_file_byte_for_byte"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "safety.undo.sigterm_install",
+              "title": "SIGTERM during an install rolls the step back",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/sigterm.rs::sigterm_during_install_rolls_the_step_back_and_exits_4"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "safety.undo.sigterm_lists",
+              "title": "SIGTERM during a Mods change or a sort restores the Profile files",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/sigterm.rs::sigterm_during_mods_and_sort_apply_restores_the_profile_files"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "safety.undo.sigterm_import",
+              "title": "SIGTERM during an import removes the new Instance",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/sigterm.rs::sigterm_during_import_mo2_removes_the_new_instance"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "staging",
+      "title": "Staging tree and conflicts",
+      "counts": {
+        "total": 30,
+        "missing": 0,
+        "implemented": 30,
+        "tagged": 30,
+        "passing": 30,
+        "covered": 29,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "staging.conflicts",
+          "title": "Conflicts",
+          "origin": "ours",
+          "counts": {
+            "total": 10,
+            "missing": 0,
+            "implemented": 10,
+            "tagged": 10,
+            "passing": 10,
+            "covered": 10,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "staging.conflicts.winners_and_losers",
+              "title": "Each contested path lists its winner and its losers in order",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/conflicts.rs::five_collisions_are_listed_once_each_with_their_winner_and_ordered_losers"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.reorder_changes_winner",
+              "title": "Reordering changes the winner",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/conflicts.rs::reordering_changes_the_winner"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.redundant_mods",
+              "title": "A Mod that loses every file is redundant",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/conflicts.rs::a_mod_that_loses_every_file_is_redundant_and_one_that_wins_some_is_mixed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.generated_left_out",
+              "title": "A generated Mod is listed as generated and left out of the conflicts",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/conflicts.rs::a_generated_mod_is_listed_as_generated_and_left_out_of_the_conflicts_with_one_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.per_mod_view",
+              "title": "One Mod's own row and the paths it is in",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/conflicts.rs::a_named_mod_keeps_its_own_row_and_the_paths_it_is_in"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.archive_axes",
+              "title": "Loose files over archives are reported when asked for",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/archives.rs::archives_lists_the_loose_and_archive_losers_with_provider_names"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.archive_not_listed",
+              "title": "An archive no ini lists is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/archives.rs::archive_not_listed_has_a_positive_and_a_negative_fixture"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.archive_listed_missing",
+              "title": "An archive an ini lists but that is missing is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/archives.rs::archive_listed_missing_has_a_positive_and_a_negative_fixture"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.archive_invalidation",
+              "title": "Archive invalidation problems are reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/archives.rs::archive_invalidation_has_a_positive_and_a_negative_fixture"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.conflicts.archive_corrupt_header",
+              "title": "A corrupt archive header is reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/archives.rs::archive_corrupt_header_has_a_positive_and_a_negative_fixture"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "staging.sweep",
+          "title": "Sweeping what a program wrote",
+          "origin": "ours",
+          "counts": {
+            "total": 7,
+            "missing": 0,
+            "implemented": 7,
+            "tagged": 7,
+            "passing": 7,
+            "covered": 7,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "staging.sweep.to_overwrite",
+              "title": "A file a program created goes to Overwrite with its folders",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_created_file_goes_to_overwrite_with_its_folders_and_the_tree_shows_it_from_there"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.replaced_file",
+              "title": "A replaced file keeps the Mod intact and its new content lands in Overwrite",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_replaced_file_keeps_the_mod_intact_and_its_new_content_lands_in_overwrite"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.deleted_restored",
+              "title": "A deleted file is restored from its provider and reported",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_deleted_file_is_restored_from_the_provider_and_reported"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.protect",
+              "title": "A protected file written in place is staged as a copy from then on",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_file_written_in_place_is_reported_and_protect_stages_it_as_a_copy_from_then_on"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.custom_target",
+              "title": "A custom target takes the output instead of Overwrite",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_custom_target_takes_the_output_instead_of_overwrite"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.repeatable",
+              "title": "An interrupted sweep gives the same tree when it runs again",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::an_interrupted_sweep_gives_the_same_final_tree_when_it_runs_again"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.sweep.never_rolled_back",
+              "title": "A sweep is never rolled back, so what a program wrote is never lost",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/sweep.rs::a_sweep_is_not_rolled_back_so_what_a_program_wrote_is_never_lost"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "staging.tree",
+          "title": "The Staging tree",
+          "origin": "ours",
+          "counts": {
+            "total": 13,
+            "missing": 0,
+            "implemented": 13,
+            "tagged": 13,
+            "passing": 13,
+            "covered": 12,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "staging.tree.lowercase_paths",
+              "title": "Every path of the tree is lower case and holds the game's files and the Mods'",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::every_path_of_the_staging_tree_is_lowercase_and_holds_game_files_and_mods"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.later_mod_wins",
+              "title": "Where two Mods provide a file the later one in the load order wins",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::where_two_mods_provide_a_file_the_later_mod_in_the_load_order_wins"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.generated_mod_wins",
+              "title": "A generated Mod (the far view) wins over every other Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::a_generated_mod_wins_over_every_other_mod_wherever_it_is_listed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.game_executable_excluded",
+              "title": "The game's executable never enters the tree",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::the_game_executable_never_enters_the_staging_tree"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.hard_links",
+              "title": "Files are hard linked where the file system allows",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::files_are_hard_linked_where_the_filesystem_allows"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "staging.tree.copy_fallback",
+              "title": "Where links cannot be made the files are copied, and the Doctor says so",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::where_links_cannot_be_made_the_files_are_copied_and_the_doctor_reports_it"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.incremental",
+              "title": "A change to one Mod rebuilds about its files, not the whole tree",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage_incremental.rs::a_changed_winner_replaces_one_file_and_matches_a_full_build",
+                "crates/nvmod-cli/tests/stage_incremental.rs::enabling_one_mod_changes_about_its_files_not_the_whole_tree"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.crash_safe",
+              "title": "A killed run is undone by the next one; the old tree stays whole until the swap",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/stage.rs::a_failed_step_exits_four_and_leaves_the_old_tree_in_place",
+                "crates/nvmod-cli/tests/stage_incremental.rs::a_killed_run_is_undone_by_the_next_run_which_then_gives_the_new_tree"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.tree_listing",
+              "title": "tree lists every path once with the layer that provides it",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/tree.rs::every_path_is_listed_once_with_the_layer_that_provides_it"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.hidden_files",
+              "title": "A hidden file is not a provider",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/tree.rs::a_hidden_file_is_not_a_provider_and_the_next_layer_wins"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.overwrite_on_top",
+              "title": "Overwrite sits above every Mod",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-api/tests/tree.rs::an_overwrite_folder_sits_above_every_mod"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.case_insensitive_index",
+              "title": "Paths are looked up ignoring case and slash style",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-core/src/index.rs::lookup_ignores_case_and_slash_style"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "staging.tree.tree_without_a_mod",
+              "title": "A tree without one Mod shows what the next provider gives",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-stage/tests/stage_without.rs::a_tree_without_a_mod_has_the_next_providers_files_and_not_its_plugin"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "External tools and contracts",
+      "counts": {
+        "total": 26,
+        "missing": 0,
+        "implemented": 26,
+        "tagged": 26,
+        "passing": 26,
+        "covered": 12,
+        "gated": 0,
+        "not_applicable": 0,
+        "deferred": 0
+      },
+      "groups": [
+        {
+          "id": "tools.contracts",
+          "title": "Contracts with the other Components",
+          "origin": "ours",
+          "counts": {
+            "total": 10,
+            "missing": 0,
+            "implemented": 10,
+            "tagged": 10,
+            "passing": 10,
+            "covered": 9,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "tools.contracts.contracts_listed",
+              "title": "contracts lists what this nvmod accepts",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::contracts_lists_what_this_nvmod_accepts"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.contracts.recorded_samples",
+              "title": "Every contract accepts its recorded sample",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::every_contract_accepts_its_recorded_sample"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.newer_refused",
+              "title": "A newer schema version is refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::a_newer_schema_version_is_refused_with_a_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.required_field",
+              "title": "A missing required field is rejected with the contract named",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::a_missing_required_field_is_rejected_with_the_contract_named"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.unknown_fields_ignored",
+              "title": "Unknown fields are ignored",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::unknown_fields_are_ignored"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.version_negotiation",
+              "title": "The highest common version not above the lock is picked",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/src/negotiate.rs::the_highest_common_version_not_above_the_lock_is_picked"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.loot_sort_contract",
+              "title": "The library result and the sort JSON output are equal and match the schema",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/loot_sort.rs::the_library_result_and_the_sort_json_output_are_equal",
+                "crates/nvmod-tools/tests/loot_sort.rs::the_sort_json_output_matches_the_vendored_schema"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.lodwright_vendored",
+              "title": "Every schema of the lodwright handshake is vendored at version 1",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::every_schema_of_the_lodwright_handshake_is_vendored_at_version_1"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.nv_rs_manifest",
+              "title": "The engine's release manifest shape validates",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/tests/contracts.rs::the_forks_real_manifest_shape_validates"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.contracts.capabilities_file",
+              "title": "The capabilities file is read; a broken one is refused with a reason",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-tools/src/capabilities.rs::a_file_that_breaks_the_contract_is_refused_with_a_reason",
+                "crates/nvmod-tools/src/capabilities.rs::counts_are_read_and_missing_is_derived"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "tools.pins",
+          "title": "Pinned tools",
+          "origin": "ours",
+          "counts": {
+            "total": 11,
+            "missing": 0,
+            "implemented": 11,
+            "tagged": 11,
+            "passing": 11,
+            "covered": 2,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "tools.pins.fetch_verified",
+              "title": "A pinned tool is fetched, checksum and attestation verified, and stored by hash",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_pinned_tool_is_fetched_verified_attested_and_stored_by_hash"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.checksum_mismatch",
+              "title": "A checksum mismatch installs nothing",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_checksum_mismatch_exits_3_installs_nothing_and_never_asks_for_the_attestation"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.attestation_failure",
+              "title": "A failed attestation leaves no file behind",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_failed_attestation_exits_3_and_leaves_no_file_behind"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.retries",
+              "title": "A network failure is retried three times, a malformed response is not",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_malformed_response_is_not_retried_and_a_network_failure_is_retried_three_times"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.pin_bump_safe",
+              "title": "A pin bump never overwrites the tool in use",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_pin_bump_never_overwrites_the_tool_in_use"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.third_party_trust",
+              "title": "A third-party tool without a pinned checksum is refused until the owner trusts it",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_third_party_installer_without_a_pinned_checksum_is_refused_until_the_owner_trusts_it"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.lock_rules",
+              "title": "A lock that breaks the rules is refused with the reason",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::a_lock_that_breaks_the_rules_is_refused_with_the_reason"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.linked_loot_rs",
+              "title": "loot-rs is linked, and the lock records the tag Cargo.toml depends on",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::the_shipped_lock_lists_loot_rs_as_linked",
+                "crates/nvmod-tools/src/lock.rs::the_shipped_lock_is_valid_and_records_the_loot_rs_tag_of_cargo_toml"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            },
+            {
+              "id": "tools.pins.runner_rechecks",
+              "title": "The runner rechecks the checksum on every call",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::the_runner_rechecks_the_checksum_on_every_call_and_exits_3_when_the_binary_changed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.offline_verify",
+              "title": "list and verify need no network",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-cli/tests/tools.rs::list_shows_each_tool_with_its_pinned_version_and_state_and_verify_needs_no_network"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.pins.sha256",
+              "title": "SHA-256 digests are correct",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-runner/src/sha256.rs::known_digests"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "tools.runner",
+          "title": "Running external tools safely",
+          "origin": "ours",
+          "counts": {
+            "total": 5,
+            "missing": 0,
+            "implemented": 5,
+            "tagged": 5,
+            "passing": 5,
+            "covered": 1,
+            "gated": 0,
+            "not_applicable": 0,
+            "deferred": 0
+          },
+          "items": [
+            {
+              "id": "tools.runner.no_shell",
+              "title": "Arguments are passed as words with no shell",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-runner/src/runner.rs::arguments_are_passed_as_words_with_no_shell"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.runner.scrubbed_environment",
+              "title": "The environment is scrubbed",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-runner/src/runner.rs::the_environment_is_scrubbed_and_extras_are_passed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.runner.time_and_output_limits",
+              "title": "A tool that runs too long or writes too much is killed",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-runner/src/runner.rs::a_tool_that_runs_too_long_is_killed_and_reported_as_failed",
+                "crates/nvmod-runner/src/runner.rs::a_tool_that_writes_past_the_cap_is_killed"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.runner.failure_reported",
+              "title": "A failing tool is a tool failure with the first line of its error",
+              "origin": "ours",
+              "state": "passing",
+              "tests": [
+                "crates/nvmod-runner/src/runner.rs::a_failing_exit_code_is_a_tool_failure_with_the_first_line_of_its_error"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": false
+              }
+            },
+            {
+              "id": "tools.runner.only_runner_spawns",
+              "title": "Only the runner crate starts processes",
+              "origin": "ours",
+              "state": "covered",
+              "tests": [
+                "crates/nvmod-runner/tests/no_command_elsewhere.rs::only_the_runner_crate_uses_process_command"
+              ],
+              "platforms": {
+                "linux": true,
+                "macos": true,
+                "windows": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
