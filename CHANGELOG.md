@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.18.0...v0.19.0) (2026-11-25)
+
+
+### Features
+
+* **catalogue:** feature catalogue with typed ids, tagged tests and reports ([#283](https://github.com/JorisJonkers-dev/nvmod-rs/issues/283)) ([07e2437](https://github.com/JorisJonkers-dev/nvmod-rs/commit/07e243758445f27b7c82a590a9d3a5c0b6c936d4))
+
+
+### Bug Fixes
+
+* **conflicts:** time only the analysis in the 300-mod speed test; count added report files in the guard ([#285](https://github.com/JorisJonkers-dev/nvmod-rs/issues/285)) ([ebb0d2c](https://github.com/JorisJonkers-dev/nvmod-rs/commit/ebb0d2ca53b7cdb7766667ec5f9756ced5a570af))
+
 ## [0.18.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.17.1...v0.18.0) (2026-11-24)
 
 
