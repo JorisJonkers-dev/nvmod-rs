@@ -65,6 +65,7 @@ fn walk(dir: &Path, relative: &str, depth: usize, found: &mut Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use nvmod_testkit::{covers, ids};
 
     fn temp(name: &str) -> std::path::PathBuf {
