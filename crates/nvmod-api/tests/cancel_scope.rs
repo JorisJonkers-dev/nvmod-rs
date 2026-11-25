@@ -6,9 +6,11 @@ use nvmod_api::install::{InstallOutput, InstallRequest, LimitOverrides};
 use nvmod_api::{CancelToken, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{BaseBuilder, PeBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 
 #[test]
 fn a_process_wide_request_does_not_stop_a_job_with_its_own_token() {
+    covers(&[ids::api::jobs::SCOPED_CANCEL]);
     let base = TempDir::new("scope-base");
     BaseBuilder::steam().write(base.path());
     write_file(base.path(), "nvse_1_4.dll", &PeBuilder::dll().build());

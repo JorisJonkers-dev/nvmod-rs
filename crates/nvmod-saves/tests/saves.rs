@@ -5,6 +5,7 @@ use nvmod_instance::NvmodInstance;
 use nvmod_profile::Target;
 use nvmod_saves::{Error, Guard, Location, backup, check, list, locate, restore, transfer};
 use nvmod_testkit::{BaseBuilder, SaveBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -72,6 +73,7 @@ fn names(dir: &Path) -> BTreeMap<String, Vec<u8>> {
 
 #[test]
 fn the_save_folder_follows_local_saves() {
+    covers(&[ids::safety::saves::LOCAL_SAVES_FOLDER]);
     let f = Fixture::new();
     assert!(f.loc("A").local);
     assert!(f.loc("A").dir.ends_with("profiles/A/saves"));
@@ -118,6 +120,7 @@ fn saves_list_with_their_plugin_count_and_a_truncated_header_is_unreadable() {
 
 #[test]
 fn backup_then_delete_then_restore_is_byte_identical() {
+    covers(&[ids::safety::saves::BACKUP_RESTORE]);
     let f = Fixture::new();
     f.save("A", "Save 1.fos", &SaveBuilder::new(1).body(b"one").build());
     f.save("A", "Save 1.nvse", b"cosave one");
@@ -139,6 +142,7 @@ fn backup_then_delete_then_restore_is_byte_identical() {
 
 #[test]
 fn restore_backs_up_what_is_there_and_never_deletes() {
+    covers(&[ids::safety::saves::RESTORE_NEVER_DELETES]);
     let f = Fixture::new();
     f.save("A", "Save 1.fos", b"original");
     let id = backup(&f.instance(), "A", &f.loc("A"), NOW).unwrap().id;

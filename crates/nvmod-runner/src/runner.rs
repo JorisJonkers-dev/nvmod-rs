@@ -428,6 +428,7 @@ impl Runner {
 mod tests {
     use super::*;
     use nvmod_testkit::TempDir;
+    use nvmod_testkit::{covers, ids};
     use std::path::PathBuf;
 
     fn script(dir: &TempDir, name: &str, body: &str) -> PathBuf {
@@ -447,6 +448,7 @@ mod tests {
 
     #[test]
     fn arguments_are_passed_as_words_with_no_shell() {
+        covers(&[ids::tools::runner::NO_SHELL]);
         let dir = TempDir::new("run-args");
         let p = script(&dir, "t", r#"printf '%s|' "$@""#);
         let a = args(&["a b", "c;touch pwned", "$HOME"]);
@@ -457,6 +459,7 @@ mod tests {
 
     #[test]
     fn the_environment_is_scrubbed_and_extras_are_passed() {
+        covers(&[ids::tools::runner::SCRUBBED_ENVIRONMENT]);
         let dir = TempDir::new("run-env");
         let p = script(&dir, "t", "env");
         // Set in the parent: must not reach the tool.
@@ -487,6 +490,7 @@ mod tests {
 
     #[test]
     fn a_tool_that_runs_too_long_is_killed_and_reported_as_failed() {
+        covers(&[ids::tools::runner::TIME_AND_OUTPUT_LIMITS]);
         let dir = TempDir::new("run-timeout");
         let p = script(&dir, "t", "exec sleep 30");
         let runner = Runner {
@@ -505,6 +509,7 @@ mod tests {
 
     #[test]
     fn a_tool_that_writes_past_the_cap_is_killed() {
+        covers(&[ids::tools::runner::TIME_AND_OUTPUT_LIMITS]);
         let dir = TempDir::new("run-cap");
         let p = script(&dir, "t", "exec yes");
         let runner = Runner {
@@ -534,6 +539,7 @@ mod tests {
 
     #[test]
     fn a_failing_exit_code_is_a_tool_failure_with_the_first_line_of_its_error() {
+        covers(&[ids::tools::runner::FAILURE_REPORTED]);
         let dir = TempDir::new("run-exit");
         let p = script(&dir, "t", "echo 'it broke' >&2; echo second >&2; exit 7");
         let why = fast().run(&Call::new("t", &p, &[])).unwrap_err();

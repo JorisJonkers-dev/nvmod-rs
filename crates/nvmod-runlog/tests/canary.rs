@@ -3,6 +3,7 @@
 //! (a message, a field, a `Secret`, a span field, a tool's standard error); neither may reach the file. One test,
 //! because the subscriber is global to the process.
 
+use nvmod_testkit::{covers, ids};
 use std::path::Path;
 
 use nvmod_runlog::{Config, Redactor, Secret, Session};
@@ -20,6 +21,7 @@ const OUTSIDE_WINDOWS: [&str; 3] = [
 
 #[test]
 fn a_planted_token_and_an_outside_path_never_reach_the_run_log() {
+    covers(&[ids::api::cli::RUN_LOG_REDACTION]);
     let state = TempDir::new("canary-state");
     let home = TempDir::new("canary-home");
     let instance = home.path().join("games/fnv");

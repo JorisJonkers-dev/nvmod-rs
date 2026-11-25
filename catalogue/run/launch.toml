@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "run.launch"
+title = "Starting the game and other programs"
+origin = "ours"
+
+[[item]]
+id = "dry_run_plan"
+title = "A dry run prints the plan and changes nothing"
+status = "implemented"
+
+[[item]]
+id = "proton"
+title = "On Linux the game runs through Proton with the prefix, app id and staged data"
+status = "implemented"
+
+[[item]]
+id = "nv_rs_native"
+title = "On an nv-rs Instance the game runs natively and nothing is copied"
+status = "implemented"
+
+[[item]]
+id = "named_program"
+title = "Only the program that is named is started"
+status = "implemented"
+
+[[item]]
+id = "game_agrees_with_verify"
+title = "The game entry agrees with verify"
+status = "implemented"
+
+[[item]]
+id = "instance_lock"
+title = "A live lock refuses every writing command; a dead one is taken over"
+status = "implemented"
+
+[[item]]
+id = "detached_run_locks"
+title = "A detached run keeps the Instance locked until the program ends"
+status = "implemented"
+
+[[item]]
+id = "profile_placed_collected"
+title = "The Profile is placed in the prefix before the start and collected after"
+status = "implemented"
+
+[[item]]
+id = "callers_launcher"
+title = "A launcher of the caller starts the program and nothing else does"
+status = "implemented"
+
+[[item]]
+id = "mo2_running_refuses"
+title = "A running Mod Organizer refuses the run"
+status = "implemented"
+
+[[item]]
+id = "real_game_start"
+title = "Starting the real game on a real install"
+status = "implemented"
+gated = "needs the game, a display and the player's own copy"

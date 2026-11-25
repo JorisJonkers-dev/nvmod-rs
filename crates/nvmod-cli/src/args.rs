@@ -60,6 +60,7 @@ impl Args {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn words(text: &str) -> Vec<String> {
         text.split_whitespace().map(str::to_owned).collect()
@@ -83,6 +84,7 @@ mod tests {
 
     #[test]
     fn unknown_options_and_missing_values_are_errors() {
+        covers(&[ids::api::cli::OPTION_PARSING]);
         assert_eq!(
             Args::parse(&words("--nope"), &[], &[]),
             Err("unknown option --nope".to_owned())

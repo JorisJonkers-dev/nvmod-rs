@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "run.prefix"
+title = "Placing a Profile in the game's prefix"
+origin = "ours"
+
+[[item]]
+id = "apply_places_profile"
+title = "apply places the Profile in the prefix"
+status = "implemented"
+
+[[item]]
+id = "local_settings"
+title = "LocalSettings places the five inis and off puts the player's own back"
+status = "implemented"
+
+[[item]]
+id = "initweaks_merge"
+title = "Ini tweaks of the Mods merge in priority order"
+status = "implemented"
+
+[[item]]
+id = "local_saves_redirect"
+title = "LocalSaves redirects the save folder and restores it byte for byte"
+status = "implemented"
+
+[[item]]
+id = "apply_idempotent"
+title = "Applying twice changes nothing and A, B, A leaves the prefix as the first A"
+status = "implemented"
+
+[[item]]
+id = "finish_collects"
+title = "finish collects what the game wrote"
+status = "implemented"
+
+[[item]]
+id = "cut_off_run_recovered"
+title = "A run that was cut off is put back by the next one"
+status = "implemented"
+
+[[item]]
+id = "archive_invalidation"
+title = "The invalidation archive reaches a staged tree"
+status = "implemented"
+
+[[item]]
+id = "dry_run"
+title = "A dry run writes nothing and a missing prefix is refused"
+status = "implemented"
+
+[[item]]
+id = "nothing_outside"
+title = "Nothing is written outside the Instance and the named prefix"
+status = "implemented"

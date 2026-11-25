@@ -4,6 +4,7 @@
 //! files with generated headers and fake content; nothing is game data.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::process::Command;
@@ -120,6 +121,7 @@ const ALL: [&str; 9] = [
 
 #[test]
 fn a_new_profile_lists_every_master_of_the_base_copy_active_and_in_game_order() {
+    covers(&[ids::instance::init::BASE_MASTERS_LISTED]);
     // Written in a scrambled order and in lower case, as a Steam copy has them.
     let lower: Vec<String> = ALL.iter().rev().map(|n| n.to_ascii_lowercase()).collect();
     let files: Vec<&str> = lower.iter().map(String::as_str).collect();
@@ -214,6 +216,7 @@ fn golden(name: &str, actual: &str) {
 
 #[test]
 fn the_doctor_names_base_masters_an_existing_profile_does_not_list_and_the_repair_fixes_it() {
+    covers(&[ids::doctor::checks::BASE_MASTERS_REPAIR]);
     let s = Scratch::new(&["DeadMoney.esm", "HonestHearts.esm", "TribalPack.esm"]);
     s.create("Default");
     // A Profile as the earlier versions made it: the base game's master only, plus a plugin of a Mod.

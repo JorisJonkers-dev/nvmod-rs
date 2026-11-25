@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "safety.saves"
+title = "Saves"
+origin = "ours"
+
+[[item]]
+id = "list"
+title = "List saves with their plugin counts; unreadable ones are listed as such"
+status = "implemented"
+
+[[item]]
+id = "backup_restore"
+title = "Back up, delete and restore round-trips"
+status = "implemented"
+
+[[item]]
+id = "restore_never_deletes"
+title = "A restore backs up what is there and never deletes"
+status = "implemented"
+
+[[item]]
+id = "transfer"
+title = "Transfer saves with their cosaves between Profiles"
+status = "implemented"
+
+[[item]]
+id = "check_missing_plugin"
+title = "check reports a save that needs a plugin the Profile lacks"
+status = "implemented"
+
+[[item]]
+id = "checksums"
+title = "checksum lists the hashes of the saves"
+status = "implemented"
+
+[[item]]
+id = "local_saves_folder"
+title = "The save folder follows the LocalSaves switch"
+status = "implemented"

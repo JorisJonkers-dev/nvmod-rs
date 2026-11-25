@@ -3,6 +3,7 @@
 //! from a synthetic base copy. nv-rs is a fake file and its record written here. No game data.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, nv_viewer_name, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::sha256_hex;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -98,6 +99,7 @@ impl Rig {
 
 #[test]
 fn a_clean_instance_exits_0_and_prints_the_doctor_report_and_the_launch_plan() {
+    covers(&[ids::doctor::verify::CLEAN]);
     let rig = Rig::new();
     let (code, out, err) = rig.verify(&[]);
     assert_eq!(code, 0, "{out}\n{err}");
@@ -182,6 +184,7 @@ fn the_proton_program_can_be_named() {
 
 #[test]
 fn a_doctor_error_is_exit_3_and_the_report_still_prints() {
+    covers(&[ids::doctor::verify::DOCTOR_ERROR_EXIT]);
     let rig = Rig::new();
     write_file(
         &rig.root(),
@@ -214,6 +217,7 @@ fn a_doctor_error_is_exit_3_and_the_report_still_prints() {
 
 #[test]
 fn an_nv_rs_that_matches_its_record_is_verified() {
+    covers(&[ids::doctor::verify::ENGINE_MATCHES_RECORD]);
     let rig = Rig::new();
     rig.fake_nv_rs(b"viewer", b"viewer");
     let (code, doc) = rig.json(&[]);
@@ -224,6 +228,7 @@ fn an_nv_rs_that_matches_its_record_is_verified() {
 
 #[test]
 fn an_nv_rs_changed_after_its_install_is_a_verification_failure() {
+    covers(&[ids::doctor::verify::ENGINE_CHANGED]);
     let rig = Rig::new();
     rig.fake_nv_rs(b"viewer", b"tampered");
     let (code, doc) = rig.json(&[]);
@@ -250,6 +255,7 @@ fn no_nv_rs_is_reported_not_failed_and_the_plan_names_the_native_command() {
 
 #[test]
 fn verify_writes_nothing() {
+    covers(&[ids::doctor::verify::WRITES_NOTHING]);
     let rig = Rig::new();
     rig.fake_nv_rs(b"viewer", b"viewer");
     let before = snapshot(rig.out.path());

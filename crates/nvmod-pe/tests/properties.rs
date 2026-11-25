@@ -3,6 +3,7 @@
 
 use nvmod_pe::{MAX_READ, ReadAt, SliceSource, Version4, inspect, inspect_bytes};
 use nvmod_testkit::PeBuilder;
+use nvmod_testkit::{covers, ids};
 use proptest::prelude::*;
 
 /// A source that records every read it is asked for and checks it against the file.
@@ -36,6 +37,7 @@ fn valid() -> Vec<u8> {
 proptest! {
     #[test]
     fn arbitrary_bytes_never_panic(bytes in proptest::collection::vec(any::<u8>(), 0..2048)) {
+        covers(&[ids::formats::pe::HOSTILE_INPUT_BOUNDED]);
         let _ = inspect_bytes(&bytes);
     }
 
@@ -50,6 +52,7 @@ proptest! {
     fn changing_any_bytes_of_a_valid_file_never_panics_and_reads_stay_in_the_file(
         edits in proptest::collection::vec((0usize..0x600, any::<u8>()), 1..8),
     ) {
+        covers(&[ids::formats::pe::HOSTILE_INPUT_BOUNDED]);
         let mut file = valid();
         for (at, value) in edits {
             file[at] = value;

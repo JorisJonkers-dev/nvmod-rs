@@ -129,6 +129,7 @@ pub fn compare(a: &str, b: &str) -> Comparison {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn lt(a: &str, b: &str) {
         let c = compare(a, b);
@@ -139,6 +140,7 @@ mod tests {
 
     #[test]
     fn dotted_suffixed_and_date_versions_order() {
+        covers(&[ids::formats::files::VERSION_ORDER]);
         lt("1.9", "1.10");
         lt("5.17", "5.17a");
         lt("5.17a", "5.17b");

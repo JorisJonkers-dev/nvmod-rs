@@ -3,6 +3,7 @@
 //! Archives are built in code by the testkit; no mod data is used.
 
 use nvmod_testkit::{BaseBuilder, TarBuilder, TempDir, ZipBuilder, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -174,6 +175,7 @@ fn fomod_zip(path: &Path, xml: &str, files: &[(&str, &[u8])]) {
 
 #[test]
 fn a_plain_archive_is_placed_enabled_at_highest_priority_and_staged() {
+    covers(&[ids::mods::install::ARCHIVE]);
     let s = Scratch::new();
     let zip = s.archive("Better Rocks.zip");
     ZipBuilder::new()
@@ -208,6 +210,7 @@ fn a_plain_archive_is_placed_enabled_at_highest_priority_and_staged() {
 
 #[test]
 fn a_nexus_named_archive_writes_its_provenance_into_meta_ini() {
+    covers(&[ids::mods::install::NEXUS_PROVENANCE]);
     let s = Scratch::new();
     let zip = s.archive("Better Rocks-83815-1-10-2-1699999999.zip");
     ZipBuilder::new()
@@ -235,6 +238,7 @@ fn a_nexus_named_archive_writes_its_provenance_into_meta_ini() {
 
 #[test]
 fn a_folder_is_installed_like_an_archive_and_left_as_it_was() {
+    covers(&[ids::mods::install::FOLDER]);
     let s = Scratch::new();
     let folder = s.archive("Generated Mod");
     write_file(&folder, "Meshes/Gen.nif", b"generated");
@@ -257,6 +261,7 @@ fn a_folder_is_installed_like_an_archive_and_left_as_it_was() {
 
 #[test]
 fn a_wrapper_folder_and_a_data_folder_are_stripped() {
+    covers(&[ids::mods::install::WRAPPER_STRIPPED]);
     let s = Scratch::new();
     let zip = s.archive("Wrapped-123.zip");
     ZipBuilder::new()
@@ -276,6 +281,7 @@ fn a_wrapper_folder_and_a_data_folder_are_stripped() {
 
 #[test]
 fn a_tar_archive_installs_too() {
+    covers(&[ids::mods::install::TAR]);
     let s = Scratch::new();
     let tar = s.archive("Tarred.tar");
     TarBuilder::new()
@@ -292,6 +298,7 @@ fn a_tar_archive_installs_too() {
 
 #[test]
 fn a_rar_archive_is_refused_with_advice_and_nothing_is_written() {
+    covers(&[ids::mods::install::RAR_REFUSED]);
     let s = Scratch::new();
     let archive = s.archive("Odd.rar");
     let mut bytes = b"Rar!\x1a\x07\x00".to_vec();
@@ -326,6 +333,7 @@ fn a_second_install_goes_above_the_first() {
 
 #[test]
 fn an_existing_mod_name_is_refused_and_nothing_changes() {
+    covers(&[ids::mods::install::DUPLICATE_NAME_REFUSED]);
     let s = Scratch::new();
     let zip = s.archive("Existing.zip");
     ZipBuilder::new().file("x.txt", b"x").write(&zip);
@@ -351,6 +359,7 @@ fn a_plugin_name_outside_the_code_page_is_refused() {
 
 #[test]
 fn plugins_txt_is_written_in_the_windows_code_page_and_loadorder_in_utf8() {
+    covers(&[ids::mods::install::PLUGIN_LISTS_ENCODING]);
     let s = Scratch::new();
     let zip = s.archive("Cafe.zip");
     ZipBuilder::new().file("Caf\u{e9}.esp", b"p").write(&zip);
@@ -369,6 +378,7 @@ fn plugins_txt_is_written_in_the_windows_code_page_and_loadorder_in_utf8() {
 
 #[test]
 fn hostile_archives_are_refused_and_change_nothing() {
+    covers(&[ids::mods::install::HOSTILE_ARCHIVES_REFUSED]);
     let s = Scratch::new();
     let cases: Vec<(&str, Vec<u8>)> = vec![
         (
@@ -415,6 +425,7 @@ fn an_archive_larger_than_the_limit_is_refused() {
 
 #[test]
 fn every_extraction_limit_refuses_with_exit_2_names_itself_and_leaves_the_instance_alone() {
+    covers(&[ids::mods::install::EXTRACTION_LIMITS]);
     let s = Scratch::new();
     let zip = s.archive("Limits.zip");
     ZipBuilder::new()
@@ -459,6 +470,7 @@ fn an_extraction_limit_that_is_not_a_number_is_a_usage_error() {
 
 #[test]
 fn dry_run_lists_the_changes_and_writes_nothing() {
+    covers(&[ids::mods::install::DRY_RUN]);
     let s = Scratch::new();
     let zip = s.archive("Dry.zip");
     ZipBuilder::new()
@@ -488,6 +500,7 @@ fn dry_run_lists_the_changes_and_writes_nothing() {
 
 #[test]
 fn a_fomod_with_inferable_choices_installs_without_questions() {
+    covers(&[ids::mods::fomod::INFERRED_CHOICES]);
     let s = Scratch::new();
     let zip = s.archive("Synthetic.zip");
     fomod_zip(
@@ -523,6 +536,7 @@ fn a_fomod_with_inferable_choices_installs_without_questions() {
 
 #[test]
 fn a_fomod_choice_that_cannot_be_inferred_is_put_as_a_question_and_nothing_is_written() {
+    covers(&[ids::mods::fomod::QUESTIONS]);
     let s = Scratch::new();
     let zip = s.archive("Ask.zip");
     fomod_zip(&zip, ASK, &[("red.txt", b"red"), ("blue.txt", b"blue")]);
@@ -545,6 +559,7 @@ fn a_fomod_choice_that_cannot_be_inferred_is_put_as_a_question_and_nothing_is_wr
 
 #[test]
 fn an_answers_file_completes_the_install() {
+    covers(&[ids::mods::fomod::ANSWERS_FILE]);
     let s = Scratch::new();
     let zip = s.archive("Ask.zip");
     fomod_zip(&zip, ASK, &[("red.txt", b"red"), ("blue.txt", b"blue")]);
@@ -560,6 +575,7 @@ fn an_answers_file_completes_the_install() {
 
 #[test]
 fn bad_answers_are_refused_and_change_nothing() {
+    covers(&[ids::mods::fomod::BAD_ANSWERS_REFUSED]);
     let s = Scratch::new();
     let zip = s.archive("Ask.zip");
     fomod_zip(&zip, ASK, &[("red.txt", b"red"), ("blue.txt", b"blue")]);
@@ -579,6 +595,7 @@ fn bad_answers_are_refused_and_change_nothing() {
 
 #[test]
 fn rollback_restores_the_previous_state_and_removes_the_mod() {
+    covers(&[ids::mods::install::ROLLBACK]);
     let s = Scratch::new();
     let before = s.state();
     let zip = s.archive("Gone.zip");
@@ -601,6 +618,7 @@ fn rollback_restores_the_previous_state_and_removes_the_mod() {
 
 #[test]
 fn a_failed_step_rolls_back_by_itself_with_exit_4() {
+    covers(&[ids::mods::install::FAILED_STEP_ROLLS_BACK]);
     let s = Scratch::new();
     let zip = s.archive("Fails.zip");
     ZipBuilder::new().file("Fails.esp", b"p").write(&zip);

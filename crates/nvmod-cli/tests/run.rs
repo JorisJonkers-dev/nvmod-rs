@@ -4,6 +4,7 @@
 #![cfg(unix)]
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -176,6 +177,7 @@ fn mo2_fixture(dir: &Path, game: &Path) {
 
 #[test]
 fn import_lists_mapped_paths_and_refuses_other_drives_with_a_finding() {
+    covers(&[ids::run::registry::IMPORT_MAPPED_PATHS]);
     let s = Scratch::new();
     let mo2 = TempDir::new("run-mo2");
     mo2_fixture(mo2.path(), s.base.path());
@@ -232,6 +234,7 @@ fn import_lists_mapped_paths_and_refuses_other_drives_with_a_finding() {
 
 #[test]
 fn exec_add_edit_and_remove_round_trip() {
+    covers(&[ids::run::registry::ADD_EDIT_REMOVE]);
     let s = Scratch::new();
     s.exec_add("Tool", &s.tool("t.exe"), &["--arguments", "-a \"b c\""]);
     let r = s.r();
@@ -282,6 +285,7 @@ fn exec_add_edit_and_remove_round_trip() {
 
 #[test]
 fn dry_run_prints_the_plan_and_changes_nothing() {
+    covers(&[ids::run::launch::DRY_RUN_PLAN]);
     let s = Scratch::new();
     let tool = s.tool("FNVEdit.exe");
     s.exec_add(
@@ -318,6 +322,7 @@ fn dry_run_prints_the_plan_and_changes_nothing() {
 
 #[test]
 fn run_goes_through_proton_with_the_prefix_app_id_folder_and_staged_data() {
+    covers(&[ids::run::launch::PROTON]);
     let s = Scratch::new();
     let tool = s.tool("FNVEdit.exe");
     let wd = s.inst.path().join("tools");
@@ -367,6 +372,7 @@ fn run_goes_through_proton_with_the_prefix_app_id_folder_and_staged_data() {
 
 #[test]
 fn the_game_entry_agrees_with_verify() {
+    covers(&[ids::run::launch::GAME_AGREES_WITH_VERIFY]);
     let s = Scratch::new();
     let r = s.r();
     let proton = s.proton.to_str().unwrap();
@@ -431,6 +437,7 @@ exit "${FAKE_EXIT:-0}""#,
 
 #[test]
 fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
+    covers(&[ids::run::launch::NV_RS_NATIVE]);
     let s = Scratch::new();
     let viewer = s.root().join("nv-rs/bin/nv-viewer");
     fake_viewer(&viewer);
@@ -502,6 +509,7 @@ fn nv_rs_runs_natively_from_a_run_folder_and_nothing_is_copied() {
 
 #[test]
 fn a_named_program_is_planned_and_the_dry_run_writes_nothing() {
+    covers(&[ids::run::launch::NAMED_PROGRAM]);
     let s = Scratch::new();
     let viewer = s.inst.path().join("opt/nv-viewer");
     fake_viewer(&viewer);
@@ -530,6 +538,7 @@ fn a_named_program_is_planned_and_the_dry_run_writes_nothing() {
 
 #[test]
 fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
+    covers(&[ids::run::launch::NV_RS_NATIVE]);
     let s = Scratch::new();
     let (code, _, err) = nvmod(&["target", "nv-rs", "--instance", &s.r()]);
     assert_eq!(code, 0, "{err}");
@@ -557,6 +566,7 @@ fn game_on_an_nv_rs_instance_is_native_and_via_proton_is_the_fallback() {
 // and the host's processes are not seen; it works on every platform.
 #[test]
 fn a_running_mo2_refuses_the_run() {
+    covers(&[ids::run::launch::MO2_RUNNING_REFUSES]);
     let s = Scratch::new();
     let tool = s.tool("t.exe");
     s.exec_add("T", &tool, &[]);
@@ -576,6 +586,7 @@ fn a_running_mo2_refuses_the_run() {
 
 #[test]
 fn a_live_lock_refuses_every_writing_command_and_a_dead_one_is_taken_over() {
+    covers(&[ids::run::launch::INSTANCE_LOCK]);
     let s = Scratch::new();
     let tool = s.tool("t.exe");
     s.exec_add("T", &tool, &[]);
@@ -622,6 +633,7 @@ fn a_live_lock_refuses_every_writing_command_and_a_dead_one_is_taken_over() {
 
 #[test]
 fn a_detached_run_keeps_the_instance_locked_until_the_program_ends() {
+    covers(&[ids::run::launch::DETACHED_RUN_LOCKS]);
     let s = Scratch::new();
     let tool = s.tool("t.exe");
     s.exec_add("T", &tool, &[]);
@@ -648,6 +660,7 @@ fn a_detached_run_keeps_the_instance_locked_until_the_program_ends() {
 
 #[test]
 fn the_profile_is_placed_in_the_prefix_before_the_start_and_collected_after() {
+    covers(&[ids::run::launch::PROFILE_PLACED_COLLECTED]);
     let s = Scratch::new();
     let tool = s.tool("t.exe");
     s.exec_add("T", &tool, &[]);
@@ -697,6 +710,7 @@ impl nvmod_run::Launcher for Recording {
 
 #[test]
 fn a_launcher_of_the_callers_starts_the_program_and_nothing_else_does() {
+    covers(&[ids::run::launch::CALLERS_LAUNCHER]);
     let s = Scratch::new();
     let r = s.r();
     let launcher = Recording(std::sync::Mutex::new(Vec::new()));

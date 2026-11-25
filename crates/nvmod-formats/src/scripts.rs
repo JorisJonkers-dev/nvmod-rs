@@ -265,9 +265,11 @@ fn expression_calls(expr: &[u8], depth: usize, calls: &mut Vec<u16>) {
 mod tests {
     use super::*;
     use nvmod_testkit::{PluginBuilder, ScdaBuilder};
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn statements_expressions_and_nested_arguments_are_counted() {
+        covers(&[ids::formats::files::SCRIPT_SCAN]);
         let script = ScdaBuilder::new()
             .call(0x1401)
             .call_on(2, 0x2201)
@@ -298,6 +300,7 @@ mod tests {
     fn a_compressed_record_is_read() {
         use flate2::{Compression, write::ZlibEncoder};
         use std::io::Write;
+        covers(&[ids::formats::files::SCRIPT_SCAN]);
         let script = ScdaBuilder::new().call(0x1401).build();
         let mut body = Vec::new();
         body.extend_from_slice(b"SCDA");

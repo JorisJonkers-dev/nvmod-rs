@@ -3,6 +3,7 @@
 //! code by the testkit and `.meta` files are written here; no mod data is used.
 
 use nvmod_testkit::{BaseBuilder, TempDir, ZipBuilder, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::process::Command;
@@ -77,6 +78,7 @@ fn schema(name: &str) -> String {
 
 #[test]
 fn list_json_matches_its_schema_and_names_with_brackets_work() {
+    covers(&[ids::mods::downloads::LIST]);
     let s = Scratch::new();
     let dl = s.root().join("downloads");
     std::fs::create_dir_all(&dl).unwrap();
@@ -143,6 +145,7 @@ fn list_json_matches_its_schema_and_names_with_brackets_work() {
 
 #[test]
 fn show_with_hash_and_a_path_inside_the_folder() {
+    covers(&[ids::mods::downloads::SHOW_HASH]);
     let s = Scratch::new();
     let dl = s.root().join("downloads");
     std::fs::create_dir_all(&dl).unwrap();
@@ -186,6 +189,7 @@ fn show_with_hash_and_a_path_inside_the_folder() {
 
 #[test]
 fn install_marks_the_meta_and_hide_unhide_forget_work() {
+    covers(&[ids::mods::downloads::INSTALL_FROM_LIBRARY]);
     let s = Scratch::new();
     let dl = s.root().join("downloads");
     std::fs::create_dir_all(&dl).unwrap();
@@ -280,6 +284,7 @@ fn install_marks_the_meta_and_hide_unhide_forget_work() {
 
 #[test]
 fn the_downloads_option_names_another_folder() {
+    covers(&[ids::mods::downloads::OTHER_FOLDER]);
     let s = Scratch::new();
     let elsewhere = TempDir::new("dlcli-other");
     write_file(elsewhere.path(), "Far.zip", b"x");

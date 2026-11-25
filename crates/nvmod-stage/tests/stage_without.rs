@@ -5,6 +5,7 @@
 use nvmod_instance::NvmodInstance;
 use nvmod_stage::{Options, StageError, stage, stage_without};
 use nvmod_testkit::{BaseBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::Path;
 
@@ -43,6 +44,7 @@ fn read(p: &Path) -> Vec<u8> {
 
 #[test]
 fn a_tree_without_a_mod_has_the_next_providers_files_and_not_its_plugin() {
+    covers(&[ids::staging::tree::TREE_WITHOUT_A_MOD]);
     let (_base, dir, instance) = scratch();
     let dest = dir.path().join("pictures/without-far");
     let report = stage_without(

@@ -3,6 +3,7 @@
 //! from a local fake server with its checksum verified; a missing pin is a refusal that says so.
 
 use nvmod_testkit::{BaseBuilder, FakeServer, PluginBuilder, Reply, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::sha256_hex;
 use std::path::PathBuf;
 use std::process::Command;
@@ -115,6 +116,7 @@ fn server(body: &[u8]) -> FakeServer {
 
 #[test]
 fn the_pinned_masterlist_is_fetched_verified_stored_and_used() {
+    covers(&[ids::plugins::sort::PINNED_MASTERLIST]);
     let rig = Rig::new();
     let server = server(MASTERLIST);
     let lock = rig.lock(Some(&server), MASTERLIST);
@@ -139,6 +141,7 @@ fn a_missing_pin_is_a_refusal_that_says_so() {
 
 #[test]
 fn a_masterlist_that_does_not_match_its_checksum_exits_3_and_is_not_used() {
+    covers(&[ids::plugins::sort::MASTERLIST_CHECKSUM]);
     let rig = Rig::new();
     let server = server(b"plugins: []\n# tampered\n");
     let lock = rig.lock(Some(&server), MASTERLIST);

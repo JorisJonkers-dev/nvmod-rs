@@ -414,6 +414,7 @@ pub fn parse_nexus_name(file_name: &str) -> Option<NexusName> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     const SAMPLE: &[u8] = b"[General]\r\ngameName=newvegas\r\nmodid=83815\r\nversion=d2026.3.1.0\r\ninstallationFile=C:/Users/someone/Downloads/Mod-83815.7z\r\ncolor=@Variant(\\0\\0\\0\\x43\\x1\\xff\\xff\\0\\0\\0\\0\\0\\0)\r\n; kept comment\r\nfuture=@ByteArray(a\\x00b)\r\n\r\n[installedFiles]\r\n1\\modid=83815\r\n1\\fileid=4\r\nsize=1\r\n\r\n[Plugins]\r\nA.esp/lock=true\r\nA.esp/priority=5\r\n";
 
@@ -444,6 +445,7 @@ mod tests {
 
     #[test]
     fn setting_a_key_changes_only_its_line() {
+        covers(&[ids::formats::files::META_INI_EDIT]);
         let mut meta = MetaIni::parse(SAMPLE);
         meta.set("General", "version", "d2026.11.2.0");
         let new = meta.to_bytes();

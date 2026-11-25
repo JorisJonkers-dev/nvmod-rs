@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "mods.lifecycle"
+title = "The life of a Mod"
+origin = "ours"
+
+[[item]]
+id = "list_priority"
+title = "List the Mods in priority order, with their categories"
+status = "implemented"
+
+[[item]]
+id = "enable_disable"
+title = "Turn Mods on and off"
+status = "implemented"
+
+[[item]]
+id = "reorder"
+title = "Change which Mod wins"
+status = "implemented"
+
+[[item]]
+id = "remove"
+title = "Remove a Mod; rollback brings it back"
+status = "implemented"
+
+[[item]]
+id = "remove_dependants"
+title = "Removing a Mod other plugins need names the dependants and needs --force"
+status = "implemented"
+
+[[item]]
+id = "rename"
+title = "Rename a Mod"
+status = "implemented"
+
+[[item]]
+id = "create"
+title = "Create an empty Mod"
+status = "implemented"
+
+[[item]]
+id = "clone"
+title = "Clone a Mod, optionally with hard links"
+status = "implemented"
+
+[[item]]
+id = "hide_unhide"
+title = "Hide and unhide one file of a Mod"
+status = "implemented"
+
+[[item]]
+id = "notes"
+title = "Notes on a Mod are kept in meta.ini"
+status = "implemented"
+
+[[item]]
+id = "separators"
+title = "Separators in MO2's form"
+status = "implemented"
+
+[[item]]
+id = "categories"
+title = "Categories are set, listed and filtered"
+status = "implemented"
+
+[[item]]
+id = "disable_deactivates_plugins"
+title = "Disabling a Mod takes out the plugins only it provides, never base plugins"
+status = "implemented"
+
+[[item]]
+id = "enable_restores_plugins"
+title = "Enabling a Mod puts back the plugins its disable took out"
+status = "implemented"
+
+[[item]]
+id = "running_game_refuses_change"
+title = "A running game of the Instance refuses a change, not a dry run"
+status = "implemented"
+
+[[item]]
+id = "failed_step_restores"
+title = "A failing step puts everything back"
+status = "implemented"
+
+[[item]]
+id = "modlist_format"
+title = "modlist.txt prefixes, separators and foreign entries are read as MO2 writes them"
+status = "implemented"
+
+[[item]]
+id = "meta_ini_kept"
+title = "meta.ini comes back byte for byte when nothing changed"
+status = "implemented"

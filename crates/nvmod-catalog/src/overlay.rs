@@ -231,6 +231,7 @@ fn unknown_reference(p: &Plugin, known: &HashSet<&str>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use std::fmt::Write as _;
 
     const PROV: &str =
@@ -252,6 +253,7 @@ mod tests {
 
     #[test]
     fn an_overlay_entry_is_recognised_and_marked_as_user() {
+        covers(&[ids::doctor::nvse::OVERLAY]);
         let c = with(&[("a.toml", entry("mine", "Mine.dll", ""))]);
         assert!(c.notes.is_empty(), "{:?}", c.notes);
         let p = c.by_dll("mine.DLL").unwrap();
@@ -291,6 +293,7 @@ mod tests {
 
     #[test]
     fn an_overlay_never_shadows_a_shipped_entry() {
+        covers(&[ids::doctor::nvse::OVERLAY_CANNOT_SHADOW]);
         let shipped = Catalog::builtin().plugins[0].clone();
         let by_id = entry(&shipped.id, "other.dll", "");
         let by_dll = entry("fresh", &shipped.dll.to_uppercase(), "");
@@ -305,6 +308,7 @@ mod tests {
 
     #[test]
     fn an_overlay_cannot_claim_more_than_external() {
+        covers(&[ids::doctor::nvse::OVERLAY_CANNOT_SHADOW]);
         let text = format!(
             "schema = 1\n[[plugin]]\nid = \"x\"\nname = \"N\"\ndll = \"x.dll\"\n[plugin.provided_by.nv-rs]\nkind = \"builtin-full\"\nextender = \"xnvse\"\n{PROV}"
         );
@@ -324,6 +328,7 @@ mod tests {
 
     #[test]
     fn the_entry_cap_is_enforced() {
+        covers(&[ids::doctor::nvse::OVERLAY_CAPS]);
         let mut many = String::new();
         for i in 0..MAX_ENTRIES + 3 {
             writeln!(

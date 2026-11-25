@@ -35,9 +35,11 @@ pub fn detect_storefront(dir: &Path) -> Storefront {
 mod tests {
     use super::*;
     use nvmod_testkit::{BaseBuilder, TempDir};
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn each_fixture_is_detected_and_only_steam_and_gog_are_supported() {
+        covers(&[ids::instance::init::STOREFRONTS]);
         for (builder, store, ok) in [
             (BaseBuilder::steam(), Storefront::Steam, true),
             (BaseBuilder::gog(), Storefront::Gog, true),

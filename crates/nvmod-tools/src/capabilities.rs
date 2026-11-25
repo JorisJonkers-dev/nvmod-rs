@@ -143,11 +143,13 @@ impl Capabilities {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     const GOOD: &str = r#"{"schema_version":1,"extenders":[{"id":"a","name":"A","commands":{"implemented":2,"total":5,"implemented_names":["X","Y"]}}]}"#;
 
     #[test]
     fn counts_are_read_and_missing_is_derived() {
+        covers(&[ids::tools::contracts::CAPABILITIES_FILE]);
         let caps = Capabilities::parse(GOOD).unwrap();
         let a = caps.extender("a").unwrap();
         assert_eq!((a.implemented, a.total, a.missing()), (2, 5, 3));
@@ -156,6 +158,7 @@ mod tests {
 
     #[test]
     fn a_file_that_breaks_the_contract_is_refused_with_a_reason() {
+        covers(&[ids::tools::contracts::CAPABILITIES_FILE]);
         for (text, want) in [
             ("nope", "not JSON"),
             (r#"{"schema_version":2,"extenders":[]}"#, "newer"),

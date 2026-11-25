@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "api.jobs"
+title = "The nvmod-api jobs"
+origin = "ours"
+
+[[item]]
+id = "typed_jobs"
+title = "Typed jobs for the Mods list and change, sort, plugins, install, saves, backup, stage and profile"
+status = "implemented"
+
+[[item]]
+id = "progress_events"
+title = "Jobs report progress events"
+status = "implemented"
+
+[[item]]
+id = "cancel_before_start"
+title = "A used cancel token stops every job before it touches the Instance"
+status = "implemented"
+
+[[item]]
+id = "cancel_is_a_result"
+title = "A cancelled job is a result and writes nothing"
+status = "implemented"
+
+[[item]]
+id = "copyable_refusals"
+title = "A refusal carries copyable text"
+status = "implemented"
+
+[[item]]
+id = "json_requests"
+title = "Every request round-trips through JSON and takes documented defaults"
+status = "implemented"
+
+[[item]]
+id = "stable_error_codes"
+title = "An error kind has a stable code"
+status = "implemented"
+
+[[item]]
+id = "api_version"
+title = "The API version is the release version"
+status = "implemented"
+
+[[item]]
+id = "scoped_cancel"
+title = "A process-wide cancel does not stop a job with its own token"
+status = "implemented"
+
+[[item]]
+id = "doctor_job"
+title = "The Doctor job checks a game copy or an Instance and honours fail-on"
+status = "implemented"

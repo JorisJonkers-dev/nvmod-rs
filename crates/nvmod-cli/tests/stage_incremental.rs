@@ -2,6 +2,7 @@
 //! Incremental staging (#72), run as a program against a scratch Instance of 300 synthetic Mods.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -144,6 +145,7 @@ impl Scratch {
 
 #[test]
 fn enabling_one_mod_changes_about_its_files_not_the_whole_tree() {
+    covers(&[ids::staging::tree::INCREMENTAL]);
     let mut s = Scratch::new();
     let first = s.staged(&[]);
     assert_eq!(first["mode"], "full");
@@ -159,6 +161,7 @@ fn enabling_one_mod_changes_about_its_files_not_the_whole_tree() {
 
 #[test]
 fn a_changed_winner_replaces_one_file_and_matches_a_full_build() {
+    covers(&[ids::staging::tree::INCREMENTAL]);
     let mut s = Scratch::new();
     s.staged(&[]);
     // A new Mod that overrides the shared path: one replaced path, plus its own new file.
@@ -206,6 +209,7 @@ fn a_failure_inside_a_run_leaves_the_old_tree_and_exit_4() {
 
 #[test]
 fn a_killed_run_is_undone_by_the_next_run_which_then_gives_the_new_tree() {
+    covers(&[ids::staging::tree::CRASH_SAFE]);
     let mut reference = Scratch::new();
     reference.staged(&[]);
     reference.enable_new_mod("Added", 20);

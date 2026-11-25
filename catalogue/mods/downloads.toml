@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "mods.downloads"
+title = "The downloads library"
+origin = "ours"
+
+[[item]]
+id = "list"
+title = "List the downloaded archives with their state"
+status = "implemented"
+
+[[item]]
+id = "show_hash"
+title = "Show one archive, with optional hashes"
+status = "implemented"
+
+[[item]]
+id = "install_from_library"
+title = "Install from the library marks the archive installed"
+status = "implemented"
+
+[[item]]
+id = "unmatched"
+title = "List archives with no Mod and Mods with no archive"
+status = "implemented"
+
+[[item]]
+id = "forget_to_trash"
+title = "Forgetting an archive moves it and its meta to the trash"
+status = "implemented"
+
+[[item]]
+id = "other_folder"
+title = "The downloads folder can be another one"
+status = "implemented"
+
+[[item]]
+id = "nexus_download"
+title = "Download a mod from Nexus"
+status = "deferred"
+reason = "parked until after the MVP; the library works on archives the player already has"
+
+[[item]]
+id = "update_rows"
+title = "Show which Mods have a newer version"
+status = "deferred"
+reason = "parked until after the MVP, together with Nexus downloads"

@@ -7,6 +7,7 @@ use nvmod_downloads::{
     check_file_name, digests_of, installed_mods, list, show, trash,
 };
 use nvmod_testkit::{TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -202,6 +203,7 @@ fn states_ids_and_matches_are_read_from_the_meta_and_the_names() {
 
 #[test]
 fn unmatched_lists_archives_with_no_mod_and_mods_with_no_archive() {
+    covers(&[ids::mods::downloads::UNMATCHED]);
     let dir = TempDir::new("dl-unmatched");
     let d = dir.path();
     write_file(d, "Used.zip", b"1");
@@ -385,6 +387,7 @@ fn cancel_stops_listing_and_hashing() {
 
 #[test]
 fn forgetting_moves_the_archive_and_its_meta_to_the_trash() {
+    covers(&[ids::mods::downloads::FORGET_TO_TRASH]);
     let dir = TempDir::new("dl-forget");
     let d = dir.path();
     write_file(d, "dl/[x] a.zip", b"archive");

@@ -186,6 +186,7 @@ pub fn read_header(path: &Path) -> Result<SaveHeader, SaveError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use proptest::prelude::*;
 
     /// The bytes of a synthetic save in the assumed layout.
@@ -221,6 +222,7 @@ mod tests {
 
     #[test]
     fn a_synthetic_save_is_read() {
+        covers(&[ids::formats::files::SAVE_GAME]);
         let h = parse(&synthetic(&["FalloutNV.esm", "Mod.esp"])).unwrap();
         assert_eq!(h.player, "Courier");
         assert_eq!((h.save_number, h.level, h.version), (7, 12, 48));
@@ -229,6 +231,7 @@ mod tests {
 
     #[test]
     fn every_truncation_is_an_error_not_a_panic() {
+        covers(&[ids::formats::files::SAVE_GAME]);
         let full = synthetic(&["FalloutNV.esm", "Mod.esp"]);
         for cut in 0..full.len() {
             assert!(parse(&full[..cut]).is_err(), "cut at {cut}");

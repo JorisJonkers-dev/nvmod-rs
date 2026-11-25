@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "tools.pins"
+title = "Pinned tools"
+origin = "ours"
+
+[[item]]
+id = "fetch_verified"
+title = "A pinned tool is fetched, checksum and attestation verified, and stored by hash"
+status = "implemented"
+
+[[item]]
+id = "checksum_mismatch"
+title = "A checksum mismatch installs nothing"
+status = "implemented"
+
+[[item]]
+id = "attestation_failure"
+title = "A failed attestation leaves no file behind"
+status = "implemented"
+
+[[item]]
+id = "retries"
+title = "A network failure is retried three times, a malformed response is not"
+status = "implemented"
+
+[[item]]
+id = "pin_bump_safe"
+title = "A pin bump never overwrites the tool in use"
+status = "implemented"
+
+[[item]]
+id = "third_party_trust"
+title = "A third-party tool without a pinned checksum is refused until the owner trusts it"
+status = "implemented"
+
+[[item]]
+id = "lock_rules"
+title = "A lock that breaks the rules is refused with the reason"
+status = "implemented"
+
+[[item]]
+id = "linked_loot_rs"
+title = "loot-rs is linked, and the lock records the tag Cargo.toml depends on"
+status = "implemented"
+
+[[item]]
+id = "runner_rechecks"
+title = "The runner rechecks the checksum on every call"
+status = "implemented"
+
+[[item]]
+id = "offline_verify"
+title = "list and verify need no network"
+status = "implemented"
+
+[[item]]
+id = "sha256"
+title = "SHA-256 digests are correct"
+status = "implemented"

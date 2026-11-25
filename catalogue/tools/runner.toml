@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "tools.runner"
+title = "Running external tools safely"
+origin = "ours"
+
+[[item]]
+id = "no_shell"
+title = "Arguments are passed as words with no shell"
+status = "implemented"
+
+[[item]]
+id = "scrubbed_environment"
+title = "The environment is scrubbed"
+status = "implemented"
+
+[[item]]
+id = "time_and_output_limits"
+title = "A tool that runs too long or writes too much is killed"
+status = "implemented"
+
+[[item]]
+id = "failure_reported"
+title = "A failing tool is a tool failure with the first line of its error"
+status = "implemented"
+
+[[item]]
+id = "only_runner_spawns"
+title = "Only the runner crate starts processes"
+status = "implemented"

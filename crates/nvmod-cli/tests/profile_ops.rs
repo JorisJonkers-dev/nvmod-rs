@@ -3,6 +3,7 @@
 //! `nvmod init` and against an Instance imported from a synthetic MO2 instance. Everything is built in code.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -126,6 +127,7 @@ fn profile<'a>(list: &'a Value, name: &str) -> &'a Value {
 
 #[test]
 fn copy_with_saves_makes_an_equal_tree_and_leaves_the_original_alone() {
+    covers(&[ids::instance::profiles::COPY]);
     let s = Scratch::new();
     let before = s.tree();
     let out = s.ok(&["profile", "copy", "Alpha", "Gamma", "--with-saves"]);
@@ -143,6 +145,7 @@ fn copy_with_saves_makes_an_equal_tree_and_leaves_the_original_alone() {
 
 #[test]
 fn copy_without_saves_leaves_the_saves_out() {
+    covers(&[ids::instance::profiles::COPY]);
     let s = Scratch::new();
     s.ok(&["profile", "copy", "Alpha", "Gamma"]);
     let copy = snapshot(&s.root().join("profiles/Gamma"));
@@ -192,6 +195,7 @@ fn a_failing_copy_leaves_nothing_behind() {
 
 #[test]
 fn delete_moves_the_profile_to_the_trash_and_rollback_brings_it_back() {
+    covers(&[ids::instance::profiles::DELETE_TO_TRASH]);
     let s = Scratch::new();
     s.ok(&["profile", "select", "Beta"]);
     let before = s.tree();
@@ -215,6 +219,7 @@ fn delete_moves_the_profile_to_the_trash_and_rollback_brings_it_back() {
 
 #[test]
 fn the_selected_profile_cannot_be_deleted_or_renamed() {
+    covers(&[ids::instance::profiles::SELECTED_PROTECTED]);
     let s = Scratch::new();
     s.ok(&["profile", "select", "Alpha"]);
     let before = s.tree();
@@ -240,6 +245,7 @@ fn the_only_profile_counts_as_selected_before_anything_was_selected() {
 
 #[test]
 fn rename_moves_the_profile_and_is_undone_by_rollback() {
+    covers(&[ids::instance::profiles::RENAME]);
     let s = Scratch::new();
     s.ok(&["profile", "select", "Beta"]);
     let before = s.tree();
@@ -339,6 +345,7 @@ fn a_running_game_or_a_held_lock_refuses_a_change_but_not_a_dry_run() {
 
 #[test]
 fn select_records_the_profile_in_the_instance_file_and_decides_the_default() {
+    covers(&[ids::instance::profiles::SELECT]);
     let s = Scratch::new();
     let (code, _, err) = s.cmd(&["mods", "list"], &[]);
     assert_eq!(code, 2, "two profiles and none selected: {err}");
@@ -360,6 +367,7 @@ fn select_records_the_profile_in_the_instance_file_and_decides_the_default() {
 
 #[test]
 fn set_edits_one_line_and_the_reader_returns_it() {
+    covers(&[ids::instance::profiles::SETTINGS]);
     let s = Scratch::new();
     let path = s.root().join("profiles/Alpha/settings.ini");
     s.ok(&["profile", "set", "LocalSaves", "true", "--profile", "Alpha"]);
@@ -417,6 +425,7 @@ fn set_edits_one_line_and_the_reader_returns_it() {
 
 #[test]
 fn set_refuses_an_unknown_key_or_value_with_the_usage_exit() {
+    covers(&[ids::instance::profiles::SETTINGS]);
     let s = Scratch::new();
     let before = s.tree();
     for args in [
@@ -519,6 +528,7 @@ fn mo2_instance(root: &Path) {
 
 #[test]
 fn an_imported_profile_can_be_copied_renamed_and_selected_and_mo2_is_untouched() {
+    covers(&[ids::safety::import::MO2_UNTOUCHED]);
     let mo2 = TempDir::new("po-mo2");
     mo2_instance(mo2.path());
     let base = TempDir::new("po-imp-base");

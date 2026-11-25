@@ -6,6 +6,7 @@
 use nvmod_testkit::{
     BaseBuilder, PeBuilder, PluginBuilder, TempDir, capabilities_json, write_file,
 };
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -191,6 +192,7 @@ const FULL: [(&str, &str, u64, u64); 3] = [
 
 #[test]
 fn on_the_vanilla_target_the_extender_dll_is_required_and_nothing_is_built_in() {
+    covers(&[ids::doctor::nvse::VANILLA_NEEDS_DLL]);
     let s = Scratch::new("vanilla");
     s.capabilities(&capabilities_json(&FULL));
     let report = s.doctor();
@@ -273,6 +275,7 @@ fn on_nv_rs_no_extender_dll_is_required_and_coverage_comes_from_capabilities_jso
 
 #[test]
 fn on_nv_rs_a_plugin_dll_that_is_built_in_is_redundant() {
+    covers(&[ids::doctor::nvse::NV_RS_BUILTIN_REDUNDANT]);
     let s = Scratch::new("nv-rs");
     s.capabilities(&capabilities_json(&FULL));
     let report = s.doctor();
@@ -289,6 +292,7 @@ fn on_nv_rs_a_plugin_dll_that_is_built_in_is_redundant() {
 
 #[test]
 fn on_nv_rs_a_plugin_the_catalogue_marks_absent_is_unable_to_load_by_name() {
+    covers(&[ids::doctor::nvse::NV_RS_ABSENT_PLUGIN]);
     let s = Scratch::new("nv-rs");
     s.capabilities(&capabilities_json(&FULL));
     let report = s.doctor();
@@ -425,6 +429,7 @@ fn the_catalogue_shows_the_coverage_of_the_installed_nv_rs_when_given_an_instanc
 
 #[test]
 fn on_the_vanilla_target_the_extender_dll_is_checked_against_the_catalogue_version() {
+    covers(&[ids::doctor::nvse::EXTENDER_VERSION]);
     let s = Scratch::new("vanilla");
     write_file(
         s.base.path(),
@@ -475,6 +480,7 @@ fn category<'a>(report: &'a Value, id: &str) -> &'a Value {
 
 #[test]
 fn readiness_counts_each_category_from_the_catalogue_and_the_capabilities() {
+    covers(&[ids::doctor::nvse::READINESS]);
     let s = Scratch::new("nv-rs");
     s.capabilities(&capabilities_json(&FULL));
     let report = s.doctor();
@@ -592,6 +598,7 @@ fn ttw_ini_codes(report: &Value) -> Vec<String> {
 
 #[test]
 fn a_ttw_profile_with_the_game_default_ini_gets_one_finding_per_key() {
+    covers(&[ids::doctor::checks::TTW_INI_VALUES]);
     let s = Scratch::new("nv-rs");
     s.with_ttw_master();
     s.fallout_ini(

@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "staging.tree"
+title = "The Staging tree"
+origin = "ours"
+
+[[item]]
+id = "lowercase_paths"
+title = "Every path of the tree is lower case and holds the game's files and the Mods'"
+status = "implemented"
+
+[[item]]
+id = "later_mod_wins"
+title = "Where two Mods provide a file the later one in the load order wins"
+status = "implemented"
+
+[[item]]
+id = "generated_mod_wins"
+title = "A generated Mod (the far view) wins over every other Mod"
+status = "implemented"
+
+[[item]]
+id = "game_executable_excluded"
+title = "The game's executable never enters the tree"
+status = "implemented"
+
+[[item]]
+id = "hard_links"
+title = "Files are hard linked where the file system allows"
+status = "implemented"
+
+[[item]]
+id = "copy_fallback"
+title = "Where links cannot be made the files are copied, and the Doctor says so"
+status = "implemented"
+
+[[item]]
+id = "incremental"
+title = "A change to one Mod rebuilds about its files, not the whole tree"
+status = "implemented"
+
+[[item]]
+id = "crash_safe"
+title = "A killed run is undone by the next one; the old tree stays whole until the swap"
+status = "implemented"
+
+[[item]]
+id = "tree_listing"
+title = "tree lists every path once with the layer that provides it"
+status = "implemented"
+
+[[item]]
+id = "hidden_files"
+title = "A hidden file is not a provider"
+status = "implemented"
+
+[[item]]
+id = "overwrite_on_top"
+title = "Overwrite sits above every Mod"
+status = "implemented"
+
+[[item]]
+id = "case_insensitive_index"
+title = "Paths are looked up ignoring case and slash style"
+status = "implemented"
+
+[[item]]
+id = "tree_without_a_mod"
+title = "A tree without one Mod shows what the next provider gives"
+status = "implemented"

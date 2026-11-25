@@ -105,12 +105,14 @@ pub fn qt_string(raw: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use proptest::prelude::*;
 
     const SAMPLE: &str = "[General]\r\ngameName=TTW\r\ngamePath=@ByteArray(Z:\\\\home\\\\u\\\\Game)\r\n; comment\r\n\r\n[Settings]\r\nbase_directory=\r\n[General]\r\nextra=1\r\n";
 
     #[test]
     fn sections_keys_and_wrappers() {
+        covers(&[ids::formats::files::INI_READER]);
         let ini = Ini::parse(SAMPLE);
         assert_eq!(ini.get("general", "GAMENAME"), Some("TTW"));
         assert_eq!(
@@ -137,6 +139,7 @@ mod tests {
 
     #[test]
     fn qt_strings() {
+        covers(&[ids::formats::files::INI_READER]);
         assert_eq!(
             qt_string("@ByteArray(TTW Wasteland Survival Guide)"),
             "TTW Wasteland Survival Guide"

@@ -23,6 +23,7 @@ use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{
     BaseBuilder, PeBuilder, PluginBuilder, SaveBuilder, TempDir, ZipBuilder, snapshot, write_file,
 };
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -135,6 +136,7 @@ fn names(order: &[nvmod_api::loadorder::Slot]) -> Vec<&str> {
 
 #[test]
 fn mods_list_gives_the_mods_in_priority_order() {
+    covers(&[ids::api::jobs::TYPED_JOBS]);
     let s = Scratch::new();
     let request = ListRequest {
         instance: s.root(),
@@ -202,6 +204,7 @@ fn a_mods_change_dry_run_writes_nothing() {
 
 #[test]
 fn sort_proposes_an_order_and_reports_loot_rs_progress() {
+    covers(&[ids::api::jobs::PROGRESS_EVENTS]);
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
     let mut progress = |e: &Event| events.push(e.clone());
@@ -235,6 +238,7 @@ fn sort_with_apply_writes_the_lists() {
 
 #[test]
 fn a_cancelled_sort_is_a_result_and_writes_nothing() {
+    covers(&[ids::api::jobs::CANCEL_IS_A_RESULT]);
     let s = Scratch::new();
     let before = fs::read(s.root().join("profiles/Default/loadorder.txt")).unwrap();
     let cancel = CancelToken::new();
@@ -249,6 +253,7 @@ fn a_cancelled_sort_is_a_result_and_writes_nothing() {
 
 #[test]
 fn a_sort_cancelled_while_loot_rs_runs_is_a_result_and_writes_nothing() {
+    covers(&[ids::api::jobs::CANCEL_IS_A_RESULT]);
     let s = Scratch::new();
     let before = (
         fs::read(s.root().join("profiles/Default/plugins.txt")).unwrap(),
@@ -272,6 +277,7 @@ fn a_sort_cancelled_while_loot_rs_runs_is_a_result_and_writes_nothing() {
 
 #[test]
 fn the_first_progress_event_is_reading_the_masterlist() {
+    covers(&[ids::api::jobs::PROGRESS_EVENTS]);
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
     let mut progress = |e: &Event| events.push(e.clone());
@@ -284,6 +290,7 @@ fn the_first_progress_event_is_reading_the_masterlist() {
 
 #[test]
 fn a_sort_reports_every_stage_with_counts_and_a_stable_label() {
+    covers(&[ids::plugins::sort::PROGRESS_STAGES]);
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
     let mut progress = |e: &Event| events.push(e.clone());
@@ -327,6 +334,7 @@ fn a_profile_without_a_staging_tree_is_refused_with_the_stage_command() {
 
 #[test]
 fn a_missing_masterlist_is_a_refusal_with_copyable_text() {
+    covers(&[ids::api::jobs::COPYABLE_REFUSALS]);
     let s = Scratch::new();
     let mut request = s.sort_request(false);
     request.masterlist = s.inst.path().join("missing.yaml");
@@ -516,6 +524,7 @@ fn requests_round_trip_through_json() {
 
 #[test]
 fn every_request_round_trips_through_json() {
+    covers(&[ids::api::jobs::JSON_REQUESTS]);
     let sort_request = SortRequest {
         instance: PathBuf::from("/x"),
         profile: Some("Default".into()),
@@ -579,6 +588,7 @@ fn every_request_round_trips_through_json() {
 
 #[test]
 fn a_request_without_its_optional_fields_takes_the_documented_defaults() {
+    covers(&[ids::api::jobs::JSON_REQUESTS]);
     // A hand written request (a plan in a file) may leave out the optional fields: they are `None` or empty.
     let plan: PlanRequest =
         serde_json::from_str(r#"{"instance": "/x", "profile": null, "target": "game"}"#).unwrap();
@@ -626,6 +636,7 @@ fn a_change_is_written_as_an_action_tag_and_a_place_tag() {
 
 #[test]
 fn an_error_kind_has_a_stable_code() {
+    covers(&[ids::api::jobs::STABLE_ERROR_CODES]);
     for (kind, code) in [
         (ErrorKind::Refused, "refused"),
         (ErrorKind::Corrupt, "corrupt"),
@@ -639,6 +650,7 @@ fn an_error_kind_has_a_stable_code() {
 
 #[test]
 fn a_cancel_token_already_used_stops_every_job_before_it_touches_the_instance() {
+    covers(&[ids::api::jobs::CANCEL_BEFORE_START]);
     let dir = TempDir::new("api-cancel");
     let cancel = CancelToken::new();
     cancel.cancel();
@@ -806,6 +818,7 @@ fn a_save_that_cannot_be_read_is_listed_as_unreadable_not_as_an_error() {
 
 #[test]
 fn a_mods_list_with_a_category_keeps_only_that_category() {
+    covers(&[ids::mods::lifecycle::LIST_PRIORITY]);
     let s = Scratch::new();
     fs::write(
         s.root().join("mods/Patch/meta.ini"),
@@ -862,6 +875,7 @@ fn a_mods_list_gives_each_mod_its_categories_named_by_categories_dat() {
 
 #[test]
 fn the_api_version_is_the_release_version() {
+    covers(&[ids::api::jobs::API_VERSION]);
     let manifest = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml"))
         .expect("workspace manifest");
     let version = manifest
@@ -1009,6 +1023,7 @@ fn backup_cancel_before_create_writes_nothing() {
 
 #[test]
 fn plugins_list_gives_the_plugins() {
+    covers(&[ids::api::jobs::TYPED_JOBS]);
     let s = Scratch::new();
     let request = PluginListRequest {
         instance: s.root(),
@@ -1598,6 +1613,7 @@ fn init_cancelled_before_it_starts_writes_nothing() {
 
 #[test]
 fn stage_builds_the_tree_of_a_profile() {
+    covers(&[ids::api::jobs::TYPED_JOBS]);
     let s = Scratch::new();
     fs::remove_dir_all(s.root().join("staging")).unwrap();
     let request = StageRequest {
@@ -1691,6 +1707,7 @@ fn a_stage_cancelled_before_the_write_changes_nothing() {
 
 #[test]
 fn profile_create_makes_an_empty_profile_with_the_master_as_its_only_plugin() {
+    covers(&[ids::instance::profiles::CREATE]);
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
     let mut progress = |e: &Event| events.push(e.clone());
@@ -1967,6 +1984,7 @@ fn import_mo2_cancelled_before_it_starts_writes_nothing() {
 
 #[test]
 fn target_set_switches_the_instance_to_nv_rs() {
+    covers(&[ids::instance::profiles::TARGET_SWITCH]);
     let s = Scratch::new();
     let mut events: Vec<Event> = Vec::new();
     let mut progress = |e: &Event| events.push(e.clone());
@@ -2141,6 +2159,7 @@ fn a_mods_remove_takes_the_mod_out_and_rollback_brings_it_back() {
 #[test]
 fn the_fomod_stream_gives_the_step_then_the_plan_and_the_events_follow_the_schema() {
     use nvmod_api::fomod::{FomodEvent, NextRequest};
+    covers(&[ids::mods::fomod::EVENT_STREAM]);
     let s = Scratch::new();
     let work = TempDir::new("api-fomod-stream");
     let archive = work.path().join("Ask.zip");

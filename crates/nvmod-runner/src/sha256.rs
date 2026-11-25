@@ -19,9 +19,11 @@ pub fn sha256_hex(data: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::sha256_hex;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn known_digests() {
+        covers(&[ids::tools::pins::SHA256]);
         assert_eq!(
             sha256_hex(b""),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

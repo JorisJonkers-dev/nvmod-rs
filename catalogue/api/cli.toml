@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "api.cli"
+title = "The nvmod command"
+origin = "ours"
+
+[[item]]
+id = "version"
+title = "--version prints the package version"
+status = "implemented"
+
+[[item]]
+id = "help"
+title = "No arguments print the help, which lists the exit codes"
+status = "implemented"
+
+[[item]]
+id = "unknown_command"
+title = "An unknown command is a usage error"
+status = "implemented"
+
+[[item]]
+id = "removed_commands"
+title = "Removed commands are unknown commands"
+status = "implemented"
+
+[[item]]
+id = "transcripts_replay"
+title = "Recorded command transcripts replay against the build"
+status = "implemented"
+
+[[item]]
+id = "option_parsing"
+title = "An unknown option or a missing value is an error"
+status = "implemented"
+
+[[item]]
+id = "run_log"
+title = "Each command leaves a redacted run log and keeps its output"
+status = "implemented"
+
+[[item]]
+id = "run_log_redaction"
+title = "A planted token and an outside path never reach the run log"
+status = "implemented"
+
+[[item]]
+id = "run_log_rotation"
+title = "The twenty-first run removes the oldest log"
+status = "implemented"
+
+[[item]]
+id = "log_level"
+title = "--log-level is taken out wherever it stands"
+status = "implemented"
+
+[[item]]
+id = "secret_never_prints"
+title = "A secret never prints its value"
+status = "implemented"
+
+[[item]]
+id = "run_outside_cli"
+title = "Every command is available as a library call and through raul"
+status = "n/a"
+reason = "raul's own interface, covered by the Toolbox's tests"

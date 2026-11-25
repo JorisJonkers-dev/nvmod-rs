@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "doctor.base"
+title = "Checking a game copy"
+origin = "ours"
+
+[[item]]
+id = "steam_copy"
+title = "A Steam game copy gets a clean report"
+status = "implemented"
+
+[[item]]
+id = "gog_copy"
+title = "A GOG game copy gets a clean report"
+status = "implemented"
+
+[[item]]
+id = "epic_refused"
+title = "An Epic game copy is refused with a reason"
+status = "implemented"
+
+[[item]]
+id = "four_gb_patch"
+title = "A 4 GB patched executable is accepted"
+status = "implemented"
+
+[[item]]
+id = "missing_files"
+title = "A missing executable or Data folder is reported"
+status = "implemented"
+
+[[item]]
+id = "one_target"
+title = "doctor needs exactly one of --base and --instance"
+status = "implemented"

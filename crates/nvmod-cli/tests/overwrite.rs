@@ -3,6 +3,7 @@
 //! `nvmod init`. Plugins and files are synthetic; no game data is used.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
@@ -141,6 +142,7 @@ fn paths(v: &Value) -> Vec<String> {
 
 #[test]
 fn list_shows_each_file_with_the_mods_that_provide_the_same_path() {
+    covers(&[ids::mods::overwrite::LIST]);
     let s = Scratch::new();
     let list = s.json(&["list"]);
     assert_eq!(
@@ -175,6 +177,7 @@ fn list_shows_each_file_with_the_mods_that_provide_the_same_path() {
 
 #[test]
 fn create_mod_with_a_glob_moves_only_matches_and_keeps_the_folders() {
+    covers(&[ids::mods::overwrite::CREATE_MOD]);
     let s = Scratch::new();
     let before = s.tree();
     let dry = s.json(&["create-mod", "Tool Output", "logs/**", "--dry-run"]);
@@ -228,6 +231,7 @@ fn create_mod_of_everything_lists_its_plugin_as_inactive_and_refuses_a_clash() {
 
 #[test]
 fn move_puts_a_folder_into_a_mod_and_refuses_a_name_the_mod_has() {
+    covers(&[ids::mods::overwrite::MOVE_INTO_MOD]);
     let s = Scratch::new();
     let before = s.tree();
     let (code, _, err) = s.run(&["move", "Config/core.ini", "--to", "Core"]);
@@ -250,6 +254,7 @@ fn move_puts_a_folder_into_a_mod_and_refuses_a_name_the_mod_has() {
 
 #[test]
 fn delete_moves_to_the_trash_and_rollback_brings_it_back() {
+    covers(&[ids::mods::overwrite::DELETE_TO_TRASH]);
     let s = Scratch::new();
     let before = s.tree();
     let r = s.json(&["delete", "Logs", "logs/two.log", "Only/here.txt"]);
@@ -268,6 +273,7 @@ fn delete_moves_to_the_trash_and_rollback_brings_it_back() {
 
 #[test]
 fn sync_moves_what_has_one_provider_and_refuses_an_ambiguous_one_without_to() {
+    covers(&[ids::mods::overwrite::SYNC]);
     let s = Scratch::new();
     let before = s.tree();
     let (code, _, err) = s.run(&["sync"]);
@@ -323,6 +329,7 @@ fn sync_of_an_unambiguous_overwrite_moves_it_and_the_conflict_report_sees_the_re
 
 #[test]
 fn a_failure_in_the_middle_puts_everything_back() {
+    covers(&[ids::mods::overwrite::FAILURE_PUTS_BACK]);
     let s = Scratch::new();
     let before = s.tree();
     let root = s.root();

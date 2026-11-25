@@ -3,6 +3,7 @@
 //! what its tool emits, ignores fields it does not know, refuses a newer schema version and rejects a document
 //! with a required field missing or mistyped. The samples are in `tests/recorded/` and hold no game data.
 
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::{ContractError, builtin};
 use serde_json::{Value, json};
 
@@ -33,6 +34,7 @@ const CASES: [(&str, &str, &str); 11] = [
 
 #[test]
 fn every_contract_accepts_its_recorded_sample() {
+    covers(&[ids::tools::contracts::RECORDED_SAMPLES]);
     for (contract, recorded, _) in CASES {
         assert_eq!(
             builtin(contract).unwrap().check(&sample(recorded)),
@@ -44,6 +46,7 @@ fn every_contract_accepts_its_recorded_sample() {
 
 #[test]
 fn unknown_fields_are_ignored() {
+    covers(&[ids::tools::contracts::UNKNOWN_FIELDS_IGNORED]);
     for (contract, recorded, _) in CASES {
         let mut doc = sample(recorded);
         doc["a_field_added_by_a_newer_tool"] = json!({"nested": [1, 2]});
@@ -53,6 +56,7 @@ fn unknown_fields_are_ignored() {
 
 #[test]
 fn a_newer_schema_version_is_refused_with_a_reason() {
+    covers(&[ids::tools::contracts::NEWER_REFUSED]);
     for (contract, recorded, _) in CASES {
         let mut doc = sample(recorded);
         doc["schema_version"] = json!(2);
@@ -74,6 +78,7 @@ fn a_newer_schema_version_is_refused_with_a_reason() {
 
 #[test]
 fn a_missing_required_field_is_rejected_with_the_contract_named() {
+    covers(&[ids::tools::contracts::REQUIRED_FIELD]);
     for (contract, recorded, field) in CASES {
         let mut doc = sample(recorded);
         doc.as_object_mut().unwrap().remove(field);
@@ -165,6 +170,7 @@ fn fork_manifest() -> Value {
 
 #[test]
 fn the_forks_real_manifest_shape_validates() {
+    covers(&[ids::tools::contracts::NV_RS_MANIFEST]);
     let contract = builtin("nv-rs-release-manifest").unwrap();
     assert_eq!(contract.check(&fork_manifest()), Ok(1));
 }
@@ -297,6 +303,7 @@ const LODWRIGHT_HANDSHAKE: [&str; 9] = [
 
 #[test]
 fn every_schema_of_the_lodwright_handshake_is_vendored_at_version_1() {
+    covers(&[ids::tools::contracts::LODWRIGHT_VENDORED]);
     for name in LODWRIGHT_HANDSHAKE {
         if name == "lodwright-api" {
             assert!(builtin(name).is_none());

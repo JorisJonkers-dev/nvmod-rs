@@ -1061,6 +1061,7 @@ fn check_answer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     struct Plugins(Vec<(&'static str, FileState)>);
 
@@ -1221,6 +1222,7 @@ mod tests {
 
     #[test]
     fn a_step_shown_only_by_a_flag_is_skipped_or_asked_about() {
+        covers(&[ids::mods::fomod::CONDITIONAL_STEPS]);
         let xml = r#"<config><installSteps order="Explicit">
           <installStep name="One"><optionalFileGroups><group name="Pick" type="SelectExactlyOne"><plugins order="Explicit">
             <plugin name="On"><conditionFlags><flag name="x">1</flag></conditionFlags><files><file source="on" destination="on"/></files>
@@ -1253,6 +1255,7 @@ mod tests {
 
     #[test]
     fn xml_in_utf16_or_with_a_byte_order_mark_is_read() {
+        covers(&[ids::mods::fomod::XML_ENCODINGS]);
         let xml = "<config><moduleName>M\u{e9}</moduleName></config>";
         let mut utf16 = vec![0xFF, 0xFE];
         utf16.extend(xml.encode_utf16().flat_map(u16::to_le_bytes));

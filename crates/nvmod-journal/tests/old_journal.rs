@@ -4,10 +4,12 @@
 use nvmod_instance::NvmodInstance;
 use nvmod_journal::{RollbackError, rollback};
 use nvmod_testkit::{BaseBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 
 #[test]
 fn an_install_journal_in_the_old_format_is_rolled_back() {
+    covers(&[ids::safety::undo::OLD_JOURNAL]);
     let base = TempDir::new("jr-base");
     BaseBuilder::steam().write(base.path());
     let tmp = TempDir::new("jr-inst");

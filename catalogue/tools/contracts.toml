@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "tools.contracts"
+title = "Contracts with the other Components"
+origin = "ours"
+
+[[item]]
+id = "contracts_listed"
+title = "contracts lists what this nvmod accepts"
+status = "implemented"
+
+[[item]]
+id = "recorded_samples"
+title = "Every contract accepts its recorded sample"
+status = "implemented"
+
+[[item]]
+id = "newer_refused"
+title = "A newer schema version is refused with a reason"
+status = "implemented"
+
+[[item]]
+id = "required_field"
+title = "A missing required field is rejected with the contract named"
+status = "implemented"
+
+[[item]]
+id = "unknown_fields_ignored"
+title = "Unknown fields are ignored"
+status = "implemented"
+
+[[item]]
+id = "version_negotiation"
+title = "The highest common version not above the lock is picked"
+status = "implemented"
+
+[[item]]
+id = "loot_sort_contract"
+title = "The library result and the sort JSON output are equal and match the schema"
+status = "implemented"
+
+[[item]]
+id = "lodwright_vendored"
+title = "Every schema of the lodwright handshake is vendored at version 1"
+status = "implemented"
+
+[[item]]
+id = "nv_rs_manifest"
+title = "The engine's release manifest shape validates"
+status = "implemented"
+
+[[item]]
+id = "capabilities_file"
+title = "The capabilities file is read; a broken one is refused with a reason"
+status = "implemented"

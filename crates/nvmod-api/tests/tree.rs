@@ -6,6 +6,7 @@ use nvmod_api::tree::{TreeOutput, TreeRequest, show};
 use nvmod_api::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{BaseBuilder, PeBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use std::path::PathBuf;
 
 /// The job name of every refusal of this job.
@@ -106,6 +107,7 @@ fn provider(out: &TreeOutput, path: &str) -> String {
 
 #[test]
 fn every_path_is_listed_once_with_the_layer_that_provides_it() {
+    covers(&[ids::staging::tree::TREE_LISTING]);
     let s = contested();
     let out = done(&s.request());
     assert_eq!(out.tree.profile, "Default");
@@ -124,6 +126,7 @@ fn every_path_is_listed_once_with_the_layer_that_provides_it() {
 
 #[test]
 fn an_overwrite_folder_sits_above_every_mod() {
+    covers(&[ids::staging::tree::OVERWRITE_ON_TOP]);
     let s = contested();
     write_file(&s.root(), "overwrite/textures/o.dds", b"o");
     let out = done(&s.request());
@@ -161,6 +164,7 @@ fn a_path_that_matches_nothing_is_a_result_with_no_entries() {
 
 #[test]
 fn a_hidden_file_is_not_a_provider_and_the_next_layer_wins() {
+    covers(&[ids::staging::tree::HIDDEN_FILES]);
     let s = contested();
     // A hides its copy of the rock; B's copy, the next layer, now provides it.
     write_file(&s.root(), "mods/A/meshes/rock.nif.mohidden", b"hidden");
@@ -238,6 +242,7 @@ fn a_base_copy_without_a_data_folder_is_a_refusal() {
 
 #[test]
 fn a_refusal_copies_as_text_without_a_command_line() {
+    covers(&[ids::api::jobs::COPYABLE_REFUSALS]);
     let dir = TempDir::new("tree-copy");
     let mut request = contested().request();
     request.instance = dir.path().to_path_buf();

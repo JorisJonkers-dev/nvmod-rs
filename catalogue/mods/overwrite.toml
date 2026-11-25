@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "mods.overwrite"
+title = "The Overwrite folder"
+origin = "ours"
+
+[[item]]
+id = "list"
+title = "List the files in Overwrite with the Mods that hold the same path"
+status = "implemented"
+
+[[item]]
+id = "create_mod"
+title = "Move all or matching files into a new Mod"
+status = "implemented"
+
+[[item]]
+id = "move_into_mod"
+title = "Move a file or folder into a Mod"
+status = "implemented"
+
+[[item]]
+id = "delete_to_trash"
+title = "Delete into a trash that rollback can undo"
+status = "implemented"
+
+[[item]]
+id = "sync"
+title = "sync moves what has one provider and refuses an ambiguous file"
+status = "implemented"
+
+[[item]]
+id = "failure_puts_back"
+title = "A failure in the middle puts everything back"
+status = "implemented"

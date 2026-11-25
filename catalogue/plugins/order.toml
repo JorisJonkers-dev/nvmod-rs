@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "plugins.order"
+title = "Plugins"
+origin = "ours"
+
+[[item]]
+id = "list"
+title = "List plugins with position, masters and provider"
+status = "implemented"
+
+[[item]]
+id = "enable_with_masters"
+title = "Enabling a plugin whose master is inactive is refused unless --with-masters"
+status = "implemented"
+
+[[item]]
+id = "missing_master_refused"
+title = "A master that is not installed cannot be enabled"
+status = "implemented"
+
+[[item]]
+id = "disable_names_dependants"
+title = "Disabling a master an active plugin needs names the dependants"
+status = "implemented"
+
+[[item]]
+id = "forced_plugins"
+title = "The game's own plugins are forced first and cannot be moved, disabled or locked"
+status = "implemented"
+
+[[item]]
+id = "ttw_forced_plugins"
+title = "The Tale of Two Wastelands primary plugins are forced first for a TTW Profile"
+status = "implemented"
+
+[[item]]
+id = "move_plugin"
+title = "Move a plugin, never breaking master order"
+status = "implemented"
+
+[[item]]
+id = "lock_unlock"
+title = "Lock a plugin to a position, and unlock it"
+status = "implemented"
+
+[[item]]
+id = "lock_survives_sort"
+title = "A locked plugin keeps its position after a sort"
+status = "implemented"
+
+[[item]]
+id = "code_page"
+title = "plugins.txt is Windows-1252; a name the code page lacks is refused"
+status = "implemented"
+
+[[item]]
+id = "lists_round_trip"
+title = "CRLF and the header round-trip, and both lists roll back byte for byte"
+status = "implemented"
+
+[[item]]
+id = "file_times_restamped"
+title = "A move restamps the plugin file times of a staged Profile"
+status = "implemented"

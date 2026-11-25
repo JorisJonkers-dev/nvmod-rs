@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "instance.profiles"
+title = "Profiles"
+origin = "ours"
+
+[[item]]
+id = "create"
+title = "Create a Profile"
+status = "implemented"
+
+[[item]]
+id = "copy"
+title = "Copy a Profile, with or without its saves"
+status = "implemented"
+
+[[item]]
+id = "rename"
+title = "Rename a Profile"
+status = "implemented"
+
+[[item]]
+id = "delete_to_trash"
+title = "Delete a Profile into a trash that rollback can undo"
+status = "implemented"
+
+[[item]]
+id = "select"
+title = "Select the Profile that commands use by default"
+status = "implemented"
+
+[[item]]
+id = "selected_protected"
+title = "The selected Profile cannot be deleted or renamed"
+status = "implemented"
+
+[[item]]
+id = "settings"
+title = "Profile switches (LocalSaves, LocalSettings, AutomaticArchiveInvalidation)"
+status = "implemented"
+
+[[item]]
+id = "name_rules"
+title = "Unusable Profile names are refused with a reason"
+status = "implemented"
+
+[[item]]
+id = "target_switch"
+title = "An Instance targets vanilla or nv-rs"
+status = "implemented"

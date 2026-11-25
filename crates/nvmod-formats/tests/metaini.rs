@@ -3,6 +3,7 @@
 //! that key's line.
 
 use nvmod_formats::metaini::MetaIni;
+use nvmod_testkit::{covers, ids};
 use proptest::prelude::*;
 
 /// A generated file: sections, keys, comments, blank lines, odd values, either line ending, maybe no final newline.
@@ -33,6 +34,7 @@ fn file() -> impl Strategy<Value = Vec<u8>> {
 proptest! {
     #[test]
     fn parse_then_write_is_byte_identical(bytes in file()) {
+        covers(&[ids::mods::lifecycle::META_INI_KEPT]);
         prop_assert_eq!(MetaIni::parse(&bytes).to_bytes(), bytes);
     }
 

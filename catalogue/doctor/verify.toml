@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "doctor.verify"
+title = "verify"
+origin = "ours"
+
+[[item]]
+id = "clean"
+title = "A clean Instance exits 0 with the Doctor report and the launch plan"
+status = "implemented"
+
+[[item]]
+id = "doctor_error_exit"
+title = "A Doctor error is exit 3 and the report still prints"
+status = "implemented"
+
+[[item]]
+id = "engine_matches_record"
+title = "An nv-rs that matches its install record is verified"
+status = "implemented"
+
+[[item]]
+id = "engine_changed"
+title = "An nv-rs changed after its install fails verification"
+status = "implemented"
+
+[[item]]
+id = "writes_nothing"
+title = "verify writes nothing"
+status = "implemented"

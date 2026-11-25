@@ -2,6 +2,7 @@
 //! The run log of a command (ADR-0012), on a scratch Instance made by `nvmod init`. No game data is used.
 
 use nvmod_testkit::{BaseBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -30,6 +31,7 @@ fn logs(state: &Path) -> Vec<std::path::PathBuf> {
 
 #[test]
 fn a_command_on_an_instance_leaves_a_redacted_log_and_keeps_its_output() {
+    covers(&[ids::api::cli::RUN_LOG]);
     let home = TempDir::new("runlog-home");
     let state = TempDir::new("runlog-state");
     let base = home.path().join("steam/fnv");

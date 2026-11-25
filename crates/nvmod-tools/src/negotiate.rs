@@ -110,6 +110,7 @@ pub fn negotiate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn hs(versions: &str) -> Handshake {
         Handshake::parse(&format!(
@@ -120,6 +121,7 @@ mod tests {
 
     #[test]
     fn the_highest_common_version_not_above_the_lock_is_picked() {
+        covers(&[ids::tools::contracts::VERSION_NEGOTIATION]);
         assert_eq!(negotiate("t", "demo", 2, &[1, 2], &hs("[1,2,3]")), Ok(2));
         // A tool that lists a newer version is never moved up to it.
         assert_eq!(negotiate("t", "demo", 1, &[1, 2], &hs("[1,2]")), Ok(1));

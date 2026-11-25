@@ -184,6 +184,7 @@ pub fn import_mo2(mo2: &Path, list: &mut Vec<Executable>) -> Result<Imported, St
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn entry(title: &str) -> Executable {
         Executable {
@@ -198,6 +199,7 @@ mod tests {
 
     #[test]
     fn titles_are_unique_without_case_and_not_reserved() {
+        covers(&[ids::run::registry::UNIQUE_TITLES]);
         let mut list = Vec::new();
         add(&mut list, entry("FNVEdit")).unwrap();
         assert!(add(&mut list, entry("fnvedit")).is_err());

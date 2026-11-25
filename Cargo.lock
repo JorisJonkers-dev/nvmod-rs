@@ -785,6 +785,7 @@ dependencies = [
 name = "nvmod-catalog"
 version = "0.18.0"
 dependencies = [
+ "nvmod-testkit",
  "proptest",
  "serde",
  "serde_json",
@@ -841,6 +842,7 @@ dependencies = [
 name = "nvmod-core"
 version = "0.18.0"
 dependencies = [
+ "nvmod-testkit",
  "proptest",
  "schemars",
  "serde",

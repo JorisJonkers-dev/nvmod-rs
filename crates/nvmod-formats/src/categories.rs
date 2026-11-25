@@ -100,9 +100,11 @@ pub fn format_ids(ids: &[u32]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn names_are_read_and_the_bytes_survive() {
+        covers(&[ids::formats::files::CATEGORIES_DAT]);
         let bytes = b"1|Animations|4,51|0\r\n2|Armour|5|0\r\nnot a line\r\n\xff\xfe|x\r\n7|Sub|9|2";
         let c = Categories::parse(bytes);
         assert_eq!(c.entries.len(), 3);

@@ -5,6 +5,7 @@
 use nvmod_instance::NvmodInstance;
 use nvmod_profile::{Error, Target, apply, finish};
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -84,6 +85,7 @@ fn the_prefix_layout_is_found_under_pfx_or_directly() {
 
 #[test]
 fn local_settings_place_the_five_inis_and_off_puts_the_users_own_back() {
+    covers(&[ids::run::prefix::LOCAL_SETTINGS]);
     let f = Fixture::new();
     f.profile("A", "LocalSettings=true\r\n");
     for name in nvmod_profile::INIS {
@@ -133,6 +135,7 @@ fn a_profile_without_an_ini_is_seeded_from_the_users_own_file() {
 
 #[test]
 fn initweaks_merge_in_priority_order_with_the_profile_tweaks_last() {
+    covers(&[ids::run::prefix::INITWEAKS_MERGE]);
     let f = Fixture::new();
     f.profile("A", "");
     // Highest priority first, as modlist.txt has it; Off is disabled and Foreign has no folder.
@@ -168,6 +171,7 @@ fn initweaks_with_nothing_to_merge_is_the_forced_key_alone() {
 
 #[test]
 fn local_saves_redirect_and_restore_byte_for_byte() {
+    covers(&[ids::run::prefix::LOCAL_SAVES_REDIRECT]);
     let f = Fixture::new();
     f.profile(
         "A",
@@ -277,6 +281,7 @@ fn plugin_lists_are_placed_in_the_prefix_appdata() {
 
 #[test]
 fn applying_twice_changes_nothing_and_a_b_a_leaves_the_prefix_as_the_first_a() {
+    covers(&[ids::run::prefix::APPLY_IDEMPOTENT]);
     let f = Fixture::new();
     f.profile(
         "A",
@@ -376,6 +381,7 @@ fn a_dry_run_reports_the_changes_and_writes_nothing() {
 
 #[test]
 fn nothing_is_written_outside_the_instance_and_the_named_prefix() {
+    covers(&[ids::run::prefix::NOTHING_OUTSIDE]);
     let f = Fixture::new();
     let sentinel = f.scratch.path().join("sentinel");
     write_file(&sentinel, "keep.txt", b"keep");
@@ -398,6 +404,7 @@ fn nothing_is_written_outside_the_instance_and_the_named_prefix() {
 
 #[test]
 fn a_run_that_was_cut_off_is_put_back_by_the_next_one() {
+    covers(&[ids::run::prefix::CUT_OFF_RUN_RECOVERED]);
     let f = Fixture::new();
     f.profile("A", "LocalSettings=true\r\n");
     f.put("profiles/A/fallout.ini", FALLOUT_INI.as_bytes());

@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "instance.init"
+title = "Creating an Instance"
+origin = "ours"
+
+[[item]]
+id = "init_from_base"
+title = "init builds an Instance from a game copy"
+status = "implemented"
+
+[[item]]
+id = "init_refuses_unsupported_base"
+title = "init refuses an unsupported game copy and writes nothing"
+status = "implemented"
+
+[[item]]
+id = "init_never_overwrites"
+title = "init never overwrites an Instance, nor makes one inside the game folder"
+status = "implemented"
+
+[[item]]
+id = "storefronts"
+title = "Steam and GOG game copies are supported; others are refused with a reason"
+status = "implemented"
+
+[[item]]
+id = "game_folder_untouched"
+title = "The game folder is never written to"
+status = "implemented"
+
+[[item]]
+id = "base_masters_listed"
+title = "A new Profile lists the game's masters that are present, in game order"
+status = "implemented"

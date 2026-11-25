@@ -3,6 +3,7 @@
 //! against a scratch Instance. Archives are built in code; no mod data is used.
 
 use nvmod_testkit::{BaseBuilder, TempDir, ZipBuilder, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -151,6 +152,7 @@ fn multi_zip(path: &Path, escape: bool) {
 
 #[test]
 fn a_scripted_stdin_session_installs_exactly_the_planned_files_and_saves_the_answers() {
+    covers(&[ids::mods::fomod::TERMINAL_SESSION]);
     let s = Scratch::new();
     let zip = s.archive("Multi.zip");
     multi_zip(&zip, false);
@@ -215,6 +217,7 @@ fn a_bad_line_is_asked_again_and_the_end_of_input_refuses_without_writing() {
 
 #[test]
 fn reinstall_replays_and_reconfigure_with_one_changed_answer_changes_only_those_files() {
+    covers(&[ids::mods::fomod::REINSTALL_RECONFIGURE]);
     let s = Scratch::new();
     let zip = s.archive("Multi.zip");
     multi_zip(&zip, false);
@@ -386,6 +389,7 @@ fn replace_keeps_priority_state_and_notes_and_merge_and_rename_leave_the_other_f
 
 #[test]
 fn a_destination_that_climbs_out_of_the_mod_folder_is_refused_and_writes_nothing() {
+    covers(&[ids::mods::fomod::DESTINATION_ESCAPE_REFUSED]);
     let s = Scratch::new();
     let xml = r#"<config><requiredInstallFiles>
         <file source="x.txt" destination="..\..\escape.txt"/></requiredInstallFiles></config>"#;
@@ -403,6 +407,7 @@ fn a_destination_that_climbs_out_of_the_mod_folder_is_refused_and_writes_nothing
 
 #[test]
 fn the_same_answers_always_yield_the_same_plan() {
+    covers(&[ids::mods::fomod::SAME_ANSWERS_SAME_PLAN]);
     let s = Scratch::new();
     let zip = s.archive("Multi.zip");
     multi_zip(&zip, false);

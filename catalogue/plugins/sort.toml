@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "plugins.sort"
+title = "Sorting the load order"
+origin = "ours"
+
+[[item]]
+id = "proposal_only"
+title = "sort prints a proposal and writes nothing without --apply"
+status = "implemented"
+
+[[item]]
+id = "apply"
+title = "--apply writes both lists and encodes the order in file times"
+status = "implemented"
+
+[[item]]
+id = "idempotent"
+title = "Applying twice gives the same order and changes nothing"
+status = "implemented"
+
+[[item]]
+id = "rollback"
+title = "rollback undoes a sort"
+status = "implemented"
+
+[[item]]
+id = "minimal_mode"
+title = "--mode minimal moves only what a rule forces"
+status = "implemented"
+
+[[item]]
+id = "contradicting_rules_refused"
+title = "Rules that contradict each other are refused"
+status = "implemented"
+
+[[item]]
+id = "pinned_masterlist"
+title = "The pinned LOOT masterlist is fetched, verified, stored and used"
+status = "implemented"
+
+[[item]]
+id = "masterlist_checksum"
+title = "A masterlist that does not match its checksum is not used"
+status = "implemented"
+
+[[item]]
+id = "requirement_messages"
+title = "A plugin's requirement on an extender is one error line, or a note on nv-rs"
+status = "implemented"
+
+[[item]]
+id = "keep_order"
+title = "keep-order stamps the file times and leaves the order alone"
+status = "implemented"
+
+[[item]]
+id = "progress_stages"
+title = "A sort reports each stage of loot-rs with counts"
+status = "implemented"
+
+[[item]]
+id = "run_fixes_times"
+title = "A run fixes plugin times that do not follow the load order"
+status = "implemented"
+
+[[item]]
+id = "needs_staging"
+title = "A Profile without a Staging tree is refused with the stage command"
+status = "implemented"

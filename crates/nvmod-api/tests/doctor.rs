@@ -8,6 +8,7 @@ use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{
     BaseBuilder, Mo2Builder, ModSpec, PeBuilder, PluginBuilder, TempDir, snapshot, write_file,
 };
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::PathBuf;
 
@@ -135,6 +136,7 @@ fn mo2_target(game: &TempDir, root: &TempDir) -> Target {
 
 #[test]
 fn a_base_copy_is_checked_and_reported_without_writing() {
+    covers(&[ids::api::jobs::DOCTOR_JOB]);
     let dir = TempDir::new("doctor-steam");
     BaseBuilder::steam().write(dir.path());
     let before = snapshot(dir.path());
@@ -165,6 +167,7 @@ fn an_nvmod_instance_is_checked_and_reported_as_an_instance() {
 
 #[test]
 fn a_mod_organizer_instance_is_checked_and_the_fail_on_severity_decides_found() {
+    covers(&[ids::api::jobs::DOCTOR_JOB]);
     let (game, root) = mo2();
     let at_error = done(mo2_target(&game, &root), Severity::Error);
     assert!(matches!(at_error.report, Report::Mo2(_)));

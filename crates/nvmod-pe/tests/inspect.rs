@@ -3,6 +3,7 @@
 
 use nvmod_pe::{PeError, PeFormat, Version4, VersionStruct, inspect_bytes, inspect_file};
 use nvmod_testkit::PeBuilder;
+use nvmod_testkit::{covers, ids};
 
 const OPTIONAL: usize = 0x80 + 24;
 const DIRECTORIES: usize = OPTIONAL + 96;
@@ -30,6 +31,7 @@ fn find(haystack: &[u8], needle: &[u8]) -> usize {
 
 #[test]
 fn an_nvse_plugin_is_recognised_with_its_exports_and_imports() {
+    covers(&[ids::formats::pe::PLUGIN_EXPORTS]);
     let report = inspect_bytes(&PeBuilder::nvse_plugin().build()).unwrap();
     assert!(report.is_x86_32bit() && report.is_dll && !report.large_address_aware);
     assert_eq!(report.machine_name, "i386");
@@ -46,6 +48,7 @@ fn an_nvse_plugin_is_recognised_with_its_exports_and_imports() {
 
 #[test]
 fn the_version_struct_is_read_from_the_exported_data() {
+    covers(&[ids::formats::pe::VERSION_STRUCT]);
     let file = PeBuilder::dll()
         .export_code("NVSEPlugin_Load")
         .nvse_version(1, 0x0102_0304)
@@ -63,6 +66,7 @@ fn the_version_struct_is_read_from_the_exported_data() {
 
 #[test]
 fn the_version_resource_and_the_large_address_flag_are_read() {
+    covers(&[ids::formats::pe::LARGE_ADDRESS_FLAG]);
     let file = PeBuilder::exe()
         .versions([1, 4, 0, 525], [1, 4, 0, 525])
         .large_address_aware(true)
@@ -76,6 +80,7 @@ fn the_version_resource_and_the_large_address_flag_are_read() {
 
 #[test]
 fn a_64_bit_dll_is_read_but_is_not_a_32_bit_x86_image() {
+    covers(&[ids::formats::pe::SIXTY_FOUR_BIT]);
     let file = PeBuilder::nvse_plugin().machine(0x8664).pe32_plus().build();
     let report = inspect_bytes(&file).unwrap();
     assert_eq!(
@@ -108,6 +113,7 @@ fn several_imports_and_data_exports_survive() {
 
 #[test]
 fn files_that_are_not_pe_files_are_refused_with_a_reason() {
+    covers(&[ids::formats::pe::NOT_PE_REFUSED]);
     assert_eq!(inspect_bytes(&[]), Err(PeError::Truncated("DOS header")));
     assert_eq!(inspect_bytes(b"MZ"), Err(PeError::Truncated("DOS header")));
     let good = PeBuilder::nvse_plugin().build();
@@ -152,6 +158,7 @@ fn header_fields_beyond_the_limits_are_unsupported_not_allocated() {
 
 #[test]
 fn a_damaged_export_table_is_an_issue_and_the_rest_still_reads() {
+    covers(&[ids::formats::pe::DAMAGED_TABLES]);
     let good = PeBuilder::nvse_plugin()
         .versions([2, 0, 0, 1], [2, 0, 0, 1])
         .build();

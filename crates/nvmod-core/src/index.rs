@@ -99,10 +99,12 @@ impl FileIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use proptest::prelude::*;
 
     #[test]
     fn lookup_ignores_case_and_slash_style() {
+        covers(&[ids::staging::tree::CASE_INSENSITIVE_INDEX]);
         let mut index = FileIndex::new();
         index.insert("A", "Meshes\\Armor\\x.nif");
         assert_eq!(

@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "safety.backup"
+title = "Profile backups"
+origin = "ours"
+
+[[item]]
+id = "round_trip"
+title = "Create, change, restore gives the files back byte for byte"
+status = "implemented"
+
+[[item]]
+id = "saves_on_request"
+title = "Saves are in a snapshot only on request"
+status = "implemented"
+
+[[item]]
+id = "damaged_refused"
+title = "A damaged snapshot is refused and nothing changes"
+status = "implemented"
+
+[[item]]
+id = "failed_restore_puts_back"
+title = "A failed restore puts the Profile back"
+status = "implemented"
+
+[[item]]
+id = "refused_while_running"
+title = "A restore is refused while a run of the Instance is alive"
+status = "implemented"
+
+[[item]]
+id = "automatic_snapshot"
+title = "An automatic snapshot is taken when the last one is older than the interval"
+status = "implemented"
+
+[[item]]
+id = "retention"
+title = "prune keeps the newest and one per day"
+status = "implemented"
+
+[[item]]
+id = "mo2_backups"
+title = "Mod Organizer's own timestamped backups are listed and restorable"
+status = "implemented"

@@ -10,6 +10,7 @@ use nvmod_api::install::{InstallOutput as Installed, InstallRequest as PathInsta
 use nvmod_api::{CancelToken, ErrorKind, Event, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{BaseBuilder, TempDir, ZipBuilder, write_file};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::path::PathBuf;
 
@@ -120,6 +121,7 @@ fn the_downloads_folder_can_be_named_relative_to_the_instance_or_absolute() {
 
 #[test]
 fn installing_from_the_library_equals_installing_the_path_plus_the_meta_update() {
+    covers(&[ids::mods::downloads::INSTALL_FROM_LIBRARY]);
     let a = Scratch::new();
     let b = Scratch::new();
     Scratch::put_archive(&a.downloads(), ARCHIVE);

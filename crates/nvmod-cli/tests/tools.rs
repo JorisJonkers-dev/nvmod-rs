@@ -4,6 +4,7 @@
 //! points at the fake server. No network, no game data.
 #![cfg(unix)]
 use nvmod_testkit::{BaseBuilder, FakeServer, Reply, TempDir, write_script};
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::sha256_hex;
 use serde_json::Value;
 use std::os::unix::fs::PermissionsExt;
@@ -164,6 +165,7 @@ impl Rig {
 
 #[test]
 fn a_pinned_tool_is_fetched_verified_attested_and_stored_by_hash() {
+    covers(&[ids::tools::pins::FETCH_VERIFIED]);
     let rig = Rig::new();
     let server = Rig::server(&rig.tool);
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -200,6 +202,7 @@ fn a_pinned_tool_is_fetched_verified_attested_and_stored_by_hash() {
 
 #[test]
 fn a_checksum_mismatch_exits_3_installs_nothing_and_never_asks_for_the_attestation() {
+    covers(&[ids::tools::pins::CHECKSUM_MISMATCH]);
     let rig = Rig::new();
     let server = Rig::server(b"not the pinned bytes");
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -216,6 +219,7 @@ fn a_checksum_mismatch_exits_3_installs_nothing_and_never_asks_for_the_attestati
 
 #[test]
 fn a_failed_attestation_exits_3_and_leaves_no_file_behind() {
+    covers(&[ids::tools::pins::ATTESTATION_FAILURE]);
     let rig = Rig::new();
     let server = Rig::server(&rig.tool);
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -238,6 +242,7 @@ fn a_failed_attestation_exits_3_and_leaves_no_file_behind() {
 
 #[test]
 fn a_malformed_response_is_not_retried_and_a_network_failure_is_retried_three_times() {
+    covers(&[ids::tools::pins::RETRIES]);
     let rig = Rig::new();
     let server = FakeServer::start(|_, _| Reply::Garbage);
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -257,6 +262,7 @@ fn a_malformed_response_is_not_retried_and_a_network_failure_is_retried_three_ti
 
 #[test]
 fn a_pin_bump_never_overwrites_the_tool_in_use() {
+    covers(&[ids::tools::pins::PIN_BUMP_SAFE]);
     let rig = Rig::new();
     let gh = rig.gh(0);
     let server = Rig::server(&rig.tool);
@@ -274,6 +280,7 @@ fn a_pin_bump_never_overwrites_the_tool_in_use() {
 
 #[test]
 fn list_shows_each_tool_with_its_pinned_version_and_state_and_verify_needs_no_network() {
+    covers(&[ids::tools::pins::OFFLINE_VERIFY]);
     let rig = Rig::new();
     let server = Rig::server(&rig.tool);
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -322,6 +329,7 @@ fn list_shows_each_tool_with_its_pinned_version_and_state_and_verify_needs_no_ne
 
 #[test]
 fn the_runner_rechecks_the_checksum_on_every_call_and_exits_3_when_the_binary_changed() {
+    covers(&[ids::tools::pins::RUNNER_RECHECKS]);
     let rig = Rig::new();
     let server = Rig::server(&rig.tool);
     rig.write_lock(&server, "1.0.0", &rig.tool);
@@ -360,6 +368,7 @@ fn a_tool_that_is_not_fetched_or_not_in_the_lock_is_refused() {
 
 #[test]
 fn a_third_party_installer_without_a_pinned_checksum_is_refused_until_the_owner_trusts_it() {
+    covers(&[ids::tools::pins::THIRD_PARTY_TRUST]);
     let rig = Rig::new();
     let server = Rig::server(&rig.tool);
     rig.write_third_party_lock(&server, "3.4");
@@ -474,6 +483,7 @@ fn trusting_a_tool_that_has_a_pinned_checksum_is_refused() {
 
 #[test]
 fn a_lock_that_breaks_the_rules_is_refused_with_the_reason() {
+    covers(&[ids::tools::pins::LOCK_RULES]);
     let rig = Rig::new();
     std::fs::write(
         rig.lock_path(),
@@ -490,6 +500,7 @@ fn a_lock_that_breaks_the_rules_is_refused_with_the_reason() {
 
 #[test]
 fn the_shipped_lock_lists_loot_rs_as_linked() {
+    covers(&[ids::tools::pins::LINKED_LOOT_RS]);
     let (code, out, err) = nvmod(&["tools", "list"]);
     assert_eq!(code, 0, "{err}");
     // No version here: a loot-rs bump moves the lock and the Cargo.toml tag, and this test must stay green.
@@ -521,6 +532,7 @@ fn usage_errors_exit_with_five() {
 
 #[test]
 fn contracts_lists_what_this_nvmod_accepts() {
+    covers(&[ids::tools::contracts::CONTRACTS_LISTED]);
     let (code, out, err) = nvmod(&["tools", "contracts"]);
     assert_eq!(code, 0, "{err}");
     assert!(

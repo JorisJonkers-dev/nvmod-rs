@@ -192,9 +192,11 @@ pub fn log_header(native: &Native, profile: &str, env_note: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn only_a_named_program_is_found_and_the_refusals_name_no_command() {
+        covers(&[ids::run::launch::NAMED_PROGRAM]);
         let file = std::env::temp_dir().join(format!("nvmod-viewer-{}", std::process::id()));
         std::fs::write(&file, b"x").unwrap();
         assert_eq!(find_viewer(Some(&file)).unwrap(), file);
