@@ -7,6 +7,7 @@ use nvmod_testkit::{
     BaseBuilder, Mo2Builder, ModSpec, PeBuilder, PluginBuilder, TempDir, ZipBuilder, snapshot,
     write_file,
 };
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -182,6 +183,7 @@ impl Scratch {
 
 #[test]
 fn sigterm_during_install_rolls_the_step_back_and_exits_4() {
+    covers(&[ids::safety::undo::SIGTERM_INSTALL]);
     let s = Scratch::new();
     let before = snapshot(&s.root());
     let args = strings(&[
@@ -225,6 +227,7 @@ fn sigint_is_handled_like_sigterm_and_text_output_names_the_outcome() {
 
 #[test]
 fn sigterm_during_mods_and_sort_apply_restores_the_profile_files() {
+    covers(&[ids::safety::undo::SIGTERM_LISTS]);
     let s = Scratch::new();
     let before = snapshot(&s.root());
     let args = strings(&[
@@ -265,6 +268,7 @@ fn sigterm_during_mods_and_sort_apply_restores_the_profile_files() {
 
 #[test]
 fn sigterm_during_import_mo2_removes_the_new_instance() {
+    covers(&[ids::safety::undo::SIGTERM_IMPORT]);
     let base = base_copy();
     let mo2 = TempDir::new("sigterm-mo2");
     Mo2Builder::new(base.path())

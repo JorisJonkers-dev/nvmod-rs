@@ -4,6 +4,7 @@
 //! generated headers with fake names; nothing is game data.
 
 use nvmod_testkit::{BaseBuilder, BsaBuilder, PeBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::process::Command;
@@ -144,6 +145,7 @@ fn conflict_scratch() -> Scratch {
 
 #[test]
 fn archives_lists_the_loose_and_archive_losers_with_provider_names() {
+    covers(&[ids::staging::conflicts::ARCHIVE_AXES]);
     let s = conflict_scratch();
     let (code, r) = s.json(&["conflicts", "--archives"]);
     assert_eq!(code, 0);
@@ -248,6 +250,7 @@ fn pair(positive: &[Value], negative: &[Value]) -> String {
 
 #[test]
 fn archive_not_listed_has_a_positive_and_a_negative_fixture() {
+    covers(&[ids::staging::conflicts::ARCHIVE_NOT_LISTED]);
     let s = Scratch::new();
     s.modlist("+Named\r\n+Stray\r\n+Listed\r\n+Dormant\r\n");
     s.plugins(&["Named.esp"], &["Dormant.esp"]);
@@ -275,6 +278,7 @@ fn archive_not_listed_has_a_positive_and_a_negative_fixture() {
 
 #[test]
 fn archive_listed_missing_has_a_positive_and_a_negative_fixture() {
+    covers(&[ids::staging::conflicts::ARCHIVE_LISTED_MISSING]);
     let s = Scratch::new();
     s.modlist("+Alpha\r\n");
     s.plugins(&[], &[]);
@@ -291,6 +295,7 @@ fn archive_listed_missing_has_a_positive_and_a_negative_fixture() {
 
 #[test]
 fn archive_invalidation_has_a_positive_and_a_negative_fixture() {
+    covers(&[ids::staging::conflicts::ARCHIVE_INVALIDATION]);
     let s = Scratch::new();
     s.modlist("");
     s.plugins(&[], &[]);
@@ -319,6 +324,7 @@ fn archive_invalidation_has_a_positive_and_a_negative_fixture() {
 
 #[test]
 fn archive_corrupt_header_has_a_positive_and_a_negative_fixture() {
+    covers(&[ids::staging::conflicts::ARCHIVE_CORRUPT_HEADER]);
     let s = Scratch::new();
     s.modlist("+Alpha\r\n+Beta\r\n");
     s.plugins(&["Alpha.esp", "Beta.esp"], &[]);

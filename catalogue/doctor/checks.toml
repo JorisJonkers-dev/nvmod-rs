@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "doctor.checks"
+title = "Checks of an Instance"
+origin = "ours"
+
+[[item]]
+id = "healthy"
+title = "A healthy setup has no warnings or errors"
+status = "implemented"
+
+[[item]]
+id = "bad_plugin_files"
+title = "Bad plugin files are each named"
+status = "implemented"
+
+[[item]]
+id = "shadowed_dll"
+title = "A DLL in two Mods is reported as shadowed"
+status = "implemented"
+
+[[item]]
+id = "catalogue_rules"
+title = "Catalogue rules: requirements, conflicts, replacements and ini settings"
+status = "implemented"
+
+[[item]]
+id = "missing_master_wrong_order"
+title = "A missing master and a wrong load order are reported, and a sort fixes them"
+status = "implemented"
+
+[[item]]
+id = "file_times"
+title = "File times that no longer encode the order are noticed"
+status = "implemented"
+
+[[item]]
+id = "profile_problems"
+title = "Problems of a Profile are reported"
+status = "implemented"
+
+[[item]]
+id = "ttw_ini_values"
+title = "A TTW Profile with the game's default ini gets one finding per key"
+status = "implemented"
+
+[[item]]
+id = "no_staging_tree"
+title = "The Doctor says when no Staging tree was built"
+status = "implemented"
+
+[[item]]
+id = "lowercase_collisions"
+title = "Mods whose files collide after lower-casing are reported"
+status = "implemented"
+
+[[item]]
+id = "unswept_tree"
+title = "A tree a program wrote into and nobody swept is reported"
+status = "implemented"
+
+[[item]]
+id = "lock_violation"
+title = "A lock that a sort would violate is reported"
+status = "implemented"
+
+[[item]]
+id = "base_masters_repair"
+title = "Base masters a Profile lacks are named and the repair fixes it"
+status = "implemented"
+
+[[item]]
+id = "fail_on_threshold"
+title = "--fail-on sets the severity that makes the exit code non-zero"
+status = "implemented"
+
+[[item]]
+id = "json_report"
+title = "--json prints the report as stable JSON"
+status = "implemented"
+
+[[item]]
+id = "old_instance_read_only"
+title = "The Doctor opens a schema 1 Instance without writing"
+status = "implemented"

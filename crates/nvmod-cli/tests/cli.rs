@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The binary, run as a program.
 
+use nvmod_testkit::{covers, ids};
 use std::process::Command;
 
 fn nvmod(args: &[&str]) -> (i32, String, String) {
@@ -17,6 +18,7 @@ fn nvmod(args: &[&str]) -> (i32, String, String) {
 
 #[test]
 fn version_prints_the_package_version() {
+    covers(&[ids::api::cli::VERSION]);
     let (code, out, _) = nvmod(&["--version"]);
     assert_eq!(code, 0);
     assert_eq!(out.trim(), concat!("nvmod ", env!("CARGO_PKG_VERSION")));
@@ -24,6 +26,7 @@ fn version_prints_the_package_version() {
 
 #[test]
 fn no_arguments_print_the_help() {
+    covers(&[ids::api::cli::HELP]);
     let (code, out, _) = nvmod(&[]);
     assert_eq!(code, 0);
     assert!(out.contains("nvmod pe <file>"));
@@ -31,6 +34,7 @@ fn no_arguments_print_the_help() {
 
 #[test]
 fn an_unknown_command_is_a_usage_error() {
+    covers(&[ids::api::cli::UNKNOWN_COMMAND]);
     let (code, _, err) = nvmod(&["frobnicate"]);
     assert_eq!(code, 5);
     assert!(err.contains("unknown command `frobnicate`"));
@@ -44,6 +48,7 @@ fn temp_dir(name: &str) -> std::path::PathBuf {
 
 #[test]
 fn pe_describes_a_plugin_as_text_and_as_json() {
+    covers(&[ids::doctor::nvse::PE_INSPECTION]);
     let dir = temp_dir("pe");
     let path = dir.join("plugin.dll");
     std::fs::write(
@@ -72,6 +77,7 @@ fn pe_describes_a_plugin_as_text_and_as_json() {
 
 #[test]
 fn pe_says_when_a_file_is_not_an_nvse_plugin() {
+    covers(&[ids::doctor::nvse::PE_NOT_A_PLUGIN]);
     let dir = temp_dir("pe-text");
     let plain = dir.join("plain.dll");
     std::fs::write(&plain, nvmod_testkit::PeBuilder::dll().build()).unwrap();
@@ -119,6 +125,7 @@ fn pe_usage_errors_exit_with_five() {
 mod doctor {
     use super::nvmod;
     use nvmod_testkit::{Mo2Builder, ModSpec, PeBuilder, TempDir, write_file};
+    use nvmod_testkit::{covers, ids};
 
     fn setup() -> (TempDir, TempDir) {
         let game = TempDir::new("cli-game");
@@ -163,6 +170,7 @@ mod doctor {
 
     #[test]
     fn the_json_report_matches_the_golden_file() {
+        covers(&[ids::doctor::checks::JSON_REPORT]);
         let (game, root) = setup();
         let (code, out, _) = nvmod(&[
             "doctor",
@@ -196,6 +204,7 @@ mod doctor {
 
     #[test]
     fn text_output_and_the_fail_on_threshold() {
+        covers(&[ids::doctor::checks::FAIL_ON_THRESHOLD]);
         let (_game, root) = setup();
         let dir = root.path().to_str().unwrap();
         let (code, out, _) = nvmod(&["doctor", "--instance", dir]);
@@ -278,6 +287,7 @@ mod doctor {
 
 #[test]
 fn catalog_lists_plugins_as_text_and_json() {
+    covers(&[ids::doctor::nvse::CATALOGUE_LISTING]);
     let (code, out, _) = nvmod(&["catalog"]);
     assert_eq!(code, 0);
     assert!(

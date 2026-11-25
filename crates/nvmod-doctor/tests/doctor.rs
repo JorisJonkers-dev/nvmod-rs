@@ -7,6 +7,7 @@ use nvmod_doctor::{Report, run};
 use nvmod_formats::Mo2Instance;
 use nvmod_formats::winpath::PathStyle;
 use nvmod_testkit::{Mo2Builder, ModSpec, PeBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use std::path::Path;
 
 fn plugin() -> Vec<u8> {
@@ -78,6 +79,7 @@ fn builder(game: &TempDir) -> Mo2Builder {
 
 #[test]
 fn a_healthy_setup_has_no_warnings_or_errors() {
+    covers(&[ids::doctor::checks::HEALTHY]);
     let game = healthy_game();
     let b = builder(&game)
         .mod_dir(
@@ -124,6 +126,7 @@ fn a_healthy_setup_has_no_warnings_or_errors() {
 
 #[test]
 fn bad_plugin_files_are_each_named() {
+    covers(&[ids::doctor::checks::BAD_PLUGIN_FILES]);
     let game = healthy_game();
     let b = builder(&game)
         .mod_dir(ModSpec::new("X64").file(
@@ -196,6 +199,7 @@ fn bad_plugin_files_are_each_named() {
 
 #[test]
 fn a_dll_in_two_mods_is_reported_as_shadowed_and_the_first_mod_wins() {
+    covers(&[ids::doctor::checks::SHADOWED_DLL]);
     let game = healthy_game();
     let b = builder(&game)
         .mod_dir(ModSpec::new("New").file("NVSE/Plugins/johnnyguitar.dll", &plugin()))
@@ -240,6 +244,7 @@ fn overwrite_beats_every_mod() {
 
 #[test]
 fn catalogue_rules_requirements_conflicts_replacements_and_inis() {
+    covers(&[ids::doctor::checks::CATALOGUE_RULES]);
     let text = |extra: &str| {
         let prov =
             "[plugin.provenance]\nsource = \"t\"\nverified_on = \"2026-11-14\"\nverified = false\n";
@@ -325,6 +330,7 @@ fn the_known_mac_ten_id_mismatch_is_found() {
 
 #[test]
 fn profile_problems_are_reported() {
+    covers(&[ids::doctor::checks::PROFILE_PROBLEMS]);
     let game = healthy_game();
     let root = TempDir::new("doctor-profile");
     builder(&game)

@@ -4,6 +4,7 @@
 
 use nvmod_bsa::{BsaError, read_bytes, read_directory, read_file};
 use nvmod_testkit::{BsaBuilder, TempDir};
+use nvmod_testkit::{covers, ids};
 use proptest::prelude::*;
 use std::io::{Read, Seek, SeekFrom};
 
@@ -16,6 +17,7 @@ fn an_empty_archive_has_no_files() {
 
 #[test]
 fn names_are_lowercased_and_use_slashes() {
+    covers(&[ids::formats::archives::READ_NAMES]);
     let bytes = BsaBuilder::new()
         .file("Meshes\\Fake\\Rock.NIF", 10)
         .file("textures/fake/Rock_d.dds", 20)
@@ -54,6 +56,7 @@ fn many_files_and_long_names_are_read() {
 
 #[test]
 fn the_compression_flag_and_the_toggle_bit_decide_compressed() {
+    covers(&[ids::formats::archives::COMPRESSION]);
     let stored = read_bytes(&BsaBuilder::new().file("a/b.txt", 4).bytes()).unwrap();
     assert!(!stored.files[0].compressed);
     let all = read_bytes(&BsaBuilder::new().flags(0x7).file("a/b.txt", 4).bytes()).unwrap();
@@ -70,6 +73,7 @@ fn the_compression_flag_and_the_toggle_bit_decide_compressed() {
 
 #[test]
 fn a_wrong_signature_or_version_is_named() {
+    covers(&[ids::formats::archives::BAD_HEADER_REFUSED]);
     let mut bytes = BsaBuilder::new().file("a/b", 1).bytes();
     assert_eq!(
         read_bytes(&BsaBuilder::new().version(105).bytes()),
@@ -81,6 +85,7 @@ fn a_wrong_signature_or_version_is_named() {
 
 #[test]
 fn truncated_input_is_refused_at_every_length() {
+    covers(&[ids::formats::archives::BAD_HEADER_REFUSED]);
     let bytes = BsaBuilder::new()
         .file("meshes/fake/a.nif", 5)
         .file("textures/b.dds", 7)
@@ -97,6 +102,7 @@ fn patch(bytes: &mut [u8], at: usize, value: u32) {
 
 #[test]
 fn oversized_counts_are_refused() {
+    covers(&[ids::formats::archives::BAD_HEADER_REFUSED]);
     let base = BsaBuilder::new().file("a/b.txt", 2).bytes();
     for (at, value) in [
         (16, u32::MAX),
@@ -153,6 +159,7 @@ impl<R: Seek> Seek for Counting<R> {
 
 #[test]
 fn a_two_gigabyte_class_archive_costs_only_its_directory() {
+    covers(&[ids::formats::archives::LARGE_ARCHIVE_CHEAP]);
     let builder = BsaBuilder::new()
         .file("meshes/fake/huge.nif", 1_000_000_000)
         .file("textures/fake/huge.dds", 1_000_000_000)
@@ -191,6 +198,7 @@ proptest! {
     fn mutated_archives_never_panic(
         edits in proptest::collection::vec((0_usize..400, any::<u8>()), 1..8),
     ) {
+        covers(&[ids::formats::archives::NEVER_PANICS]);
         let mut bytes = BsaBuilder::new()
             .file("meshes/fake/a.nif", 5)
             .file("textures/fake/b.dds", 7)

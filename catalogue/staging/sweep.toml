@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "staging.sweep"
+title = "Sweeping what a program wrote"
+origin = "ours"
+
+[[item]]
+id = "to_overwrite"
+title = "A file a program created goes to Overwrite with its folders"
+status = "implemented"
+
+[[item]]
+id = "replaced_file"
+title = "A replaced file keeps the Mod intact and its new content lands in Overwrite"
+status = "implemented"
+
+[[item]]
+id = "deleted_restored"
+title = "A deleted file is restored from its provider and reported"
+status = "implemented"
+
+[[item]]
+id = "protect"
+title = "A protected file written in place is staged as a copy from then on"
+status = "implemented"
+
+[[item]]
+id = "custom_target"
+title = "A custom target takes the output instead of Overwrite"
+status = "implemented"
+
+[[item]]
+id = "repeatable"
+title = "An interrupted sweep gives the same tree when it runs again"
+status = "implemented"
+
+[[item]]
+id = "never_rolled_back"
+title = "A sweep is never rolled back, so what a program wrote is never lost"
+status = "implemented"

@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "mods.fomod"
+title = "FOMOD installers"
+origin = "ours"
+
+[[item]]
+id = "inferred_choices"
+title = "A FOMOD with inferable choices installs without questions"
+status = "implemented"
+
+[[item]]
+id = "questions"
+title = "A choice that cannot be inferred becomes a question and nothing is written"
+status = "implemented"
+
+[[item]]
+id = "answers_file"
+title = "An answers file completes the install"
+status = "implemented"
+
+[[item]]
+id = "bad_answers_refused"
+title = "Bad answers are refused and change nothing"
+status = "implemented"
+
+[[item]]
+id = "terminal_session"
+title = "A terminal session asks the questions and saves the answers"
+status = "implemented"
+
+[[item]]
+id = "reinstall_reconfigure"
+title = "reinstall replays the answers and reconfigure changes only what one changed answer touches"
+status = "implemented"
+
+[[item]]
+id = "same_answers_same_plan"
+title = "The same answers always give the same plan"
+status = "implemented"
+
+[[item]]
+id = "destination_escape_refused"
+title = "A destination that climbs out of the Mod folder is refused"
+status = "implemented"
+
+[[item]]
+id = "event_stream"
+title = "The step-by-step event stream follows its published schema"
+status = "implemented"
+
+[[item]]
+id = "conditional_steps"
+title = "A step shown only by a flag is skipped or asked about"
+status = "implemented"
+
+[[item]]
+id = "xml_encodings"
+title = "FOMOD XML in UTF-16 or with a byte-order mark is read"
+status = "implemented"

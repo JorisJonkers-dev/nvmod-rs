@@ -5,6 +5,7 @@
 
 use nvmod_modinstall::{Limits, extract::extract};
 use nvmod_testkit::TempDir;
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
@@ -145,6 +146,7 @@ macro_rules! format_tests {
 
             #[test]
             fn traversal_is_refused_and_nothing_leaves_dest() {
+                covers(&[ids::mods::install::HOSTILE_ARCHIVES_REFUSED]);
                 let items = [file("../evil.txt", b"x"), file("ok.txt", b"ok")];
                 let (dir, result) = extract_made(stringify!($module), |p| make(p, &items));
                 assert_refused(&result, "escapes");

@@ -6,6 +6,7 @@
 
 use nvmod_modinstall::{Limits, extract::extract};
 use nvmod_testkit::{TarBuilder, TempDir, ZipBuilder};
+use nvmod_testkit::{covers, ids};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -128,6 +129,7 @@ macro_rules! bounded_tests {
 
             #[test]
             fn an_expansion_bomb_is_refused_and_a_ratio_just_over_it_is_not() {
+                covers(&[ids::mods::install::EXTRACTION_LIMITS]);
                 let zeros = vec![0_u8; 1 << 20];
                 let items: Items = &[("zeros.bin", &zeros)];
                 let base = Limits {

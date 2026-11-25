@@ -3,6 +3,7 @@
 //! and deletes files of the Staging tree, and the sweep takes the output into Overwrite. Synthetic files only.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
@@ -156,6 +157,7 @@ fn nothing_to_sweep_changes_nothing() {
 
 #[test]
 fn a_created_file_goes_to_overwrite_with_its_folders_and_the_tree_shows_it_from_there() {
+    covers(&[ids::staging::sweep::TO_OVERWRITE]);
     let s = Scratch::new();
     s.create("logs/deep/run.log", b"log");
     let dry = s.json(&["--dry-run"]);
@@ -186,6 +188,7 @@ fn a_case_variant_of_an_existing_folder_uses_the_existing_spelling() {
 
 #[test]
 fn a_replaced_file_keeps_the_mod_intact_and_its_new_content_lands_in_overwrite() {
+    covers(&[ids::staging::sweep::REPLACED_FILE]);
     let s = Scratch::new();
     s.replace("textures/dirt.dds", b"program dirt");
     let r = s.json(&[]);
@@ -202,6 +205,7 @@ fn a_replaced_file_keeps_the_mod_intact_and_its_new_content_lands_in_overwrite()
 
 #[test]
 fn a_deleted_file_is_restored_from_the_provider_and_reported() {
+    covers(&[ids::staging::sweep::DELETED_RESTORED]);
     let s = Scratch::new();
     fs::remove_file(s.data("config/core.ini")).unwrap();
     let r = s.json(&[]);
@@ -214,6 +218,7 @@ fn a_deleted_file_is_restored_from_the_provider_and_reported() {
 
 #[test]
 fn a_file_written_in_place_is_reported_and_protect_stages_it_as_a_copy_from_then_on() {
+    covers(&[ids::staging::sweep::PROTECT]);
     let s = Scratch::new();
     s.write_in_place("config/core.ini", b"changed ini");
     let r = s.json(&["--protect", "config/*.ini"]);
@@ -236,6 +241,7 @@ fn a_file_written_in_place_is_reported_and_protect_stages_it_as_a_copy_from_then
 
 #[test]
 fn a_custom_target_takes_the_output_instead_of_overwrite() {
+    covers(&[ids::staging::sweep::CUSTOM_TARGET]);
     let s = Scratch::new();
     s.create("out/result.txt", b"result");
     s.replace("textures/dirt.dds", b"program dirt");
@@ -247,6 +253,7 @@ fn a_custom_target_takes_the_output_instead_of_overwrite() {
 
 #[test]
 fn a_sweep_is_not_rolled_back_so_what_a_program_wrote_is_never_lost() {
+    covers(&[ids::staging::sweep::NEVER_ROLLED_BACK]);
     let s = Scratch::new();
     s.create("logs/run.log", b"log");
     s.json(&[]);
@@ -264,6 +271,7 @@ fn program(s: &Scratch) {
 
 #[test]
 fn an_interrupted_sweep_gives_the_same_final_tree_when_it_runs_again() {
+    covers(&[ids::staging::sweep::REPEATABLE]);
     let clean = Scratch::new();
     program(&clean);
     clean.json(&[]);
@@ -291,6 +299,7 @@ fn an_interrupted_sweep_gives_the_same_final_tree_when_it_runs_again() {
 
 #[test]
 fn the_doctor_reports_an_unswept_tree() {
+    covers(&[ids::doctor::checks::UNSWEPT_TREE]);
     let s = Scratch::new();
     let doctor = |s: &Scratch| {
         let (_, out, _) = nvmod_env(

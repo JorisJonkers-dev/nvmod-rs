@@ -5,6 +5,7 @@
 use nvmod_testkit::{
     BaseBuilder, PluginBuilder, TempDir, link_count, same_file, snapshot, write_file,
 };
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -185,6 +186,7 @@ const SORTED: [&str; 5] = [
 
 #[test]
 fn the_proposal_is_printed_and_nothing_is_written_without_apply() {
+    covers(&[ids::plugins::sort::PROPOSAL_ONLY]);
     let s = Scratch::new();
     let before = snapshot(&s.root());
     let (code, out, err) = s.sort(&[]);
@@ -203,6 +205,7 @@ fn the_proposal_is_printed_and_nothing_is_written_without_apply() {
 
 #[test]
 fn a_profile_without_a_staging_tree_is_refused_with_the_stage_command() {
+    covers(&[ids::plugins::sort::NEEDS_STAGING]);
     let s = Scratch::new();
     fs::remove_dir_all(s.root().join("staging")).unwrap();
     let before = snapshot(&s.root());
@@ -214,6 +217,7 @@ fn a_profile_without_a_staging_tree_is_refused_with_the_stage_command() {
 
 #[test]
 fn apply_writes_both_lists_and_encodes_the_order_in_file_times() {
+    covers(&[ids::plugins::sort::APPLY]);
     let s = Scratch::new();
     let json = s.sort_json(&["--apply"]);
     assert_eq!(json["applied"]["lists_written"], true);
@@ -282,6 +286,7 @@ fn the_mod_folders_are_untouched_when_the_staged_files_get_their_times() {
 
 #[test]
 fn running_apply_twice_gives_the_same_order_and_changes_nothing() {
+    covers(&[ids::plugins::sort::IDEMPOTENT]);
     let s = Scratch::new();
     let first = s.sort_json(&["--apply"]);
     let after_first = snapshot(&s.root());
@@ -302,6 +307,7 @@ fn running_apply_twice_gives_the_same_order_and_changes_nothing() {
 
 #[test]
 fn rollback_undoes_the_sort() {
+    covers(&[ids::plugins::sort::ROLLBACK]);
     let s = Scratch::new();
     let lists_before = (
         s.profile_file("plugins.txt"),
@@ -389,6 +395,7 @@ fn bad_arguments_and_inputs_have_their_own_exit_codes() {
 
 #[test]
 fn rules_that_contradict_each_other_are_refused() {
+    covers(&[ids::plugins::sort::CONTRADICTING_RULES_REFUSED]);
     let s = Scratch::new();
     fs::write(
         &s.masterlist,
@@ -443,6 +450,7 @@ fn has(findings: &[(String, String, String)], code: &str, subject: &str) -> Opti
 
 #[test]
 fn the_doctor_reports_a_missing_master_and_a_wrong_load_order() {
+    covers(&[ids::doctor::checks::MISSING_MASTER_WRONG_ORDER]);
     let s = Scratch::new();
     let ml = s.masterlist_arg();
     let (code, findings) = s.doctor(&["--masterlist", &ml]);
@@ -493,6 +501,7 @@ fn the_doctor_reports_a_missing_master_and_a_wrong_load_order() {
 
 #[test]
 fn after_a_sort_the_doctor_finds_neither_a_missing_master_nor_a_wrong_order() {
+    covers(&[ids::doctor::checks::MISSING_MASTER_WRONG_ORDER]);
     let s = Scratch::new();
     let ml = s.masterlist_arg();
     s.sort_json(&["--apply"]);
@@ -505,6 +514,7 @@ fn after_a_sort_the_doctor_finds_neither_a_missing_master_nor_a_wrong_order() {
 
 #[test]
 fn the_doctor_notices_file_times_that_no_longer_encode_the_order() {
+    covers(&[ids::doctor::checks::FILE_TIMES]);
     let s = Scratch::new();
     s.sort_json(&["--apply"]);
     // A program that rewrites a staged plugin gives it a new time: the Doctor sees the order is lost.
@@ -593,6 +603,7 @@ fn a_sort_preview_does_not_call_a_tree_with_wrong_times_sorted() {
 
 #[test]
 fn run_fixes_plugin_times_that_do_not_follow_the_load_order_before_the_game_starts() {
+    covers(&[ids::plugins::sort::RUN_FIXES_TIMES]);
     let s = Scratch::new();
     s.sort_json(&["--apply"]);
     let root = s.root();
@@ -773,6 +784,7 @@ fn the_proposal_counts_the_positions_it_would_change_and_names_none() {
 
 #[test]
 fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
+    covers(&[ids::plugins::sort::KEEP_ORDER]);
     let scratch = Scratch::new();
     scratch.stage();
     let before = (
@@ -818,6 +830,7 @@ fn keep_order_stamps_the_times_and_leaves_the_order_alone() {
 
 #[test]
 fn the_minimal_mode_moves_only_what_a_rule_forces_and_names_its_mode() {
+    covers(&[ids::plugins::sort::MINIMAL_MODE]);
     let s = Scratch::new();
     // A plugin first in the order that the full sort has no reason to keep there.
     write_file(&s.root(), "mods/Zed/Zed.esp", &PluginBuilder::new().build());

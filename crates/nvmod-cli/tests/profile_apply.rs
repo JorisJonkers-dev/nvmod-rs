@@ -2,6 +2,7 @@
 //! `nvmod profile apply|finish`, run as a program against a scratch Instance and a synthetic prefix.
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -97,6 +98,7 @@ impl Scratch {
 
 #[test]
 fn apply_reports_json_and_places_the_profile() {
+    covers(&[ids::run::prefix::APPLY_PLACES_PROFILE]);
     let s = Scratch::new();
     let (code, out, err) = s.run(&["apply", "--json"]);
     assert_eq!(code, 0, "{err}");
@@ -132,6 +134,7 @@ fn the_default_prefix_is_the_one_in_the_launch_plan() {
 
 #[test]
 fn a_dry_run_writes_nothing_and_a_missing_prefix_is_refused() {
+    covers(&[ids::run::prefix::DRY_RUN]);
     let s = Scratch::new();
     let before = snapshot(s.dir.path());
     let (code, out, err) = s.run(&["apply", "--dry-run"]);
@@ -179,6 +182,7 @@ fn a_failing_step_exits_4_and_leaves_everything_as_it_was() {
 
 #[test]
 fn finish_collects_what_the_game_wrote() {
+    covers(&[ids::run::prefix::FINISH_COLLECTS]);
     let s = Scratch::new();
     assert_eq!(s.run(&["apply"]).0, 0);
     fs::write(s.games().join("fallout.ini"), b"[General]\r\nplayed=1\r\n").unwrap();
@@ -196,6 +200,7 @@ fn finish_collects_what_the_game_wrote() {
 
 #[test]
 fn the_invalidation_archive_reaches_a_staged_tree() {
+    covers(&[ids::run::prefix::ARCHIVE_INVALIDATION]);
     let s = Scratch::new();
     write_file(&s.root(), "mods/M/Textures/a.dds", b"m");
     write_file(

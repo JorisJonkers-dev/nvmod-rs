@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# The feature catalogue of nvmod-rs, read by tally (https://github.com/JorisJonkers-dev/tally, docs/FORMAT.md):
+# what nvmod promises, and which tests prove it.
+[repo]
+package = "nvmod-cli"
+name = "nvmod-rs"
+
+[scan]
+paths = ["crates"]
+
+[areas]
+instance = "Instance and Profiles"
+mods = "Mods"
+staging = "Staging tree and conflicts"
+plugins = "Plugins and load order"
+doctor = "Doctor and verification"
+safety = "Backups, saves and import"
+run = "Running programs"
+tools = "External tools and contracts"
+api = "Library and command line"
+formats = "File readers"

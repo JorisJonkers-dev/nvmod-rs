@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "safety.undo"
+title = "Undo and interruption"
+origin = "ours"
+
+[[item]]
+id = "old_journal"
+title = "A journal in the old format is still rolled back"
+status = "implemented"
+
+[[item]]
+id = "schema_rollback"
+title = "rollback restores a schema 1 file byte for byte"
+status = "implemented"
+
+[[item]]
+id = "sigterm_install"
+title = "SIGTERM during an install rolls the step back"
+status = "implemented"
+
+[[item]]
+id = "sigterm_lists"
+title = "SIGTERM during a Mods change or a sort restores the Profile files"
+status = "implemented"
+
+[[item]]
+id = "sigterm_import"
+title = "SIGTERM during an import removes the new Instance"
+status = "implemented"

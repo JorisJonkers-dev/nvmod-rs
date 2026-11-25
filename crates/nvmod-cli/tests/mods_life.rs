@@ -3,6 +3,7 @@
 //! against a scratch Instance made by `nvmod init`. Plugins and files are synthetic; no game data is used.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
@@ -157,6 +158,7 @@ impl Scratch {
 
 #[test]
 fn remove_then_rollback_restores_every_file_and_list_line() {
+    covers(&[ids::mods::lifecycle::REMOVE]);
     let s = Scratch::new();
     let before = s.tree();
     let r = s.json(&["remove", "Plain"]);
@@ -176,6 +178,7 @@ fn remove_then_rollback_restores_every_file_and_list_line() {
 
 #[test]
 fn removing_a_mod_other_plugins_need_names_the_dependants_and_needs_force() {
+    covers(&[ids::mods::lifecycle::REMOVE_DEPENDANTS]);
     let s = Scratch::new();
     let before = s.tree();
     let (code, _, err) = s.run(&["remove", "Core"]);
@@ -207,6 +210,7 @@ fn a_plugin_another_mod_still_provides_stays_listed() {
 
 #[test]
 fn rename_updates_the_folder_and_the_line_and_refuses_an_existing_name() {
+    covers(&[ids::mods::lifecycle::RENAME]);
     let s = Scratch::new();
     let before = s.tree();
     for to in [
@@ -244,6 +248,7 @@ fn rename_keeps_a_disabled_prefix() {
 
 #[test]
 fn create_makes_an_empty_mod_at_the_place_and_roll_back_removes_it() {
+    covers(&[ids::mods::lifecycle::CREATE]);
     let s = Scratch::new();
     let before = s.tree();
     let (code, _, err) = s.run(&["create", "Fresh [new]", "--after", "Core"]);
@@ -305,6 +310,7 @@ fn a_clone_named_like_a_backup_is_not_listed_and_not_staged() {
 
 #[test]
 fn a_clone_with_another_name_is_listed_disabled_below_the_original_and_can_hard_link() {
+    covers(&[ids::mods::lifecycle::CLONE]);
     let s = Scratch::new();
     let r = s.json(&["clone", "Plain", "--name", "Plain tweaked", "--hardlink"]);
     assert_eq!(r["listed"], true);
@@ -327,6 +333,7 @@ fn a_clone_with_another_name_is_listed_disabled_below_the_original_and_can_hard_
 
 #[test]
 fn hide_and_unhide_round_trip_a_file_and_the_staging_tree_follows() {
+    covers(&[ids::mods::lifecycle::HIDE_UNHIDE]);
     let s = Scratch::new();
     let before = s.tree();
     assert_eq!(s.staged("textures/dirt.dds").unwrap(), b"Extra");
@@ -380,6 +387,7 @@ fn hide_and_unhide_round_trip_a_file_and_the_staging_tree_follows() {
 
 #[test]
 fn a_note_is_written_to_meta_ini_and_rolled_back() {
+    covers(&[ids::mods::lifecycle::NOTES]);
     let s = Scratch::new();
     let before = s.tree();
     let (code, _, err) = s.run(&["note", "Plain", "needs the \"fix\", see [wiki]"]);
@@ -405,6 +413,7 @@ fn a_note_is_written_to_meta_ini_and_rolled_back() {
 
 #[test]
 fn a_separator_has_mo2s_form_and_removing_it_leaves_the_other_lines() {
+    covers(&[ids::mods::lifecycle::SEPARATORS]);
     let s = Scratch::new();
     let before_list = s.modlist();
     let before = s.tree();
@@ -460,6 +469,7 @@ fn a_separator_has_mo2s_form_and_removing_it_leaves_the_other_lines() {
 
 #[test]
 fn reordering_across_separators_keeps_the_separator_lines() {
+    covers(&[ids::mods::lifecycle::REORDER]);
     let s = Scratch::new();
     let (code, _, err) = s.run(&["reorder", "Plain", "--top"]);
     assert_eq!(code, 0, "{err}");
@@ -477,6 +487,7 @@ fn reordering_across_separators_keeps_the_separator_lines() {
 
 #[test]
 fn categories_are_set_listed_filtered_and_the_file_is_untouched() {
+    covers(&[ids::mods::lifecycle::CATEGORIES]);
     let s = Scratch::new();
     write_file(&s.root(), "categories.dat", CATEGORIES);
     let (code, _, err) = s.run(&["category", "set", "Plain", "2", "1"]);
@@ -555,6 +566,7 @@ fn hold(root: &std::path::Path, command: &str) {
 
 #[test]
 fn a_running_game_of_the_instance_refuses_a_change_but_not_a_dry_run() {
+    covers(&[ids::mods::lifecycle::RUNNING_GAME_REFUSES_CHANGE]);
     let s = Scratch::new();
     hold(&s.root(), "run raul --play-mode");
     let before = s.tree();
@@ -585,6 +597,7 @@ fn a_game_of_another_instance_does_not_refuse_a_change() {
 
 #[test]
 fn a_failing_step_puts_everything_back_and_exits_4() {
+    covers(&[ids::mods::lifecycle::FAILED_STEP_RESTORES]);
     for step in ["mod", "lists", "stage"] {
         for args in [
             &["remove", "Core", "--force"][..],

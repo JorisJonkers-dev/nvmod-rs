@@ -6,6 +6,7 @@
 use nvmod_testkit::{
     BaseBuilder, PluginBuilder, ScdaBuilder, TempDir, capabilities_json, write_file,
 };
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::process::Command;
 
@@ -190,6 +191,7 @@ fn caps_with(xnvse: &[&str], jip: &[&str]) -> String {
 
 #[test]
 fn planted_opcodes_are_counted_with_plugins_and_status() {
+    covers(&[ids::doctor::nvse::OPCODE_USAGE]);
     let s = Scratch::new();
     s.capabilities(&caps_with(
         &["GetNVSEVersion", "GetBaseObject"],
@@ -289,6 +291,7 @@ fn without_capabilities_known_commands_are_unchecked() {
 
 #[test]
 fn only_opcodes_names_counts_and_plugin_files_reach_the_output() {
+    covers(&[ids::doctor::nvse::OPCODE_USAGE_PRIVACY]);
     let s = Scratch::new();
     s.capabilities(&capabilities_json(&[("xnvse", "xNVSE", 1, 3)]));
     for json in [false, true] {

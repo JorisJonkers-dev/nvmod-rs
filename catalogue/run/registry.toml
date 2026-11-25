@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "run.registry"
+title = "Programs registry"
+origin = "ours"
+
+[[item]]
+id = "add_edit_remove"
+title = "exec add, edit and remove round-trip"
+status = "implemented"
+
+[[item]]
+id = "unique_titles"
+title = "Titles are unique ignoring case and not reserved"
+status = "implemented"
+
+[[item]]
+id = "import_mapped_paths"
+title = "import lists mapped paths and refuses other drives"
+status = "implemented"

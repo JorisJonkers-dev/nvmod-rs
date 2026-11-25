@@ -25,7 +25,11 @@ and a mod's installer asks its questions in the window.
 - ⚠️ **Finds problems**: two mods that change the same file, or a plugin that misses another one it needs.
 - 💾 **Backs up** your profiles and saves, and brings a profile over from Mod Organizer 2.
 
-<!-- Progress picture: docs/coverage/tally.svg goes here once the feature catalogue reaches this repository. -->
+<p align="center">
+  <img src="docs/coverage/tally.svg" alt="Feature catalogue: items, tagged, passing and covered per area" width="100%">
+</p>
+
+Every promise nvmod makes is on a list, and the bars show how many of them a test proves on Linux, Windows and macOS ([how it works](docs/TESTING.md)).
 
 ## How it fits together
 

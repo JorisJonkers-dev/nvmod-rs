@@ -65,6 +65,8 @@ fn walk(dir: &Path, relative: &str, depth: usize, found: &mut Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    use nvmod_testkit::{covers, ids};
 
     fn temp(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("nvmod-scan-{name}-{}", std::process::id()));
@@ -103,6 +105,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn symlinks_are_not_followed_and_depth_is_bounded() {
+        covers(&[ids::formats::files::SCAN_BOUNDED]);
         let dir = temp("links");
         touch(&dir.join("nvse/real.dll"));
         std::os::unix::fs::symlink(&dir, dir.join("nvse/loop")).unwrap();

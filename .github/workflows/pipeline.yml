@@ -25,6 +25,15 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_DEV_DEBUG: 0
   CARGO_TERM_COLOR: always
+  # The pinned tally release (https://github.com/JorisJonkers-dev/tally) and the SHA-256 of its Linux binary, from
+  # that release's SHA256SUMS. Bump it with `tally ids --generator catalogue/tally_ids_gen.rs`.
+  TALLY_VERSION: v0.5.0
+  TALLY_SHA256: 649429de98a93b263376b11bb218e563651b31e8539e645ca2aee4a3d63e93a9
+  # The generated feature-catalogue reports: the only files the `reports` job may commit on main.
+  REPORT_FILES: >-
+    docs/coverage/FEATURES.md
+    docs/coverage/tally-report.json
+    docs/coverage/tally.svg
 
 jobs:
   hygiene:
@@ -62,12 +71,35 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      # Only cargo-nextest from mise.toml; the toolchain comes from rust-toolchain.toml.
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
+        with:
+          install_args: aqua:nextest-rs/nextest/cargo-nextest
+          cache: true
       - name: Lint
         run: cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed-methods
+      # Through cargo-nextest, so the run leaves JUnit for the feature catalogue (.config/nextest.toml, profile ci).
+      # Every failing test in one run, not only those of the first crate that fails (the profile has fail-fast off).
       - name: Test
         if: ${{ !cancelled() }}
-        # Every failing test in one run, not only those of the first crate that fails.
-        run: cargo test --locked --workspace --no-fail-fast
+        run: cargo nextest run --locked --workspace --profile ci
+      - name: Doc tests
+        if: ${{ !cancelled() }}
+        run: cargo test --locked --workspace --doc
+      - name: Keep the JUnit results
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          os="$(tr '[:upper:]' '[:lower:]' <<<"$RUNNER_OS")"
+          if [ -f target/nextest/ci/junit.xml ]; then cp target/nextest/ci/junit.xml "$RUNNER_TEMP/junit-$os.xml"; fi
+          echo "JUNIT_OS=$os" >>"$GITHUB_ENV"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-${{ env.JUNIT_OS }}
+          path: ${{ runner.temp }}/junit-${{ env.JUNIT_OS }}.xml
+          if-no-files-found: warn
+          retention-days: 7
 
   pipeline-complete:
     name: Pipeline Complete
@@ -75,13 +107,16 @@ jobs:
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      reports: ${{ steps.catalogue.outputs.reports }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      # Documentation-only changes skip the Rust steps. Every other check, and the gate below, still runs.
+      # Documentation-only changes skip the Rust steps. Every other check, and the gate below, still runs. A push to
+      # main always builds, so its feature-catalogue reports carry the test results of all three platforms.
       - name: Changed files
         id: changes
         env:
@@ -89,6 +124,9 @@ jobs:
           HEAD: ${{ github.sha }}
         run: |
           set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "code=true" >>"$GITHUB_OUTPUT"; echo "a push to main: building"; exit 0
+          fi
           if [ -z "${BASE:-}" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$BASE" 2>/dev/null; then
             echo "code=true" >>"$GITHUB_OUTPUT"; echo "no base to compare with: building"; exit 0
           fi
@@ -118,6 +156,19 @@ jobs:
       - name: Tests and coverage gate
         if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
         run: mise exec -- task test
+      # cargo llvm-cov keeps its own target folder, so the JUnit file is looked for below target/.
+      - name: Keep the JUnit results
+        if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
+        run: |
+          junit="$(find target -path '*nextest/ci/junit.xml' | head -n 1)"
+          if [ -n "$junit" ]; then cp "$junit" "$RUNNER_TEMP/junit-linux.xml"; else echo "::warning title=JUnit::no JUnit file below target/"; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
+        with:
+          name: junit-linux
+          path: ${{ runner.temp }}/junit-linux.xml
+          if-no-files-found: warn
+          retention-days: 7
       - name: Fuzz harnesses compile
         if: ${{ !cancelled() && steps.changes.outputs.code == 'true' }}
         run: mise exec -- task fuzz:check
@@ -143,6 +194,104 @@ jobs:
         if: ${{ !cancelled() }}
         run: mise exec -- task scripts
 
+      # The JUnit results of the three test runs (Linux in this job, Windows and macOS in `platforms`). Missing files
+      # (a documentation-only pull request, a job that did not finish) are handled by the next step.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          pattern: junit-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/junit
+      # The feature catalogue (catalogue/, docs/TESTING.md): ids, pins, evidence and test tags, and against the base
+      # revision no id removed without `retired` or an alias. With the JUnit results of all three platforms an item is
+      # covered when its tagged tests passed on each, and the ratchet holds: the covered (and tagged) count does not
+      # drop below main's last report (docs/coverage/tally-report.json). tally is a pinned release binary, checked
+      # against its SHA-256; it is not a crate dependency. On main the step also renders the reports for the
+      # `reports` job.
+      - name: Feature catalogue (tally)
+        id: catalogue
+        if: ${{ !cancelled() }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          JUNIT: ${{ runner.temp }}/junit
+          CODE: ${{ steps.changes.outputs.code }}
+        run: |
+          set -euo pipefail
+          # The files the `reports` job commits on main must not be ignored, or its `git add` fails there.
+          # shellcheck disable=SC2086
+          if ignored="$(git check-ignore --no-index -v $REPORT_FILES)"; then
+            echo "::error title=Feature catalogue::report files are ignored by .gitignore: $ignored"; exit 1
+          fi
+          curl -fsSL --retry 3 --retry-all-errors -o "$RUNNER_TEMP/tally" "https://github.com/JorisJonkers-dev/tally/releases/download/${TALLY_VERSION}/tally-x86_64-unknown-linux-gnu"
+          echo "${TALLY_SHA256}  $RUNNER_TEMP/tally" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/tally"
+          tally="$RUNNER_TEMP/tally"
+          args=()
+          if [ -f "$JUNIT/junit-linux.xml" ] && [ -f "$JUNIT/junit-windows.xml" ] && [ -f "$JUNIT/junit-macos.xml" ]; then
+            "$tally" ingest --junit "$JUNIT/junit-linux.xml" --junit "$JUNIT/junit-windows.xml" --junit "$JUNIT/junit-macos.xml" --out "$RUNNER_TEMP/results.json"
+            args=(--results "$RUNNER_TEMP/results.json")
+          elif [ "$GITHUB_EVENT_NAME" = push ] || [ "$CODE" = true ]; then
+            # The test jobs ran, so their results must be here: a lost upload must not switch the ratchet off.
+            echo "::error title=Feature catalogue::the JUnit results of Linux, Windows and macOS are needed when the tests run"; exit 1
+          else
+            echo "::notice title=Feature catalogue::documentation only: the tests did not run, so no covered count and no ratchet"
+          fi
+          # Pull requests never change the generated reports, so none can lower the bar the ratchet measures against.
+          # (A report file that main does not have yet may be added once, as the first copy of the picture the README shows.)
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --name-only --diff-filter=MDRT "$BASE" HEAD -- docs/coverage | grep -q .; then
+            echo "::error title=Feature catalogue::docs/coverage/ is generated on main; leave it out of the pull request"; exit 1
+          fi
+          # The ratchet measures against the report of the base revision (main before this change).
+          ratchet=()
+          if [ ${#args[@]} -gt 0 ] && [ -n "${BASE:-}" ] && git show "${BASE}:docs/coverage/tally-report.json" >"$RUNNER_TEMP/base-report.json" 2>/dev/null; then
+            ratchet=(--ratchet "$RUNNER_TEMP/base-report.json")
+          elif [ ${#args[@]} -gt 0 ] && [ -f docs/coverage/tally-report.json ]; then
+            ratchet=(--ratchet docs/coverage/tally-report.json)
+          fi
+          if [ -n "${BASE:-}" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            "$tally" check --base "$BASE" "${args[@]}" "${ratchet[@]}"
+          elif [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            echo "::error title=Feature catalogue::the base revision $BASE is not in the checkout"; exit 1
+          else
+            "$tally" check "${args[@]}" "${ratchet[@]}"
+          fi
+          "$tally" report --depth 2 --format md "${args[@]}" >>"$GITHUB_STEP_SUMMARY"
+          [ "$GITHUB_EVENT_NAME" = push ] || exit 0
+          # Rendered in a clean worktree of the tested commit, so nothing the earlier steps left behind is picked up.
+          git worktree add --quiet --detach "$RUNNER_TEMP/render" HEAD
+          cd "$RUNNER_TEMP/render"
+          mkdir -p docs/coverage
+          {
+            echo "# Feature coverage"
+            echo
+            echo "Generated on main by tally from \`catalogue/\` (docs/TESTING.md, \"Feature catalogue\"). Do not edit."
+            echo
+            "$tally" report --depth 3 --format md "${args[@]}"
+          } >docs/coverage/FEATURES.md
+          "$tally" report --depth 3 --format json "${args[@]}" --out docs/coverage/tally-report.json
+          "$tally" report --depth 1 --format svg "${args[@]}" --out docs/coverage/tally.svg
+          # Only the report files may change; anything else stops the run.
+          # shellcheck disable=SC2086
+          printf '%s\n' $REPORT_FILES >"$RUNNER_TEMP/allowed"
+          git status --porcelain --untracked-files=all | cut -c4- >"$RUNNER_TEMP/changed"
+          if [ ! -s "$RUNNER_TEMP/changed" ]; then
+            echo "The catalogue reports are up to date: nothing to commit." >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          other="$(grep -vxF -f "$RUNNER_TEMP/allowed" "$RUNNER_TEMP/changed" || true)"
+          if [ -n "$other" ]; then
+            echo "::error title=Feature catalogue::files other than the reports changed: $other"; exit 1
+          fi
+          echo "reports=changed" >>"$GITHUB_OUTPUT"
+          { echo "Catalogue reports changed:"; sed 's/^/- /' "$RUNNER_TEMP/changed"; } >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() && steps.catalogue.outputs.reports == 'changed' }}
+        with:
+          name: report-files
+          path: ${{ runner.temp }}/render/docs/coverage/
+          retention-days: 3
+
       # A job that did not succeed fails the gate, except the two that only run on pull requests.
       - name: Reusable-workflow jobs passed
         if: ${{ !cancelled() }}
@@ -152,3 +301,67 @@ jobs:
           set -euo pipefail
           failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | "\(.key): \(.value.result)"' <<<"$NEEDS")"
           if [ -n "$failed" ]; then echo "$failed"; exit 1; fi
+
+  # On main, the feature-catalogue reports rendered by Pipeline Complete go onto main as one commit of those files only,
+  # carrying the skip-ci marker, when one changed and every job passed. This job runs no code of the repository: a fresh
+  # checkout, the rendered files copied in, a commit and a push with the token of raul-progress-bot (contents write,
+  # metadata read; a bypass actor of the ruleset "Main", .github/rulesets/main.json). Git hooks are off for that commit
+  # and push. Without the App's variable and secret nothing is pushed.
+  reports:
+    name: Catalogue reports
+    needs: pipeline-complete
+    # Explicit result check: the implicit success() is false on a push, because the pull-request-only jobs upstream of
+    # Pipeline Complete (hygiene, PR title) are skipped there.
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.pipeline-complete.result == 'success' && needs.pipeline-complete.outputs.reports == 'changed' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_APP: ${{ vars.PROGRESS_APP_ID != '' && secrets.PROGRESS_APP_PRIVATE_KEY != '' }}
+    steps:
+      - name: No App to push with
+        if: ${{ env.HAS_APP != 'true' }}
+        run: echo "::warning title=Catalogue reports::the reports changed, but PROGRESS_APP_ID or PROGRESS_APP_PRIVATE_KEY is not set; nothing pushed"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ env.HAS_APP == 'true' }}
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ env.HAS_APP == 'true' }}
+        with:
+          name: report-files
+          path: ${{ runner.temp }}/report-files
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        if: ${{ env.HAS_APP == 'true' }}
+        with:
+          app-id: ${{ vars.PROGRESS_APP_ID }}
+          private-key: ${{ secrets.PROGRESS_APP_PRIVATE_KEY }}
+          permission-contents: write
+      # The commit is made on the commit that was tested. If main moved on meanwhile, the newer push's run commits.
+      - name: Commit and push
+        if: ${{ env.HAS_APP == 'true' }}
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p docs/coverage
+          # The artifact holds the files of docs/coverage/ without that folder.
+          for f in $REPORT_FILES; do
+            cp "$RUNNER_TEMP/report-files/$(basename "$f")" "$f"
+          done
+          git=(git -c core.hooksPath=/dev/null -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com")
+          # shellcheck disable=SC2086
+          "${git[@]}" add -- $REPORT_FILES
+          if "${git[@]}" diff --cached --quiet; then
+            echo "Nothing to commit." >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          "${git[@]}" commit --quiet -m "chore(catalogue): update the generated reports [skip ci]"
+          remote="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          head="$("${git[@]}" ls-remote "$remote" refs/heads/main | cut -f1)"
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "::notice title=Catalogue reports::main moved on ($head); the newer run commits"
+            exit 0
+          fi
+          "${git[@]}" push --quiet "$remote" HEAD:refs/heads/main
+          echo "Pushed $(git rev-parse --short HEAD)." >>"$GITHUB_STEP_SUMMARY"

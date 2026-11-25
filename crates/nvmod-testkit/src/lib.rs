@@ -14,6 +14,14 @@ mod plugin;
 mod save;
 mod standin;
 
+// The ids of the feature catalogue (catalogue/, docs/TESTING.md "Feature catalogue"), written by build.rs: a test says
+// which promises it proves with `covers(&[ids::area::group::ITEM])`, and an id the catalogue lacks does not compile.
+#[allow(missing_docs)]
+mod tally {
+    include!(concat!(env!("OUT_DIR"), "/tally_ids.rs"));
+}
+pub use tally::{Id, covers, ids};
+
 pub use archive::{TarBuilder, ZipBuilder};
 pub use base::{BaseBuilder, Store, snapshot};
 pub use bsa::BsaBuilder;

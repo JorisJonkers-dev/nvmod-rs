@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "safety.import"
+title = "Importing from Mod Organizer 2"
+origin = "ours"
+
+[[item]]
+id = "same_mods_same_order"
+title = "An MO2 instance imports with the same Mods and load order"
+status = "implemented"
+
+[[item]]
+id = "unmapped_listed"
+title = "What cannot be mapped is listed"
+status = "implemented"
+
+[[item]]
+id = "code_page"
+title = "plugins.txt is decoded in the Windows code page"
+status = "implemented"
+
+[[item]]
+id = "disagreement_refused"
+title = "Disagreeing plugin lists are reported per plugin and nothing is written"
+status = "implemented"
+
+[[item]]
+id = "hard_links"
+title = "Mods are hard linked unless copying is asked for"
+status = "implemented"
+
+[[item]]
+id = "imported_instance_works"
+title = "The imported Instance stages and passes the Doctor"
+status = "implemented"
+
+[[item]]
+id = "mo2_untouched"
+title = "The Mod Organizer folder is never touched"
+status = "implemented"

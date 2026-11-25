@@ -810,9 +810,11 @@ fn sevenz_error(archive: &Path, e: &sevenz_rust2::Error) -> String {
 #[cfg(test)]
 mod detect_tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn every_supported_format_is_read_in_process_and_rar_is_not() {
+        covers(&[ids::mods::install::ARCHIVE_FORMATS]);
         assert_eq!(detect(b"PK\x03\x04rest"), Format::Zip);
         assert_eq!(detect(b"7z\xbc\xaf\x27\x1c\x00\x04"), Format::SevenZ);
         assert_eq!(detect(b"\x1f\x8b\x08"), Format::CompressedTar(Codec::Gzip));

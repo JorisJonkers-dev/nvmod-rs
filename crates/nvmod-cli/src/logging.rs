@@ -124,6 +124,7 @@ pub fn run_logged(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn words(text: &str) -> Vec<String> {
         text.split_whitespace().map(str::to_owned).collect()
@@ -131,6 +132,7 @@ mod tests {
 
     #[test]
     fn the_level_option_is_taken_out_wherever_it_is() {
+        covers(&[ids::api::cli::LOG_LEVEL]);
         let (rest, level) = take_level(&words("doctor --log-level debug --json")).unwrap();
         assert_eq!(rest, words("doctor --json"));
         assert_eq!(level, Some(LevelFilter::DEBUG));

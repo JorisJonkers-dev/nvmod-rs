@@ -104,6 +104,7 @@ fn wine_to_host(path: &str, drives: &BTreeMap<char, PathBuf>) -> Result<PathBuf,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     fn wine(path: &str, drives: &BTreeMap<char, PathBuf>) -> Result<PathBuf, UnmappedDrive> {
         to_host_path_as(PathStyle::Wine, path, drives)
@@ -115,6 +116,7 @@ mod tests {
 
     #[test]
     fn z_maps_to_the_root_in_either_slash_style() {
+        covers(&[ids::formats::files::WINE_PATHS]);
         let none = BTreeMap::new();
         assert_eq!(
             wine("Z:\\home\\u\\Game", &none).unwrap(),
@@ -129,6 +131,7 @@ mod tests {
 
     #[test]
     fn other_drives_need_a_mapping() {
+        covers(&[ids::formats::files::WINE_PATHS]);
         let mut drives = BTreeMap::new();
         assert_eq!(wine("C:\\x", &drives), Err(UnmappedDrive('c')));
         drives.insert('c', PathBuf::from("/prefix/drive_c"));

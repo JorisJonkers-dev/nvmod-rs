@@ -3,6 +3,7 @@
 //! `nvmod init` from a synthetic base copy. Mods and profiles are written as files, in code.
 
 use nvmod_testkit::{BaseBuilder, TempDir, case_sensitive, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -110,6 +111,7 @@ fn codes(report: &Value) -> Vec<String> {
 
 #[test]
 fn every_path_of_the_staging_tree_is_lowercase_and_holds_game_files_and_mods() {
+    covers(&[ids::staging::tree::LOWERCASE_PATHS]);
     let s = Scratch::new();
     s.mod_file("Texture Pack", "Textures/Landscape/Dirt.DDS", b"dirt");
     s.mod_file("Texture Pack", "Fallout - Textures.BSA", b"tex bsa");
@@ -143,6 +145,7 @@ fn every_path_of_the_staging_tree_is_lowercase_and_holds_game_files_and_mods() {
 
 #[test]
 fn the_game_executable_never_enters_the_staging_tree() {
+    covers(&[ids::staging::tree::GAME_EXECUTABLE_EXCLUDED]);
     let s = Scratch::new();
     assert_eq!(s.stage(&[]).0, 0);
     assert!(
@@ -155,6 +158,7 @@ fn the_game_executable_never_enters_the_staging_tree() {
 
 #[test]
 fn where_two_mods_provide_a_file_the_later_mod_in_the_load_order_wins() {
+    covers(&[ids::staging::tree::LATER_MOD_WINS]);
     let s = Scratch::new();
     // modlist.txt lists the highest priority first; the load order is the reverse, so the last mod wins.
     s.mod_file("Early", "Meshes/Rock.nif", b"early");
@@ -186,6 +190,7 @@ const GENERATED_META: &[u8] = b"[raulGeneratedLod]\r\ngenerated=true\r\nprofile=
 /// the generated blocks keep their UVs and would sample the pack's atlas (far rocks drawn with crate textures).
 #[test]
 fn a_generated_mod_wins_over_every_other_mod_wherever_it_is_listed() {
+    covers(&[ids::staging::tree::GENERATED_MOD_WINS]);
     let s = Scratch::new();
     let atlas = "Textures/Landscape/LOD/WastelandNV/Blocks/WastelandNV.Buildings.dds";
     s.mod_file("Generated LOD (Default)", "meta.ini", GENERATED_META);
@@ -344,6 +349,7 @@ fn a_listed_mod_without_a_folder_is_reported_and_staging_goes_on() {
 #[test]
 fn files_are_hard_linked_where_the_filesystem_allows() {
     use std::os::unix::fs::MetadataExt;
+    covers(&[ids::staging::tree::HARD_LINKS]);
     let s = Scratch::new();
     s.mod_file("Mod", "Meshes/New.nif", b"new");
     s.modlist("Default", "+Mod\r\n");
@@ -361,6 +367,7 @@ fn files_are_hard_linked_where_the_filesystem_allows() {
 
 #[test]
 fn where_links_cannot_be_made_the_files_are_copied_and_the_doctor_reports_it() {
+    covers(&[ids::staging::tree::COPY_FALLBACK]);
     let s = Scratch::new();
     s.mod_file("Mod", "Meshes/New.nif", b"new");
     s.modlist("Default", "+Mod\r\n");
@@ -406,6 +413,7 @@ fn a_hard_linked_tree_is_not_reported_as_degraded() {
 
 #[test]
 fn the_doctor_says_when_no_staging_tree_was_built() {
+    covers(&[ids::doctor::checks::NO_STAGING_TREE]);
     let s = Scratch::new();
     s.mod_file("Mod", "a.txt", b"a");
     s.modlist("Default", "+Mod\r\n");
@@ -419,6 +427,7 @@ fn the_doctor_says_when_no_staging_tree_was_built() {
 
 #[test]
 fn the_doctor_reports_mods_whose_files_collide_after_lowercasing() {
+    covers(&[ids::doctor::checks::LOWERCASE_COLLISIONS]);
     let s = Scratch::new();
     s.mod_file("Clash", "Textures/Wall.dds", b"one");
     s.mod_file("Clash", "textures/wall.dds", b"two");
@@ -483,6 +492,7 @@ fn staging_again_replaces_the_tree() {
 
 #[test]
 fn staging_never_changes_the_base_copy_or_the_mods() {
+    covers(&[ids::instance::init::GAME_FOLDER_UNTOUCHED]);
     let s = Scratch::new();
     s.mod_file("Mod", "Meshes/New.nif", b"new");
     s.modlist("Default", "+Mod\r\n");
@@ -500,6 +510,7 @@ fn staging_never_changes_the_base_copy_or_the_mods() {
 #[test]
 fn a_failed_step_exits_four_and_leaves_the_old_tree_in_place() {
     use std::os::unix::fs::PermissionsExt;
+    covers(&[ids::staging::tree::CRASH_SAFE]);
     let s = Scratch::new();
     s.mod_file("Mod", "good.txt", b"g");
     s.modlist("Default", "+Mod\r\n");

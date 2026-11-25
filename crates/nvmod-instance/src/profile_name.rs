@@ -46,6 +46,7 @@ pub fn check_profile_name(name: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::check_profile_name;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn usable_names_pass() {
@@ -62,6 +63,7 @@ mod tests {
 
     #[test]
     fn unusable_names_are_refused_with_a_reason() {
+        covers(&[ids::instance::profiles::NAME_RULES]);
         for name in [
             "", ".", "..", "a/b", "a\\b", "a:b", "a*", "a?", "a\"b", "a<b", "a>b", "a|b", "a\nb",
             " a", "a ", "a.", "con", "NUL.txt", "Com3",

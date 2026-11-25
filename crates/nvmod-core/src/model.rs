@@ -315,6 +315,7 @@ fn schema_text(schema: &schemars::Schema) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use std::path::Path;
 
     /// Compare the checked-in schema with the generated one; `NVMOD_BLESS=1` rewrites the file.
@@ -336,11 +337,13 @@ mod tests {
 
     #[test]
     fn the_checked_in_instance_schema_is_the_generated_one() {
+        covers(&[ids::instance::model::JSON_SCHEMAS]);
         check_schema("instance.v2.json", &instance_schema());
     }
 
     #[test]
     fn the_checked_in_profile_schema_is_the_generated_one() {
+        covers(&[ids::instance::model::JSON_SCHEMAS]);
         check_schema("profile.v1.json", &profile_schema());
     }
 
@@ -352,6 +355,7 @@ mod tests {
 
     #[test]
     fn a_current_instance_round_trips() {
+        covers(&[ids::instance::model::CURRENT_SCHEMA]);
         let i = Instance::new(PathBuf::from("/games/fnv"), Storefront::Gog);
         let text = serde_json::to_string(&i).unwrap();
         let loaded = load_instance(&text).unwrap();
@@ -372,6 +376,7 @@ mod tests {
 
     #[test]
     fn a_newer_instance_is_refused_with_a_reason() {
+        covers(&[ids::instance::model::NEWER_SCHEMA_REFUSED]);
         let why =
             load_instance(r#"{"schema_version":3,"base":"/x","storefront":"steam"}"#).unwrap_err();
         assert!(

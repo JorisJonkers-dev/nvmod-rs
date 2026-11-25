@@ -245,6 +245,7 @@ pub fn builtin_lock() -> Lock {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     const HASH: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
@@ -377,6 +378,7 @@ tag = "v0.1.0"
 
     #[test]
     fn the_shipped_lock_is_valid_and_records_the_loot_rs_tag_of_cargo_toml() {
+        covers(&[ids::tools::pins::LINKED_LOOT_RS]);
         let lock = builtin_lock();
         let loot = lock.tool("loot-rs").unwrap();
         assert_eq!(loot.kind, Kind::Linked);

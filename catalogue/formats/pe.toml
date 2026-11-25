@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "formats.pe"
+title = "PE files"
+origin = "ours"
+
+[[item]]
+id = "plugin_exports"
+title = "An NVSE plugin is recognised with its exports and imports"
+status = "implemented"
+
+[[item]]
+id = "version_struct"
+title = "The plugin's version struct is read from its exported data"
+status = "implemented"
+
+[[item]]
+id = "large_address_flag"
+title = "The version resource and the large-address-aware flag are read"
+status = "implemented"
+
+[[item]]
+id = "sixty_four_bit"
+title = "A 64-bit DLL is read but is not a 32-bit image"
+status = "implemented"
+
+[[item]]
+id = "damaged_tables"
+title = "A damaged table is an issue and the rest still reads"
+status = "implemented"
+
+[[item]]
+id = "not_pe_refused"
+title = "A file that is not a PE file is refused with a reason"
+status = "implemented"
+
+[[item]]
+id = "hostile_input_bounded"
+title = "Hostile input never panics and reads stay inside the file"
+status = "implemented"

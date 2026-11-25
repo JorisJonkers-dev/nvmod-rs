@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "formats.files"
+title = "Text, ini and binary file readers"
+origin = "ours"
+
+[[item]]
+id = "plugin_lists"
+title = "plugins.txt is read with names, comments, stars and a code page"
+status = "implemented"
+
+[[item]]
+id = "locked_order"
+title = "The locked-order file round-trips with its header and CRLF"
+status = "implemented"
+
+[[item]]
+id = "ini_reader"
+title = "Ini sections, keys and Qt strings are read"
+status = "implemented"
+
+[[item]]
+id = "meta_ini_edit"
+title = "Setting a key changes only its line"
+status = "implemented"
+
+[[item]]
+id = "save_game"
+title = "A save game is read; truncation is an error, not a panic"
+status = "implemented"
+
+[[item]]
+id = "script_scan"
+title = "Scripts of a plugin are scanned for opcodes, including compressed records"
+status = "implemented"
+
+[[item]]
+id = "text_code_pages"
+title = "Text is UTF-8 or Windows-1252, and encoding refuses what the code page lacks"
+status = "implemented"
+
+[[item]]
+id = "version_order"
+title = "Dotted, suffixed and date versions order"
+status = "implemented"
+
+[[item]]
+id = "wine_paths"
+title = "A Windows drive path maps to a host path"
+status = "implemented"
+
+[[item]]
+id = "categories_dat"
+title = "categories.dat names are read and its bytes survive"
+status = "implemented"
+
+[[item]]
+id = "scan_bounded"
+title = "A directory scan does not follow symlinks and bounds its depth"
+status = "implemented"

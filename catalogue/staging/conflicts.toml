@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "staging.conflicts"
+title = "Conflicts"
+origin = "ours"
+
+[[item]]
+id = "winners_and_losers"
+title = "Each contested path lists its winner and its losers in order"
+status = "implemented"
+
+[[item]]
+id = "reorder_changes_winner"
+title = "Reordering changes the winner"
+status = "implemented"
+
+[[item]]
+id = "redundant_mods"
+title = "A Mod that loses every file is redundant"
+status = "implemented"
+
+[[item]]
+id = "generated_left_out"
+title = "A generated Mod is listed as generated and left out of the conflicts"
+status = "implemented"
+
+[[item]]
+id = "per_mod_view"
+title = "One Mod's own row and the paths it is in"
+status = "implemented"
+
+[[item]]
+id = "archive_axes"
+title = "Loose files over archives are reported when asked for"
+status = "implemented"
+
+[[item]]
+id = "archive_not_listed"
+title = "An archive no ini lists is reported"
+status = "implemented"
+
+[[item]]
+id = "archive_listed_missing"
+title = "An archive an ini lists but that is missing is reported"
+status = "implemented"
+
+[[item]]
+id = "archive_invalidation"
+title = "Archive invalidation problems are reported"
+status = "implemented"
+
+[[item]]
+id = "archive_corrupt_header"
+title = "A corrupt archive header is reported"
+status = "implemented"

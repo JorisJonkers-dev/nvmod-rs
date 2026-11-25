@@ -3,6 +3,7 @@
 //! Mods are written as files, in code.
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -136,6 +137,7 @@ fn mod_row<'a>(report: &'a Value, name: &str) -> &'a Value {
 
 #[test]
 fn five_collisions_are_listed_once_each_with_their_winner_and_ordered_losers() {
+    covers(&[ids::staging::conflicts::WINNERS_AND_LOSERS]);
     let s = Scratch::new();
     let (code, r) = s.json("conflicts", &[]);
     assert_eq!(code, 0);
@@ -190,6 +192,7 @@ fn the_json_matches_the_golden_file() {
 
 #[test]
 fn reordering_changes_the_winner() {
+    covers(&[ids::staging::conflicts::REORDER_CHANGES_WINNER]);
     let s = Scratch::new();
     let root = s.root();
     let (code, _, err) = nvmod(&[
@@ -210,6 +213,7 @@ fn reordering_changes_the_winner() {
 
 #[test]
 fn a_mod_that_loses_every_file_is_redundant_and_one_that_wins_some_is_mixed() {
+    covers(&[ids::staging::conflicts::REDUNDANT_MODS]);
     let s = Scratch::new();
     s.mod_file("R", "textures/a.dds", b"r");
     s.mod_file("R", "scripts/s.pex", b"r");
@@ -402,6 +406,7 @@ const MARKER: &[u8] = b"[General]\r\nnotes=\"kept\"\r\n[raulGeneratedLod]\r\ngen
 
 #[test]
 fn a_generated_mod_is_listed_as_generated_and_left_out_of_the_conflicts_with_one_reason() {
+    covers(&[ids::staging::conflicts::GENERATED_LEFT_OUT]);
     let s = Scratch::new();
     // A generated Mod at the top of the list that collides with everything below it.
     s.modlist("+Generated LOD (Default)\r\n+A\r\n+B\r\n+C\r\n");

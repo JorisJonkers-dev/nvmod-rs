@@ -6,6 +6,7 @@ use nvmod_api::conflicts::{ReportOutput, ReportRequest, report};
 use nvmod_api::{CancelToken, ErrorKind, Event, JobError, NoProgress, Outcome};
 use nvmod_instance::NvmodInstance;
 use nvmod_testkit::{BaseBuilder, PeBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use std::path::PathBuf;
 
 /// The job name of every refusal of this job.
@@ -173,6 +174,7 @@ fn without_the_flag_the_report_has_no_archive_axis() {
 
 #[test]
 fn a_named_mod_keeps_its_own_row_and_the_paths_it_is_in() {
+    covers(&[ids::staging::conflicts::PER_MOD_VIEW]);
     let s = contested();
     let mut request = s.request();
     request.mod_name = Some("B".to_owned());

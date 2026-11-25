@@ -5,6 +5,7 @@
 
 use loot_rs::api::{Masterlist, PluginSlot, SortOptions, sort};
 use nvmod_testkit::{PluginBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::builtin;
 use serde_json::Value;
 use std::path::Path;
@@ -60,6 +61,7 @@ fn command_line_json(dir: &Path) -> (u8, String) {
 
 #[test]
 fn the_library_result_and_the_sort_json_output_are_equal() {
+    covers(&[ids::tools::contracts::LOOT_SORT_CONTRACT]);
     let dir = TempDir::new("loot-contract");
     fixture(dir.path());
 
@@ -117,6 +119,7 @@ fn the_library_result_and_the_sort_json_output_are_equal() {
 
 #[test]
 fn the_sort_json_output_matches_the_vendored_schema() {
+    covers(&[ids::tools::contracts::LOOT_SORT_CONTRACT]);
     let dir = TempDir::new("loot-contract-schema");
     fixture(dir.path());
     let (_, text) = command_line_json(dir.path());

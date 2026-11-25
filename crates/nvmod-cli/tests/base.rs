@@ -3,6 +3,7 @@
 //! fixtures (a fake Steam, GOG or Epic copy). Nothing here depends on the machine or on any game file.
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::process::Command;
 
@@ -41,6 +42,7 @@ fn codes(report: &Value) -> Vec<String> {
 
 #[test]
 fn a_steam_base_copy_gets_a_clean_report() {
+    covers(&[ids::doctor::base::STEAM_COPY]);
     let dir = base(&BaseBuilder::steam());
     let (code, report) = doctor_json(&dir);
     assert_eq!(code, 0, "{report}");
@@ -51,6 +53,7 @@ fn a_steam_base_copy_gets_a_clean_report() {
 
 #[test]
 fn a_gog_base_copy_gets_a_clean_report() {
+    covers(&[ids::doctor::base::GOG_COPY]);
     let dir = base(&BaseBuilder::gog());
     let (code, report) = doctor_json(&dir);
     assert_eq!(code, 0, "{report}");
@@ -70,6 +73,7 @@ fn the_text_report_names_the_storefront_and_the_executable() {
 
 #[test]
 fn a_4gb_patched_executable_is_accepted() {
+    covers(&[ids::doctor::base::FOUR_GB_PATCH]);
     for builder in [BaseBuilder::steam(), BaseBuilder::gog()] {
         let dir = base(&builder.patched_4gb());
         let (code, report) = doctor_json(&dir);
@@ -99,6 +103,7 @@ fn a_file_that_is_not_an_executable_is_reported() {
 
 #[test]
 fn a_missing_executable_or_data_folder_is_reported() {
+    covers(&[ids::doctor::base::MISSING_FILES]);
     let dir = base(&BaseBuilder::steam().without_executable());
     let (code, report) = doctor_json(&dir);
     assert_eq!(code, 1);
@@ -112,6 +117,7 @@ fn a_missing_executable_or_data_folder_is_reported() {
 
 #[test]
 fn an_epic_base_copy_is_refused_with_a_reason() {
+    covers(&[ids::doctor::base::EPIC_REFUSED]);
     let dir = base(&BaseBuilder::epic());
     let (code, _, err) = nvmod(&["doctor", "--base", dir.path().to_str().unwrap()]);
     assert_eq!(code, 2);
@@ -148,6 +154,7 @@ fn a_base_folder_that_does_not_exist_is_refused() {
 
 #[test]
 fn doctor_never_writes_to_the_base_copy() {
+    covers(&[ids::instance::init::GAME_FOLDER_UNTOUCHED]);
     for builder in [
         BaseBuilder::steam(),
         BaseBuilder::gog().patched_4gb(),
@@ -165,6 +172,7 @@ fn doctor_never_writes_to_the_base_copy() {
 
 #[test]
 fn doctor_needs_exactly_one_of_base_and_instance() {
+    covers(&[ids::doctor::base::ONE_TARGET]);
     let (code, _, err) = nvmod(&["doctor"]);
     assert_eq!(code, 5);
     assert!(err.contains("--base"), "{err}");
@@ -174,6 +182,7 @@ fn doctor_needs_exactly_one_of_base_and_instance() {
 
 #[test]
 fn the_help_lists_the_exit_codes() {
+    covers(&[ids::api::cli::HELP]);
     let (code, out, _) = nvmod(&["--help"]);
     assert_eq!(code, 0);
     for line in [
@@ -202,6 +211,7 @@ mod init {
 
     #[test]
     fn init_builds_an_instance_skeleton_the_doctor_accepts() {
+        covers(&[ids::instance::init::INIT_FROM_BASE]);
         let base = base(&BaseBuilder::steam());
         // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
         nvmod_testkit::write_file(
@@ -247,6 +257,7 @@ mod init {
 
     #[test]
     fn init_refuses_an_unsupported_base_and_writes_nothing() {
+        covers(&[ids::instance::init::INIT_REFUSES_UNSUPPORTED_BASE]);
         let base = base(&BaseBuilder::epic());
         let scratch = TempDir::new("instance");
         let instance = scratch.path().join("fnv");
@@ -258,6 +269,7 @@ mod init {
 
     #[test]
     fn init_refuses_to_overwrite_an_instance_and_one_inside_the_base() {
+        covers(&[ids::instance::init::INIT_NEVER_OVERWRITES]);
         let base = base(&BaseBuilder::steam());
         let scratch = TempDir::new("instance");
         let instance = scratch.path().join("fnv");

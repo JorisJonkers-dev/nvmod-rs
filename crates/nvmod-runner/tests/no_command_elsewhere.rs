@@ -3,6 +3,7 @@
 //! `disallowed-methods` (see `clippy.toml`) catches a new `Command::new`; this test also catches the other ways in
 //! (`Command::from`, a renamed import, an `#[allow]` that silences the lint), and it runs under plain `cargo test`.
 
+use nvmod_testkit::{covers, ids};
 use std::path::{Path, PathBuf};
 
 /// Source files outside the runner crate that may still start a process, with the reason.
@@ -30,6 +31,7 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
 
 #[test]
 fn only_the_runner_crate_uses_process_command() {
+    covers(&[ids::tools::runner::ONLY_RUNNER_SPAWNS]);
     let crates = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
     let mut offenders = Vec::new();
     for krate in std::fs::read_dir(crates).unwrap().flatten() {

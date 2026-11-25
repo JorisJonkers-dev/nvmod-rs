@@ -79,6 +79,7 @@ pub fn lines(text: &str) -> impl Iterator<Item = &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn utf8_passes_through_and_the_bom_is_dropped() {
@@ -88,6 +89,7 @@ mod tests {
 
     #[test]
     fn invalid_utf8_is_read_as_windows_1252() {
+        covers(&[ids::formats::files::TEXT_CODE_PAGES]);
         assert_eq!(
             decode(b"Caf\xE9 \x80 \x93x\x94"),
             "Caf\u{e9} \u{20ac} \u{201c}x\u{201d}"
@@ -97,6 +99,7 @@ mod tests {
 
     #[test]
     fn encoding_is_the_inverse_of_decoding_and_refuses_what_the_code_page_lacks() {
+        covers(&[ids::formats::files::TEXT_CODE_PAGES]);
         let all: Vec<u8> = (0..=255).collect();
         assert_eq!(
             encode_windows_1252(&decode(&all)),

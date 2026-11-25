@@ -4,6 +4,7 @@
 //! No game data is used; every file is a few synthetic bytes.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -197,6 +198,7 @@ fn active(bytes: &[u8]) -> Vec<String> {
 
 #[test]
 fn disabling_a_mod_that_ships_base_masters_takes_out_only_what_no_one_else_provides() {
+    covers(&[ids::mods::lifecycle::DISABLE_DEACTIVATES_PLUGINS]);
     let s = Scratch::new();
     let (_, v) = s.mods(&["disable", "Ttw"]);
     // Anchorage.esm is also provided by the enabled Mod Twin, the four base masters by the base copy
@@ -230,6 +232,7 @@ fn disabling_a_mod_that_ships_base_masters_takes_out_only_what_no_one_else_provi
 
 #[test]
 fn disable_then_enable_is_the_identity_on_the_profile_files_and_the_plugin_report() {
+    covers(&[ids::mods::lifecycle::ENABLE_RESTORES_PLUGINS]);
     let s = Scratch::new();
     let plugins = s.file("plugins.txt");
     let order = s.file("loadorder.txt");

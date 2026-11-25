@@ -437,6 +437,7 @@ impl Catalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
     use proptest::prelude::*;
 
     const PROV: &str =
@@ -464,6 +465,7 @@ mod tests {
 
     #[test]
     fn the_shipped_catalogue_is_valid_and_every_entry_has_provenance() {
+        covers(&[ids::doctor::nvse::CATALOGUE_PROVENANCE]);
         let catalog = Catalog::builtin();
         assert!(catalog.plugins.len() > 30 && !catalog.mods.is_empty());
         for p in &catalog.plugins {

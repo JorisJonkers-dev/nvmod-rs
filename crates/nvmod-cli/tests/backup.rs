@@ -3,6 +3,7 @@
 //! The clock is `NVMOD_NOW`; every file is synthetic.
 
 use nvmod_testkit::{BaseBuilder, TempDir, ZipBuilder, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -124,6 +125,7 @@ impl Scratch {
 
 #[test]
 fn create_change_restore_gives_the_files_back_byte_for_byte() {
+    covers(&[ids::safety::backup::ROUND_TRIP]);
     let s = Scratch::new();
     let before = s.profile_files();
     let (code, v) = s.json(T0, &["backup", "create"]);
@@ -168,6 +170,7 @@ fn create_change_restore_gives_the_files_back_byte_for_byte() {
 
 #[test]
 fn snapshots_are_real_copies_of_text_and_inis_and_saves_only_on_request() {
+    covers(&[ids::safety::backup::SAVES_ON_REQUEST]);
     let s = Scratch::new();
     let (code, v) = s.json(T0, &["backup", "create"]);
     assert_eq!(code, 0, "{v}");
@@ -216,6 +219,7 @@ fn snapshots_are_real_copies_of_text_and_inis_and_saves_only_on_request() {
 
 #[test]
 fn a_damaged_snapshot_is_refused_with_exit_3_and_nothing_changes() {
+    covers(&[ids::safety::backup::DAMAGED_REFUSED]);
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
     write_file(
@@ -236,6 +240,7 @@ fn a_damaged_snapshot_is_refused_with_exit_3_and_nothing_changes() {
 
 #[test]
 fn a_failed_restore_puts_the_profile_back_and_exits_4() {
+    covers(&[ids::safety::backup::FAILED_RESTORE_PUTS_BACK]);
     let s = Scratch::new();
     assert_eq!(s.run(T0, &["stage"]).0, 0);
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
@@ -275,6 +280,7 @@ fn a_failed_restore_puts_the_profile_back_and_exits_4() {
 // test program: a live process that is not called like any game, standing in for a long-running one.
 #[test]
 fn restore_refuses_while_a_run_of_the_instance_is_alive_and_ignores_other_games() {
+    covers(&[ids::safety::backup::REFUSED_WHILE_RUNNING]);
     let s = Scratch::new();
     assert_eq!(s.json(T0, &["backup", "create"]).0, 0);
     let root = s.root();
@@ -321,6 +327,7 @@ fn restore_refuses_while_a_run_of_the_instance_is_alive_and_ignores_other_games(
 
 #[test]
 fn the_automatic_snapshot_is_taken_when_the_last_one_is_older_than_the_interval() {
+    covers(&[ids::safety::backup::AUTOMATIC_SNAPSHOT]);
     let s = Scratch::new();
     let zip = |name: &str| {
         let path = s.inst.path().join(name);
@@ -370,6 +377,7 @@ fn the_automatic_snapshot_is_taken_when_the_last_one_is_older_than_the_interval(
 
 #[test]
 fn prune_keeps_the_newest_and_one_per_day() {
+    covers(&[ids::safety::backup::RETENTION]);
     let s = Scratch::new();
     for k in (0..40).rev() {
         let (code, v) = s.json(T0 - k * 12 * 3600, &["backup", "create"]);
@@ -405,6 +413,7 @@ fn prune_keeps_the_newest_and_one_per_day() {
 
 #[test]
 fn mo2s_own_timestamped_backups_are_listed_and_restorable() {
+    covers(&[ids::safety::backup::MO2_BACKUPS]);
     let s = Scratch::new();
     write_file(
         &s.root(),

@@ -369,9 +369,11 @@ impl NvmodInstance {
 mod tests {
     use super::*;
     use nvmod_testkit::{BaseBuilder, TempDir};
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn create_then_open_round_trips() {
+        covers(&[ids::instance::model::CURRENT_SCHEMA]);
         let base = TempDir::new("inst-base");
         BaseBuilder::gog().write(base.path());
         let scratch = TempDir::new("inst");
@@ -479,6 +481,7 @@ mod tests {
 
     #[test]
     fn a_schema_1_file_opens_read_only_and_migrates_on_open_with_a_backup() {
+        covers(&[ids::instance::model::SCHEMA_MIGRATION]);
         let dir = TempDir::new("inst-v1");
         let old = r#"{"schema":1,"base":"/x","storefront":"gog"}"#;
         std::fs::write(dir.path().join(INSTANCE_FILE), old).unwrap();

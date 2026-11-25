@@ -2,6 +2,7 @@
 //! `nvmod mods`, run as a program against a scratch Instance made by `nvmod init`. No game data is used.
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -131,6 +132,7 @@ fn a_category_that_is_not_a_number_is_refused_but_a_folder_that_is_not_an_instan
 
 #[test]
 fn list_prints_the_priority_order_as_json_and_text() {
+    covers(&[ids::mods::lifecycle::LIST_PRIORITY]);
     let s = Scratch::new(true);
     let (code, out, err) = s.run(&["list", "--json"]);
     assert_eq!(code, 0, "{err}");
@@ -146,6 +148,7 @@ fn list_prints_the_priority_order_as_json_and_text() {
 
 #[test]
 fn disable_and_enable_edit_only_modlist_stage_again_and_roll_back() {
+    covers(&[ids::mods::lifecycle::ENABLE_DISABLE]);
     let s = Scratch::new(true);
     assert_eq!(s.staged_dirt(), b"Gamma");
     let (code, out, err) = s.run(&["disable", "Gamma", "--json"]);
@@ -179,6 +182,7 @@ fn disable_and_enable_edit_only_modlist_stage_again_and_roll_back() {
 
 #[test]
 fn reorder_moves_one_entry() {
+    covers(&[ids::mods::lifecycle::REORDER]);
     let s = Scratch::new(true);
     let (code, out, err) = s.run(&["reorder", "Alpha", "--top", "--json"]);
     assert_eq!(code, 0, "{err}");

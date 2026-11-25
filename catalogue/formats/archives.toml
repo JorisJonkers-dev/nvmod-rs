@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "formats.archives"
+title = "BSA archives"
+origin = "ours"
+
+[[item]]
+id = "read_names"
+title = "Names are lower-cased with forward slashes"
+status = "implemented"
+
+[[item]]
+id = "compression"
+title = "The compression flag and the toggle bit decide compressed"
+status = "implemented"
+
+[[item]]
+id = "bad_header_refused"
+title = "A wrong signature or version, truncated input and oversized counts are refused"
+status = "implemented"
+
+[[item]]
+id = "large_archive_cheap"
+title = "A two-gigabyte class archive costs only its directory"
+status = "implemented"
+
+[[item]]
+id = "never_panics"
+title = "Mutated archives never panic"
+status = "implemented"
+
+[[item]]
+id = "packing"
+title = "Writing BSA archives"
+status = "n/a"
+reason = "nvmod only reads archives; packing is not part of the MVP"

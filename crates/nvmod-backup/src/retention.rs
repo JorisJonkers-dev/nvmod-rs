@@ -79,12 +79,14 @@ pub fn prune(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     /// 40 snapshots twelve hours apart, the newest at 2026-11-14 12:00 UTC (the fake clock's "now"). With 12 hour
     /// spacing the snapshots are at 12:00 (even index) and 00:00 (odd index) of each day, so the newest of day
     /// `j` back is index `2j`.
     #[test]
     fn forty_snapshots_keep_the_newest_five_and_one_per_day_for_fourteen_days() {
+        covers(&[ids::safety::backup::RETENTION]);
         let now = clock::parse_utc("20261114T120000Z").unwrap();
         let series: Vec<(String, i64)> = (0..40)
             .map(|k| {

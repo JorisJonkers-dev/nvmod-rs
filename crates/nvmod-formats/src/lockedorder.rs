@@ -117,9 +117,11 @@ impl LockedOrder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn a_file_round_trips_with_its_header_and_crlf() {
+        covers(&[ids::formats::files::LOCKED_ORDER]);
         let bytes = b"# header\r\nB.esp|3\r\nA.esm|0\r\n";
         let parsed = LockedOrder::parse(bytes).unwrap();
         assert_eq!(parsed.get("a.ESM"), Some(0));
@@ -147,6 +149,7 @@ mod tests {
 
     #[test]
     fn bad_lines_and_non_utf8_are_refused() {
+        covers(&[ids::formats::files::LOCKED_ORDER]);
         assert!(
             LockedOrder::parse(b"A.esp\r\n")
                 .unwrap_err()

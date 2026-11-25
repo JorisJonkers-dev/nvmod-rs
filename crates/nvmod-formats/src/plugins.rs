@@ -18,6 +18,7 @@ pub fn parse_plugin_list(bytes: &[u8]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn names_comments_and_stars() {
@@ -29,6 +30,7 @@ mod tests {
 
     #[test]
     fn a_code_page_name_is_decoded() {
+        covers(&[ids::formats::files::PLUGIN_LISTS]);
         assert_eq!(parse_plugin_list(b"Caf\xE9.esp\r\n"), ["Caf\u{e9}.esp"]);
     }
 

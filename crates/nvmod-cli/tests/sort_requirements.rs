@@ -4,6 +4,7 @@
 //! masterlist, the plugins and the capabilities file are synthetic and written here.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, capabilities_json, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -136,6 +137,7 @@ fn about<'a>(all: &'a [(String, String)], needle: &str) -> Vec<&'a (String, Stri
 
 #[test]
 fn on_vanilla_each_requirement_is_one_error_line_and_nothing_is_built_in() {
+    covers(&[ids::plugins::sort::REQUIREMENT_MESSAGES]);
     let s = Scratch::new(
         "vanilla",
         Some(&capabilities_json(&[("jip-ln", "JIP LN", 10, 12)])),
@@ -164,6 +166,7 @@ fn on_vanilla_each_requirement_is_one_error_line_and_nothing_is_built_in() {
 
 #[test]
 fn on_nv_rs_a_built_in_extender_is_a_note_with_its_coverage_and_the_rest_keeps_its_message() {
+    covers(&[ids::plugins::sort::REQUIREMENT_MESSAGES]);
     let s = Scratch::new(
         "nv-rs",
         Some(&capabilities_json(&[("jip-ln", "JIP LN", 10, 12)])),

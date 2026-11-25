@@ -4,6 +4,7 @@
 use nvmod_formats::winpath::PathStyle;
 use nvmod_formats::{EntryKind, Mo2Error, Mo2Instance, ModState};
 use nvmod_testkit::{Mo2Builder, ModSpec, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 
 fn sample() -> (TempDir, TempDir) {
     let game = TempDir::new("game");
@@ -36,6 +37,7 @@ fn sample() -> (TempDir, TempDir) {
 
 #[test]
 fn the_instance_is_read_with_its_paths_mapped_to_this_machine() {
+    covers(&[ids::instance::model::WINDOWS_PATHS]);
     let (game, root) = sample();
     let instance = Mo2Instance::open(root.path()).unwrap();
     assert_eq!(instance.game_name, "TTW");

@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "doctor.nvse"
+title = "NVSE plugins and the catalogue"
+origin = "ours"
+
+[[item]]
+id = "pe_inspection"
+title = "pe inspects a plugin DLL without running it"
+status = "implemented"
+
+[[item]]
+id = "pe_not_a_plugin"
+title = "pe says when a file is not an NVSE plugin"
+status = "implemented"
+
+[[item]]
+id = "catalogue_listing"
+title = "catalog lists the plugin catalogue"
+status = "implemented"
+
+[[item]]
+id = "catalogue_provenance"
+title = "Every catalogue entry carries its provenance"
+status = "implemented"
+
+[[item]]
+id = "overlay"
+title = "A player's catalogue.d overlay adds entries marked as the player's"
+status = "implemented"
+
+[[item]]
+id = "overlay_cannot_shadow"
+title = "An overlay never shadows a shipped entry or claims more than external"
+status = "implemented"
+
+[[item]]
+id = "overlay_caps"
+title = "An overlay is bounded in entries, size and count"
+status = "implemented"
+
+[[item]]
+id = "vanilla_needs_dll"
+title = "On the vanilla target the extender DLL is required"
+status = "implemented"
+
+[[item]]
+id = "nv_rs_builtin_redundant"
+title = "On nv-rs a plugin DLL that is built in is redundant"
+status = "implemented"
+
+[[item]]
+id = "nv_rs_absent_plugin"
+title = "On nv-rs a plugin the catalogue marks absent cannot load"
+status = "implemented"
+
+[[item]]
+id = "readiness"
+title = "Readiness per category from the catalogue and nv-rs's capabilities.json"
+status = "implemented"
+
+[[item]]
+id = "opcode_usage"
+title = "nvse-usage counts the opcodes the active plugins' scripts use"
+status = "implemented"
+
+[[item]]
+id = "opcode_usage_privacy"
+title = "nvse-usage prints only opcode names, counts and plugin files"
+status = "implemented"
+
+[[item]]
+id = "extender_version"
+title = "On the vanilla target the extender DLL is checked against the catalogue version"
+status = "implemented"

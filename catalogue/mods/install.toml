@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "mods.install"
+title = "Installing a mod"
+origin = "ours"
+
+[[item]]
+id = "archive"
+title = "A plain archive is installed enabled at the highest priority and staged"
+status = "implemented"
+
+[[item]]
+id = "archive_formats"
+title = "Zip, 7z, tar and compressed tar archives are read in process"
+status = "implemented"
+
+[[item]]
+id = "tar"
+title = "A tar archive installs"
+status = "implemented"
+
+[[item]]
+id = "folder"
+title = "A folder installs like an archive and is left as it was"
+status = "implemented"
+
+[[item]]
+id = "wrapper_stripped"
+title = "A wrapper folder or a Data folder is stripped"
+status = "implemented"
+
+[[item]]
+id = "rar_refused"
+title = "A RAR archive is refused with advice and nothing is written"
+status = "implemented"
+
+[[item]]
+id = "nexus_provenance"
+title = "A Nexus-named archive writes its provenance into meta.ini"
+status = "implemented"
+
+[[item]]
+id = "duplicate_name_refused"
+title = "An existing Mod name is refused"
+status = "implemented"
+
+[[item]]
+id = "plugin_lists_encoding"
+title = "plugins.txt is written in the Windows code page, loadorder.txt in UTF-8"
+status = "implemented"
+
+[[item]]
+id = "hostile_archives_refused"
+title = "Hostile archives (traversal, absolute paths, links, bombs) are refused and change nothing"
+status = "implemented"
+
+[[item]]
+id = "extraction_limits"
+title = "Entry count, size, ratio, depth and time limits bound every extraction"
+status = "implemented"
+
+[[item]]
+id = "dry_run"
+title = "A dry run lists the changes and writes nothing"
+status = "implemented"
+
+[[item]]
+id = "rollback"
+title = "rollback undoes the last change"
+status = "implemented"
+
+[[item]]
+id = "failed_step_rolls_back"
+title = "A failed step rolls back by itself"
+status = "implemented"

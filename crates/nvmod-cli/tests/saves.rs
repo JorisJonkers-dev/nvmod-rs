@@ -2,6 +2,7 @@
 //! `nvmod saves`, run as a program against a scratch Instance with synthetic saves.
 
 use nvmod_testkit::{BaseBuilder, SaveBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -79,6 +80,7 @@ impl Scratch {
 
 #[test]
 fn list_shows_saves_with_plugin_counts_and_unreadable_ones() {
+    covers(&[ids::safety::saves::LIST]);
     let s = Scratch::new();
     s.save(
         "A",
@@ -102,6 +104,7 @@ fn list_shows_saves_with_plugin_counts_and_unreadable_ones() {
 
 #[test]
 fn backup_delete_restore_round_trips_through_the_commands() {
+    covers(&[ids::safety::saves::BACKUP_RESTORE]);
     let s = Scratch::new();
     s.save("A", "Save 1.fos", b"fos");
     s.save("A", "Save 1.nvse", b"nvse");
@@ -131,6 +134,7 @@ fn backup_delete_restore_round_trips_through_the_commands() {
 
 #[test]
 fn transfer_refuses_without_the_cosave_and_force_copies() {
+    covers(&[ids::safety::saves::TRANSFER]);
     let s = Scratch::new();
     s.save("A", "Save 1.fos", b"fos");
     let (code, _, err) = s.run(&["saves", "transfer", "A", "B"]);
@@ -147,6 +151,7 @@ fn transfer_refuses_without_the_cosave_and_force_copies() {
 
 #[test]
 fn check_exits_1_for_a_save_that_needs_a_missing_plugin() {
+    covers(&[ids::safety::saves::CHECK_MISSING_PLUGIN]);
     let s = Scratch::new();
     write_file(&s.root(), "profiles/A/plugins.txt", b"FalloutNV.esm\r\n");
     s.save(
@@ -169,6 +174,7 @@ fn check_exits_1_for_a_save_that_needs_a_missing_plugin() {
 
 #[test]
 fn checksum_lists_hashes_and_a_shared_profile_needs_a_prefix() {
+    covers(&[ids::safety::saves::CHECKSUMS]);
     let s = Scratch::new();
     s.save("A", "Save 1.fos", b"abc");
     let (code, out, _) = s.run(&["saves", "checksum", "--profile", "A", "--json"]);

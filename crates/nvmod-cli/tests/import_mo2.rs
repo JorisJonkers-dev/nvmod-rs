@@ -4,6 +4,7 @@
 //! folder, a foreign DLC entry, an inactive plugin). Nothing here depends on the machine or on any game file.
 
 use nvmod_testkit::{BaseBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -127,6 +128,7 @@ fn lines(path: &Path) -> Vec<String> {
 
 #[test]
 fn the_example_instance_imports_with_the_same_mods_and_load_order() {
+    covers(&[ids::safety::import::SAME_MODS_SAME_ORDER]);
     let w = World::new();
     let before = snapshot(w.mo2.path());
     let (code, out, err) = w.import(&[]);
@@ -167,6 +169,7 @@ fn the_example_instance_imports_with_the_same_mods_and_load_order() {
 
 #[test]
 fn what_cannot_be_mapped_is_listed() {
+    covers(&[ids::safety::import::UNMAPPED_LISTED]);
     let w = World::new();
     let (code, out, _) = w.import(&[]);
     assert_eq!(code, 0);
@@ -201,6 +204,7 @@ fn what_cannot_be_mapped_is_listed() {
 
 #[test]
 fn plugins_txt_is_decoded_in_the_windows_code_page() {
+    covers(&[ids::safety::import::CODE_PAGE]);
     let w = World::new();
     w.profile_file("plugins.txt", b"FalloutNV.esm\r\nCaf\xE9.esp\r\n");
     w.profile_file(
@@ -222,6 +226,7 @@ fn plugins_txt_is_decoded_in_the_windows_code_page() {
 
 #[test]
 fn a_plugin_missing_from_loadorder_is_one_disagreement_and_nothing_is_written() {
+    covers(&[ids::safety::import::DISAGREEMENT_REFUSED]);
     let w = World::new();
     w.profile_file(
         "loadorder.txt",
@@ -244,6 +249,7 @@ fn a_plugin_missing_from_loadorder_is_one_disagreement_and_nothing_is_written() 
 
 #[test]
 fn a_different_order_in_the_two_lists_is_reported_per_plugin() {
+    covers(&[ids::safety::import::DISAGREEMENT_REFUSED]);
     let w = World::new();
     w.profile_file(
         "loadorder.txt",
@@ -360,6 +366,7 @@ fn import_usage_errors_exit_with_five() {
 
 #[test]
 fn the_imported_instance_stages_and_passes_the_doctor() {
+    covers(&[ids::safety::import::IMPORTED_INSTANCE_WORKS]);
     let w = World::new();
     // The vanilla target needs xNVSE's DLL in the base copy (ticket 29).
     nvmod_testkit::write_file(
@@ -380,6 +387,7 @@ fn the_imported_instance_stages_and_passes_the_doctor() {
 #[test]
 fn mods_are_hard_linked_unless_copying_is_asked_for() {
     use std::os::unix::fs::MetadataExt;
+    covers(&[ids::safety::import::HARD_LINKS]);
     let w = World::new();
     assert_eq!(w.import(&[]).0, 0);
     let nlink = |inst: &Path| {

@@ -3,6 +3,7 @@
 
 use nvmod_runlog::{Config, Redactor, Session};
 use nvmod_testkit::TempDir;
+use nvmod_testkit::{covers, ids};
 use tracing::level_filters::LevelFilter;
 
 fn start(state: &TempDir) -> Session {
@@ -18,6 +19,7 @@ fn start(state: &TempDir) -> Session {
 
 #[test]
 fn the_twenty_first_run_removes_the_oldest() {
+    covers(&[ids::api::cli::RUN_LOG_ROTATION]);
     let state = TempDir::new("rotation");
     let first = start(&state).log_path().unwrap().to_owned();
     assert!(first.exists());

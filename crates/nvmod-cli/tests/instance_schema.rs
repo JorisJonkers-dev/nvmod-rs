@@ -4,6 +4,7 @@
 //! migration. Instances are made by `nvmod init` from a synthetic base copy; the old file is written in code.
 
 use nvmod_testkit::{BaseBuilder, TempDir, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -87,6 +88,7 @@ fn init_writes_the_current_schema() {
 
 #[test]
 fn a_schema_1_instance_is_migrated_by_the_first_write_with_a_backup() {
+    covers(&[ids::instance::model::SCHEMA_MIGRATION]);
     let s = Scratch::new();
     let old = s.downgrade_to_v1();
     let (code, _, err) = s.stage();
@@ -104,6 +106,7 @@ fn a_schema_1_instance_is_migrated_by_the_first_write_with_a_backup() {
 
 #[test]
 fn rollback_restores_the_schema_1_file_byte_for_byte() {
+    covers(&[ids::safety::undo::SCHEMA_ROLLBACK]);
     let s = Scratch::new();
     let old = s.downgrade_to_v1();
     assert_eq!(s.stage().0, 0);
@@ -119,6 +122,7 @@ fn rollback_restores_the_schema_1_file_byte_for_byte() {
 
 #[test]
 fn the_doctor_opens_a_schema_1_instance_without_writing() {
+    covers(&[ids::doctor::checks::OLD_INSTANCE_READ_ONLY]);
     let s = Scratch::new();
     let old = s.downgrade_to_v1();
     let (code, _, err) = nvmod(&["doctor", "--instance", path_str(&s.root()), "--json"]);
@@ -129,6 +133,7 @@ fn the_doctor_opens_a_schema_1_instance_without_writing() {
 
 #[test]
 fn a_newer_schema_is_refused_with_exit_2_and_a_reason_and_left_alone() {
+    covers(&[ids::instance::model::NEWER_SCHEMA_REFUSED]);
     let s = Scratch::new();
     let newer = br#"{"schema_version":3,"base":"/x","storefront":"steam","target":"vanilla"}"#;
     std::fs::write(s.file(), newer).unwrap();

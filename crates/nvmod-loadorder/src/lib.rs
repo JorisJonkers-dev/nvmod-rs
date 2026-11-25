@@ -483,6 +483,7 @@ pub fn masters_of(path: &Path) -> Result<Vec<String>, String> {
 mod tests {
     use super::*;
     use nvmod_testkit::{TempDir, write_file};
+    use nvmod_testkit::{covers, ids};
 
     fn names(order: &[Slot]) -> Vec<&str> {
         order.iter().map(|s| s.name.as_str()).collect()
@@ -505,6 +506,7 @@ mod tests {
 
     #[test]
     fn a_locked_plugin_goes_back_to_its_position_after_a_sort() {
+        covers(&[ids::plugins::order::LOCK_SURVIVES_SORT]);
         let mut order = vec![
             slot("FalloutNV.esm", true),
             slot("A.esp", true),
@@ -533,6 +535,7 @@ mod tests {
 
     #[test]
     fn the_ttw_list_is_forced_only_when_the_list_has_the_ttw_master() {
+        covers(&[ids::plugins::order::TTW_FORCED_PLUGINS]);
         let fnv = [
             slot("A.esp", true),
             slot("FalloutNV.esm", true),

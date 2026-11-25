@@ -47,9 +47,11 @@ impl<T> serde::Serialize for Secret<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nvmod_testkit::{covers, ids};
 
     #[test]
     fn a_secret_never_prints_its_value() {
+        covers(&[ids::api::cli::SECRET_NEVER_PRINTS]);
         let s = Secret::new("hunter2-token".to_owned());
         assert_eq!(format!("{s:?}"), "[redacted]");
         assert_eq!(format!("{s}"), "[redacted]");

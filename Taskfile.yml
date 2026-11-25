@@ -22,8 +22,10 @@ tasks:
       - cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed-methods
 
   test:
-    desc: Tests and the line-coverage gate ({{.COVERAGE_MIN}}%)
-    cmd: cargo llvm-cov --locked --workspace --fail-under-lines {{.COVERAGE_MIN}}
+    desc: Tests and the line-coverage gate ({{.COVERAGE_MIN}}%), through cargo-nextest so the run leaves JUnit in target/nextest/ci/junit.xml
+    cmds:
+      - cargo llvm-cov nextest --locked --workspace --profile ci --fail-under-lines {{.COVERAGE_MIN}}
+      - cargo test --locked --workspace --doc
 
   fuzz:check:
     desc: The fuzz harnesses compile (stable, type-check only; running them needs nightly and cargo-fuzz)

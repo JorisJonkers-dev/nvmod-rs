@@ -3,6 +3,7 @@
 //! Instance made by `nvmod init`. Plugins are synthetic headers built by the testkit; no game data is used.
 
 use nvmod_testkit::{BaseBuilder, PluginBuilder, TempDir, snapshot, write_file};
+use nvmod_testkit::{covers, ids};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -130,6 +131,7 @@ fn active_names(text: &str) -> Vec<String> {
 
 #[test]
 fn list_shows_position_masters_provider_and_the_forced_plugin() {
+    covers(&[ids::plugins::order::LIST]);
     let s = Scratch::new();
     let r = s.list();
     let rows = r["plugins"].as_array().unwrap();
@@ -178,6 +180,7 @@ fn list_json_matches_the_schema_and_the_golden_file() {
 
 #[test]
 fn enabling_a_plugin_whose_master_is_inactive_is_refused_unless_with_masters() {
+    covers(&[ids::plugins::order::ENABLE_WITH_MASTERS]);
     let s = Scratch::new();
     let before = s.file("plugins.txt");
     let (code, _, err) = s.run(&["enable", "B.esp"]);
@@ -197,6 +200,7 @@ fn enabling_a_plugin_whose_master_is_inactive_is_refused_unless_with_masters() {
 
 #[test]
 fn a_master_that_is_not_installed_cannot_be_enabled_even_with_masters() {
+    covers(&[ids::plugins::order::MISSING_MASTER_REFUSED]);
     let s = Scratch::new();
     write_file(
         &s.root(),
@@ -214,6 +218,7 @@ fn a_master_that_is_not_installed_cannot_be_enabled_even_with_masters() {
 
 #[test]
 fn disabling_a_master_that_an_active_plugin_needs_names_the_dependants() {
+    covers(&[ids::plugins::order::DISABLE_NAMES_DEPENDANTS]);
     let s = Scratch::new();
     assert_eq!(s.run(&["enable", "C.esp", "--with-masters"]).0, 0);
     let (code, _, err) = s.run(&["disable", "A.esm"]);
@@ -230,6 +235,7 @@ fn disabling_a_master_that_an_active_plugin_needs_names_the_dependants() {
 
 #[test]
 fn forced_primary_plugins_cannot_be_moved_disabled_or_locked() {
+    covers(&[ids::plugins::order::FORCED_PLUGINS]);
     let s = Scratch::new();
     let before = snapshot(&s.root().join("profiles"));
     assert_eq!(s.run(&["disable", "FalloutNV.esm"]).0, 2);
@@ -245,6 +251,7 @@ fn forced_primary_plugins_cannot_be_moved_disabled_or_locked() {
 
 #[test]
 fn ttw_primary_plugins_are_forced_first_for_a_ttw_profile() {
+    covers(&[ids::plugins::order::TTW_FORCED_PLUGINS]);
     let s = Scratch::new();
     let root = s.root();
     for n in ["Fallout3.esm", "TaleOfTwoWastelands.esm"] {
@@ -266,6 +273,7 @@ fn ttw_primary_plugins_are_forced_first_for_a_ttw_profile() {
 
 #[test]
 fn move_changes_both_lists_and_refuses_to_break_master_order() {
+    covers(&[ids::plugins::order::MOVE_PLUGIN]);
     let s = Scratch::new();
     let (code, _, err) = s.run(&["move", "B.esp", "--top"]);
     assert_eq!(code, 2, "B before its master A.esm");
@@ -287,6 +295,7 @@ fn move_changes_both_lists_and_refuses_to_break_master_order() {
 
 #[test]
 fn a_move_restamps_the_plugin_file_times_of_a_staged_profile() {
+    covers(&[ids::plugins::order::FILE_TIMES_RESTAMPED]);
     let s = Scratch::new();
     s.stage();
     assert_eq!(s.run(&["move", "D.esp", "--before", "A.esm"]).0, 0);
@@ -302,6 +311,7 @@ fn a_move_restamps_the_plugin_file_times_of_a_staged_profile() {
 
 #[test]
 fn locks_are_written_kept_for_absent_plugins_and_rolled_back() {
+    covers(&[ids::plugins::order::LOCK_UNLOCK]);
     let s = Scratch::new();
     let profile = s.root().join("profiles/Default");
     let before = snapshot(&profile);
@@ -338,6 +348,7 @@ fn locks_are_written_kept_for_absent_plugins_and_rolled_back() {
 
 #[test]
 fn plugins_txt_and_loadorder_txt_roll_back_byte_for_byte_after_one_step() {
+    covers(&[ids::plugins::order::LISTS_ROUND_TRIP]);
     let s = Scratch::new();
     let (plugins, order) = (s.file("plugins.txt"), s.file("loadorder.txt"));
     assert_eq!(s.run(&["enable", "C.esp", "--with-masters"]).0, 0);
@@ -352,6 +363,7 @@ fn plugins_txt_and_loadorder_txt_roll_back_byte_for_byte_after_one_step() {
 
 #[test]
 fn crlf_and_the_header_round_trip() {
+    covers(&[ids::plugins::order::LISTS_ROUND_TRIP]);
     let s = Scratch::new();
     let (plugins, order) = (s.file("plugins.txt"), s.file("loadorder.txt"));
     assert!(plugins.starts_with(HEADER.as_bytes()) && plugins.windows(2).any(|w| w == b"\r\n"));
@@ -372,6 +384,7 @@ fn crlf_and_the_header_round_trip() {
 
 #[test]
 fn plugins_txt_is_windows_1252_and_a_name_the_code_page_lacks_is_refused() {
+    covers(&[ids::plugins::order::CODE_PAGE]);
     let s = Scratch::new();
     let root = s.root();
     write_file(
@@ -480,6 +493,7 @@ const EMPTY_MASTERLIST: &str = "plugins: []\n";
 
 #[test]
 fn a_locked_plugin_keeps_its_position_after_sort_apply() {
+    covers(&[ids::plugins::order::LOCK_SURVIVES_SORT]);
     let s = Scratch::new();
     // Activate everything that exists so sort has all the masters; Ghost.esp stays absent.
     s.lists(
@@ -508,6 +522,7 @@ fn a_locked_plugin_keeps_its_position_after_sort_apply() {
 
 #[test]
 fn the_doctor_reports_a_lock_that_sort_would_violate() {
+    covers(&[ids::doctor::checks::LOCK_VIOLATION]);
     let s = Scratch::new();
     s.lists(
         "FalloutNV.esm\r\nA.esm\r\nB.esp\r\nC.esp\r\nD.esp\r\n",

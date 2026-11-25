@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[group]
+id = "instance.model"
+title = "Instance file and schemas"
+origin = "ours"
+
+[[item]]
+id = "current_schema"
+title = "An Instance file carries a schema version and round-trips"
+status = "implemented"
+
+[[item]]
+id = "schema_migration"
+title = "A schema 1 Instance migrates on its first write, with a backup"
+status = "implemented"
+
+[[item]]
+id = "newer_schema_refused"
+title = "An Instance file from a newer nvmod is refused and left alone"
+status = "implemented"
+
+[[item]]
+id = "json_schemas"
+title = "The JSON schemas of the Instance and Profile are checked in and match the code"
+status = "implemented"
+
+[[item]]
+id = "windows_paths"
+title = "Windows paths in an Instance map to this machine"
+status = "implemented"

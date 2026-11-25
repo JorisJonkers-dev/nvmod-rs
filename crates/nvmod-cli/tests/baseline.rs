@@ -15,6 +15,7 @@ use nvmod_testkit::{
     BaseBuilder, FAKE_ASSET, FakeServer, PeBuilder, PluginBuilder, Reply, TempDir, nv_viewer_name,
     write_file, write_script,
 };
+use nvmod_testkit::{covers, ids};
 use nvmod_tools::{platform, sha256_hex};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
@@ -1336,6 +1337,7 @@ fn all_transcript_files(dir: &Path, found: &mut BTreeSet<PathBuf>) {
 
 #[test]
 fn every_transcript_replays_against_the_build() {
+    covers(&[ids::api::cli::TRANSCRIPTS_REPLAY]);
     let bless = bless_requested();
     let cases = cases();
     let mut failures = Vec::new();
@@ -1457,6 +1459,7 @@ fn removed_transcripts_still_parse_and_are_unchanged() {
 /// The removed commands are unknown commands, exit 5 (usage), like any other word nvmod does not know.
 #[test]
 fn removed_commands_are_unknown_commands() {
+    covers(&[ids::api::cli::REMOVED_COMMANDS]);
     for (args, word) in [
         (&["lod", "plan"][..], "lod"),
         (&["setup", "--base", "x"][..], "setup"),
