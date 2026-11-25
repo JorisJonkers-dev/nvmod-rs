@@ -11,3 +11,9 @@ flaky-result = "fail"
 [profile.ci.junit]
 path = "junit.xml"
 report-skipped = "all"
+
+# A time-bounded test (10 seconds in a debug build) must not compete with the other test processes for the CPU: nextest
+# runs one process per test, all at once, where `cargo test` ran the test binaries one after the other.
+[[profile.ci.overrides]]
+filter = "test(three_hundred_mods_over_fifty_thousand_paths_are_fast)"
+threads-required = "num-cpus"
