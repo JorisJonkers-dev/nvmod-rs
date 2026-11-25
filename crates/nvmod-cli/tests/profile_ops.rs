@@ -425,7 +425,6 @@ fn set_edits_one_line_and_the_reader_returns_it() {
 
 #[test]
 fn set_refuses_an_unknown_key_or_value_with_the_usage_exit() {
-    covers(&[ids::instance::profiles::SETTINGS]);
     let s = Scratch::new();
     let before = s.tree();
     for args in [
