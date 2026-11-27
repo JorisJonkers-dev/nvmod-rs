@@ -78,6 +78,9 @@ pub struct InstallRequest {
     /// A JSON file with answers to the FOMOD's questions.
     #[serde(default)]
     pub answers: Option<PathBuf>,
+    /// Where the Mod goes in `modlist.txt`: the top (the default), a position, or under a named entry.
+    #[serde(default)]
+    pub placement: crate::install::Placement,
     /// The most bytes the extraction may write; `None` for the default limit.
     #[serde(default)]
     pub max_extract_bytes: Option<u64>,
@@ -349,7 +352,7 @@ pub fn install(
         answers: request.answers.clone(),
         fomod_answers: None,
         on_conflict: crate::install::OnConflict::Refuse,
-        placement: crate::install::Placement::Top,
+        placement: request.placement.clone(),
         max_extract_bytes: request.max_extract_bytes,
         extract_limits: request.extract_limits,
     };
