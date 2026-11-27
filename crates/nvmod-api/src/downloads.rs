@@ -349,7 +349,7 @@ pub fn install(
         answers: request.answers.clone(),
         fomod_answers: None,
         on_conflict: crate::install::OnConflict::Refuse,
-        placement: Default::default(),
+        placement: crate::install::Placement::Top,
         max_extract_bytes: request.max_extract_bytes,
         extract_limits: request.extract_limits,
     };
