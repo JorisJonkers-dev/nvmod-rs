@@ -323,6 +323,7 @@ fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 
         name: c.args.option("name").map(str::to_owned),
         dry_run: c.args.flag("dry-run"),
         answers: c.args.option("answers").map(PathBuf::from),
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: extract_limits.max_bytes,
         extract_limits,
     };

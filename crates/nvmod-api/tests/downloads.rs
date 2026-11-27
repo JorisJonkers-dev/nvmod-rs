@@ -74,6 +74,7 @@ fn install_request(s: &Scratch) -> InstallRequest {
         name: None,
         dry_run: false,
         answers: None,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     }
@@ -211,6 +212,29 @@ fn installing_from_the_library_equals_installing_the_path_plus_the_meta_update()
         meta_ini.contains(&format!("installationFile={ARCHIVE}")),
         "{meta_ini}"
     );
+}
+
+#[test]
+fn a_library_install_goes_where_the_placement_says() {
+    let s = Scratch::new();
+    Scratch::put_archive(&s.downloads(), ARCHIVE);
+    Scratch::put_archive(&s.downloads(), "Other.zip");
+    let put = |archive: &str, name: &str, placement: nvmod_api::install::Placement| {
+        let mut request = install_request(&s);
+        request.archive = archive.to_owned();
+        request.name = Some(name.to_owned());
+        request.placement = placement;
+        done(install(&request, &mut NoProgress, &CancelToken::new()));
+    };
+    put(ARCHIVE, "First", nvmod_api::install::Placement::Top);
+    put(
+        "Other.zip",
+        "Second",
+        nvmod_api::install::Placement::After("first".to_owned()),
+    );
+    let modlist = fs::read_to_string(s.root().join("profiles/Default/modlist.txt")).unwrap();
+    let entries: Vec<&str> = modlist.lines().filter(|l| !l.starts_with('#')).collect();
+    assert_eq!(entries, ["+First", "+Second"]);
 }
 
 #[test]
