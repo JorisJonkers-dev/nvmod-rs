@@ -5,7 +5,7 @@ name: Pipeline
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types: [opened, edited, reopened, synchronize, labeled]
   push:
     branches: [main]
   workflow_dispatch:
@@ -53,11 +53,48 @@ jobs:
     name: Quarantine
     uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@658bec7f448631fbaa3f28d3a2e5708390e0c4c1 # v0.51.0
 
+  # Windows and macOS minutes cost 2x and 10x Linux minutes, so a pull request runs them only when it can matter:
+  # it touches platform-specific code or the build setup, or it carries the label `ci:all-os`. A push to main
+  # always runs them.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      platforms: ${{ steps.filter.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Platform-specific changes
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          say() { echo "platforms=$1" >>"$GITHUB_OUTPUT"; echo "Windows and macOS: $1 ($2)"; exit 0; }
+          [ "$EVENT" = pull_request ] || say true "not a pull request"
+          jq -e 'index("ci:all-os")' <<<"$LABELS" >/dev/null && say true "label ci:all-os"
+          git cat-file -e "$BASE" 2>/dev/null || say true "no base to compare with"
+          files="$(git diff --name-only "$BASE...$HEAD")"
+          grep -qE '^(Cargo\.(toml|lock)|rust-toolchain\.toml|mise\.toml|Taskfile\.yml|deny\.toml|clippy\.toml|\.github/workflows/pipeline\.yml|crates/[^/]+/Cargo\.toml)$' <<<"$files" && say true "build setup changed"
+          # Rust files that contain platform conditions, as they are after the change.
+          while read -r f; do
+            case "$f" in *.rs) [ -f "$f" ] && grep -qE 'cfg(_attr)?!?\(.*(windows|unix|target_os|target_family)' "$f" && say true "platform code in $f";; esac
+          done <<<"$files"
+          say false "nothing platform-specific changed"
+
   # nvmod's crates ship inside the Toolbox on Linux, Windows and macOS (Toolbox ADR-0006), so they build and test
   # natively on all three. Linux runs in Pipeline Complete itself; this job runs Windows and macOS, and Pipeline
-  # Complete gates on it.
+  # Complete gates on it. Skipped, which the gate accepts, when Changes found nothing platform-specific.
   platforms:
     name: Build and test (${{ matrix.os }})
+    needs: changes
+    if: ${{ needs.changes.outputs.platforms == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -103,7 +140,7 @@ jobs:
 
   pipeline-complete:
     name: Pipeline Complete
-    needs: [hygiene, pr-title, quarantine, platforms]
+    needs: [hygiene, pr-title, quarantine, changes, platforms]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -291,14 +328,15 @@ jobs:
           path: ${{ runner.temp }}/render/docs/coverage/
           retention-days: 3
 
-      # A job that did not succeed fails the gate, except the two that only run on pull requests.
+      # A job that did not succeed fails the gate, except the two that only run on pull requests and the Windows
+      # and macOS job, which Changes may skip (a failure in either still fails the gate).
       - name: Reusable-workflow jobs passed
         if: ${{ !cancelled() }}
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           set -euo pipefail
-          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title") | not)) | "\(.key): \(.value.result)"' <<<"$NEEDS")"
+          failed="$(jq -r 'to_entries[] | select(.value.result != "success") | select(.value.result != "skipped" or (.key | IN("hygiene", "pr-title", "platforms") | not)) | "\(.key): \(.value.result)"' <<<"$NEEDS")"
           if [ -n "$failed" ]; then echo "$failed"; exit 1; fi
 
   # On main, the feature-catalogue reports rendered by Pipeline Complete go onto main as one commit of those files only,
