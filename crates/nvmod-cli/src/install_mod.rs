@@ -13,7 +13,7 @@ use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--interactive] [--on-conflict replace|merge|rename] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
+const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--interactive] [--on-conflict replace|merge|rename] [--after <mod> | --position <n>] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
 const REINSTALL_USAGE: &str = "usage: nvmod mods reinstall|reconfigure <mod> --instance <dir> [--profile <name>] [--archive <file>] [--answers <file>] [--interactive] [--dry-run] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]  (--answers and --interactive: reconfigure only)";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
@@ -148,6 +148,8 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             "name",
             "answers",
             "on-conflict",
+            "after",
+            "position",
             "max-extract-bytes",
             "max-extract-entries",
             "max-extract-entry-bytes",
@@ -182,6 +184,24 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             let _ = writeln!(
                 err,
                 "nvmod install: --on-conflict wants replace, merge or rename"
+            );
+            return USAGE;
+        }
+    };
+    let placement = match (args.option("after"), args.option("position")) {
+        (None, None) => nvmod_api::install::Placement::Top,
+        (Some(name), None) => nvmod_api::install::Placement::After(name.to_owned()),
+        (None, Some(n)) => match n.parse() {
+            Ok(n) => nvmod_api::install::Placement::Position(n),
+            Err(_) => {
+                let _ = writeln!(err, "nvmod install: --position wants a number");
+                return USAGE;
+            }
+        },
+        (Some(_), Some(_)) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --after and --position are alternatives"
             );
             return USAGE;
         }
@@ -223,6 +243,7 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         answers: args.option("answers").map(PathBuf::from),
         fomod_answers,
         on_conflict,
+        placement,
         max_extract_bytes: None,
         extract_limits: limits,
     };
