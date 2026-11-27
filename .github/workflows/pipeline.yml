@@ -42,16 +42,16 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/repository-hygiene-guard.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/repository-hygiene-guard.yml@658bec7f448631fbaa3f28d3a2e5708390e0c4c1 # v0.51.0
 
   pr-title:
     name: PR title
     if: ${{ github.event_name == 'pull_request' }}
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/pr-title-check.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/pr-title-check.yml@658bec7f448631fbaa3f28d3a2e5708390e0c4c1 # v0.51.0
 
   quarantine:
     name: Quarantine
-    uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@b14d5e031f1abd5bec45e50c898e9e73f3ffc534 # v0.50.4
+    uses: JorisJonkers-dev/github-workflows/.github/workflows/quarantine-check.yml@658bec7f448631fbaa3f28d3a2e5708390e0c4c1 # v0.51.0
 
   # nvmod's crates ship inside the Toolbox on Linux, Windows and macOS (Toolbox ADR-0006), so they build and test
   # natively on all three. Linux runs in Pipeline Complete itself; this job runs Windows and macOS, and Pipeline
