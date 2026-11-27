@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.19.0...v0.20.0) (2026-11-27)
+
+
+### Features
+
+* **api:** placement for the downloads install job ([#299](https://github.com/JorisJonkers-dev/nvmod-rs/issues/299)) ([c9c6e32](https://github.com/JorisJonkers-dev/nvmod-rs/commit/c9c6e323767972b62fd26a11366746fe83d7391f))
+* **modinstall:** install a Mod at a position or under a named Mod in modlist.txt ([#297](https://github.com/JorisJonkers-dev/nvmod-rs/issues/297)) ([fed57ac](https://github.com/JorisJonkers-dev/nvmod-rs/commit/fed57ac256f6f3f0b0e442c905c8ea28ab373964))
+* **runlog:** redact the Nexus apikey forms and the nxm key query parameter ([#295](https://github.com/JorisJonkers-dev/nvmod-rs/issues/295)) ([4b4d8fa](https://github.com/JorisJonkers-dev/nvmod-rs/commit/4b4d8fa2fc94fbcbc449957c9b33e5607925bfa2))
+
 ## [0.19.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.18.0...v0.19.0) (2026-11-25)
 
 
