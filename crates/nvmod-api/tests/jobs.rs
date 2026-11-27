@@ -1218,6 +1218,7 @@ fn install_dry_run_writes_nothing() {
         answers: None,
         fomod_answers: None,
         on_conflict: nvmod_api::install::OnConflict::Refuse,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1249,6 +1250,7 @@ fn install_for_real_then_rollback_removes_it() {
         answers: None,
         fomod_answers: None,
         on_conflict: nvmod_api::install::OnConflict::Refuse,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1285,6 +1287,7 @@ fn install_cancelled_before_changes_nothing() {
         answers: None,
         fomod_answers: None,
         on_conflict: nvmod_api::install::OnConflict::Refuse,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1315,6 +1318,7 @@ fn an_install_that_needs_fomod_answers_returns_the_questions() {
         answers: None,
         fomod_answers: None,
         on_conflict: nvmod_api::install::OnConflict::Refuse,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: None,
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };
@@ -1356,6 +1360,7 @@ fn an_install_over_the_extraction_limit_is_refused() {
         answers: None,
         fomod_answers: None,
         on_conflict: nvmod_api::install::OnConflict::Refuse,
+        placement: nvmod_api::install::Placement::Top,
         max_extract_bytes: Some(50),
         extract_limits: nvmod_api::install::LimitOverrides::default(),
     };

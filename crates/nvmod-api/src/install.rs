@@ -4,10 +4,10 @@
 use crate::{CancelToken, ErrorKind, Event, JobError, Outcome, Progress};
 pub use nvmod_journal::RollbackReport;
 pub use nvmod_modinstall::LimitOverrides;
-pub use nvmod_modinstall::OnConflict;
 pub use nvmod_modinstall::Question;
 pub use nvmod_modinstall::Report;
 use nvmod_modinstall::{InstallError, Request as ModInstallRequest};
+pub use nvmod_modinstall::{OnConflict, Placement};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -42,6 +42,10 @@ pub struct InstallRequest {
     /// report's `mod` is the folder that was written, and its `conflict` says what happened.
     #[serde(default)]
     pub on_conflict: OnConflict,
+    /// Where the new Mod goes in `modlist.txt`: the top (highest priority, the default), a position counted from
+    /// the top, or right under a named entry.
+    #[serde(default)]
+    pub placement: Placement,
     /// The most bytes the extraction may write; `None` for the default limit.
     #[serde(default)]
     pub max_extract_bytes: Option<u64>,
@@ -212,6 +216,7 @@ pub fn install(
         answers_inline: request.fomod_answers.as_ref(),
         limits,
         on_conflict: request.on_conflict,
+        placement: request.placement.clone(),
     };
     match nvmod_modinstall::install(&mod_request) {
         Ok(report) => Ok(Outcome::Done(InstallOutput::Installed(report))),

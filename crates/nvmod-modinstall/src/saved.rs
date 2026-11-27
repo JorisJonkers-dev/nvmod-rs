@@ -128,6 +128,7 @@ fn replay(request: &ReinstallRequest, changes: Option<&Answers>) -> Result<Repor
         answers_inline: Some(&answers),
         limits: request.limits,
         on_conflict: OnConflict::Replace,
+        placement: crate::Placement::Top,
     })
 }
 

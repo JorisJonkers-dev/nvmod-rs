@@ -13,7 +13,7 @@ use nvmod_instance::{InstanceError, NvmodInstance};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--interactive] [--on-conflict replace|merge|rename] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
+const INSTALL_USAGE: &str = "usage: nvmod install <archive> --instance <dir> [--profile <name>] [--name <mod name>] [--dry-run] [--answers <file>] [--interactive] [--on-conflict replace|merge|rename] [--after <mod> | --position <n>] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]";
 const REINSTALL_USAGE: &str = "usage: nvmod mods reinstall|reconfigure <mod> --instance <dir> [--profile <name>] [--archive <file>] [--answers <file>] [--interactive] [--dry-run] [--max-extract-bytes <n>] [--max-extract-entries <n>] [--max-extract-entry-bytes <n>] [--max-extract-ratio <n>] [--max-extract-depth <n>] [--max-extract-operations <n>] [--max-extract-seconds <n>] [--json]  (--answers and --interactive: reconfigure only)";
 const ROLLBACK_USAGE: &str = "usage: nvmod rollback --instance <dir> [--json]";
 
@@ -138,6 +138,44 @@ pub(crate) fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str
     })
 }
 
+/// The placement the flags ask for; `None` (after a message on `err`) when they are wrong.
+fn placement_of(args: &Args, err: &mut dyn Write) -> Option<nvmod_api::install::Placement> {
+    use nvmod_api::install::Placement;
+    match (args.option("after"), args.option("position")) {
+        (None, None) => Some(Placement::Top),
+        (Some(name), None) => Some(Placement::After(name.to_owned())),
+        (None, Some(n)) => {
+            let parsed = n.parse().ok().map(Placement::Position);
+            if parsed.is_none() {
+                let _ = writeln!(err, "nvmod install: --position wants a number");
+            }
+            parsed
+        }
+        (Some(_), Some(_)) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --after and --position are alternatives"
+            );
+            None
+        }
+    }
+}
+
+/// The `--on-conflict` choice; `None` (after a message on `err`) when it is not a word.
+fn on_conflict_of(args: &Args, err: &mut dyn Write) -> Option<OnConflict> {
+    match args.option("on-conflict").map(OnConflict::parse) {
+        None => Some(OnConflict::Refuse),
+        Some(None) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --on-conflict wants replace, merge or rename"
+            );
+            None
+        }
+        Some(c) => c,
+    }
+}
+
 pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
         args,
@@ -148,6 +186,8 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             "name",
             "answers",
             "on-conflict",
+            "after",
+            "position",
             "max-extract-bytes",
             "max-extract-entries",
             "max-extract-entry-bytes",
@@ -175,16 +215,11 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             return USAGE;
         }
     };
-    let on_conflict = match args.option("on-conflict").map(OnConflict::parse) {
-        None => OnConflict::Refuse,
-        Some(Some(c)) => c,
-        Some(None) => {
-            let _ = writeln!(
-                err,
-                "nvmod install: --on-conflict wants replace, merge or rename"
-            );
-            return USAGE;
-        }
+    let Some(on_conflict) = on_conflict_of(&args, err) else {
+        return USAGE;
+    };
+    let Some(placement) = placement_of(&args, err) else {
+        return USAGE;
     };
     if args.flag("interactive") && args.option("answers").is_some() {
         let _ = writeln!(
@@ -223,6 +258,7 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
         answers: args.option("answers").map(PathBuf::from),
         fomod_answers,
         on_conflict,
+        placement,
         max_extract_bytes: None,
         extract_limits: limits,
     };

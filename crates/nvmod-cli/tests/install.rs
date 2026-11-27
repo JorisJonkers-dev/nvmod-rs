@@ -332,6 +332,42 @@ fn a_second_install_goes_above_the_first() {
 }
 
 #[test]
+fn a_mod_goes_under_a_named_mod_or_at_a_position_and_a_rollback_undoes_it() {
+    let s = Scratch::new();
+    let put = |name: &str, extra: &[&str]| {
+        let zip = s.archive(&format!("{name}.zip"));
+        ZipBuilder::new()
+            .file(&format!("{name}.esp"), b"p")
+            .write(&zip);
+        s.install(&zip, extra)
+    };
+    assert_eq!(put("One", &[]).0, 0);
+    assert_eq!(put("Two", &[]).0, 0);
+    let order = |s: &Scratch| lines(&s.text("profiles/Default/modlist.txt"))[1..].join(",");
+    assert_eq!(order(&s), "+Two,+One,+Existing");
+    assert_eq!(put("Three", &["--after", "one"]).0, 0);
+    assert_eq!(order(&s), "+Two,+One,+Three,+Existing");
+    let before = s.state();
+    assert_eq!(put("Four", &["--position", "1"]).0, 0);
+    assert_eq!(order(&s), "+Two,+Four,+One,+Three,+Existing");
+    assert_eq!(put("Five", &["--position", "99"]).0, 0);
+    assert_eq!(order(&s), "+Two,+Four,+One,+Three,+Existing,+Five");
+    assert_eq!(s.rollback().0, 0);
+    assert_eq!(s.rollback().0, 0);
+    for file in ["modlist.txt", "plugins.txt", "loadorder.txt"] {
+        let path = format!("profiles/Default/{file}");
+        assert_eq!(s.state()[&path], before[&path], "{file}");
+    }
+    assert!(!s.root().join("mods/Four").exists() && !s.root().join("mods/Five").exists());
+    let (code, _, err) = put("Six", &["--after", "Nobody"]);
+    assert_eq!(code, 2, "{err}");
+    assert!(err.contains("Nobody"), "{err}");
+    assert!(!s.root().join("mods/Six").exists());
+    assert_eq!(put("Seven", &["--after", "One", "--position", "1"]).0, 5);
+    assert_eq!(put("Seven", &["--position", "x"]).0, 5);
+}
+
+#[test]
 fn an_existing_mod_name_is_refused_and_nothing_changes() {
     covers(&[ids::mods::install::DUPLICATE_NAME_REFUSED]);
     let s = Scratch::new();

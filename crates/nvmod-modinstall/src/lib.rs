@@ -29,6 +29,7 @@ pub use extract::{LimitOverrides, Limits};
 pub use fomod::{Decided, GroupEvent, OptionEvent, StepEvent};
 pub use fomod::{GroupKind, Inferred, PluginType, Question, QuestionOption};
 pub use journal::{RollbackError, RollbackReport, rollback};
+pub use lists::Placement;
 pub use saved::{ANSWERS_PATH, AnswersFile, ReinstallRequest, open_saved, reconfigure, reinstall};
 pub use session::{FomodEvent, PlanEvent, Session, answers_schema, events_schema};
 
@@ -97,6 +98,9 @@ pub struct Request<'a> {
     pub limits: Limits,
     /// What to do when the Mod's folder already exists.
     pub on_conflict: OnConflict,
+    /// Where the new Mod goes in `modlist.txt`; the top by default. Ignored when the Mod keeps its place
+    /// (`replace` or `merge` of a listed Mod).
+    pub placement: Placement,
 }
 
 /// Why nothing was installed.
@@ -586,7 +590,10 @@ pub fn install(request: &Request) -> Result<Report, InstallError> {
     let new_modlist = if keep_line {
         None
     } else {
-        Some(lists::add_to_modlist(modlist.as_deref(), &name).map_err(InstallError::Refused)?)
+        Some(
+            lists::add_to_modlist(modlist.as_deref(), &name, &request.placement)
+                .map_err(InstallError::Refused)?,
+        )
     };
 
     let answers = gather_answers(request).map_err(InstallError::Refused)?;
