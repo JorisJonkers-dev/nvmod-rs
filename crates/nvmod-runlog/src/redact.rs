@@ -4,7 +4,8 @@
 //!
 //! In order: known folders become placeholders (the Instance folder `$INSTANCE`, other configured library paths a
 //! named placeholder, the home directory `~`); any other absolute path becomes `<path>`; the value after a
-//! `token`, `password`, `secret`, `api_key`, `authorization` or `bearer` word is masked; and key-like words are
+//! `token`, `password`, `secret`, `api_key`, `apikey` (the Nexus API key header, an `apikey=` pair, `NEXUS_API_KEY=`), `authorization` or `bearer`
+//! word is masked; the value of a `key` query parameter (an `nxm://` link) is masked; and key-like words are
 //! masked (known token prefixes, and long mixed letter-and-digit words that are not a hash).
 
 use std::path::Path;
@@ -89,6 +90,7 @@ impl Redactor {
         }
         let out = mask_paths(&out);
         let out = mask_secret_values(&out);
+        let out = mask_query_keys(&out);
         mask_keys(&out)
     }
 }
@@ -243,6 +245,33 @@ fn mask_secret_values(text: &str) -> String {
     out
 }
 
+/// Mask the value of a `key` query parameter (`?key=` or `&key=`, any case): the one-time download key of an `nxm://`
+/// link. The `apikey` parameter is covered by [`mask_secret_values`].
+fn mask_query_keys(text: &str) -> String {
+    let lower = text.to_ascii_lowercase();
+    let mut out = String::with_capacity(text.len());
+    let mut pos = 0;
+    while let Some(at) = ["?key=", "&key="]
+        .iter()
+        .filter_map(|p| lower[pos..].find(p).map(|a| pos + a))
+        .min()
+    {
+        let start = at + "?key=".len();
+        out.push_str(&text[pos..start]);
+        let len = text[start..]
+            .find(|c: char| c.is_whitespace() || matches!(c, '"' | '\'' | ',' | ';' | '&' | '#'))
+            .unwrap_or(text.len() - start);
+        if len > 0 && !text[start..].starts_with(KEY_MASK) {
+            out.push_str(KEY_MASK);
+            pos = start + len;
+        } else {
+            pos = start;
+        }
+    }
+    out.push_str(&text[pos..]);
+    out
+}
+
 fn looks_like_key(word: &str) -> bool {
     if KEY_PREFIXES.iter().any(|p| word.starts_with(p)) && word.len() >= 10 {
         return true;
@@ -383,6 +412,66 @@ mod tests {
         assert_eq!(
             r.apply("install-nv-rs finished in 12 ms"),
             "install-nv-rs finished in 12 ms"
+        );
+    }
+
+    #[test]
+    fn the_nexus_apikey_header_is_masked_in_every_form() {
+        let r = redactor();
+        let key = "Fake0Nexus1Key2Zz";
+        for line in [
+            format!("apikey: {key}"),
+            format!("APIKEY: {key}"),
+            format!("ApiKey:{key}"),
+            format!("header = \"apikey: {key}\""),
+            format!("-H 'apikey: {key}'"),
+            format!("\"apikey\": \"{key}\""),
+            format!("apikey={key}"),
+        ] {
+            let out = r.apply(&line);
+            assert!(!out.contains(key), "{line} -> {out}");
+            assert!(out.contains(KEY_MASK), "{line} -> {out}");
+        }
+        assert_eq!(
+            r.apply(&format!("header = \"apikey: {key}\"")),
+            "header = \"apikey: [redacted]\""
+        );
+    }
+
+    #[test]
+    fn an_apikey_query_pair_is_masked_and_the_rest_of_the_url_stays() {
+        let r = redactor();
+        assert_eq!(
+            r.apply("GET https://api.example.test/v1/x?apikey=fake1234&page=2 ok"),
+            "GET https://api.example.test/v1/x?apikey=[redacted]&page=2 ok"
+        );
+    }
+
+    #[test]
+    fn an_nxm_link_key_is_masked_in_either_query_position() {
+        let r = redactor();
+        assert_eq!(
+            r.apply("nxm://game/mods/1/files/2?key=fake-key_9&expires=1700000000&user_id=3"),
+            "nxm://game/mods/1/files/2?key=[redacted]&expires=1700000000&user_id=3"
+        );
+        assert_eq!(
+            r.apply("nxm://game/mods/1/files/2?expires=1&KEY=fake9&user_id=3"),
+            "nxm://game/mods/1/files/2?expires=1&KEY=[redacted]&user_id=3"
+        );
+        assert_eq!(r.apply("open /a?x=1&key= done"), "open <path> done");
+        assert_eq!(r.apply("monkey=1 ?keyboard=2"), "monkey=1 ?keyboard=2");
+    }
+
+    #[test]
+    fn nexus_api_key_environment_assignments_are_masked() {
+        let r = redactor();
+        assert_eq!(
+            r.apply("NEXUS_API_KEY=fake123 NEXUS_API_KEY: fake456"),
+            "NEXUS_API_KEY=[redacted] NEXUS_API_KEY: [redacted]"
+        );
+        assert_eq!(
+            r.apply("export NEXUS_API_KEY=\"fake123\""),
+            "export NEXUS_API_KEY=\"[redacted]\""
         );
     }
 }
