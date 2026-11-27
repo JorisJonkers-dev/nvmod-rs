@@ -138,6 +138,44 @@ pub(crate) fn extract_limits(args: &Args) -> Result<LimitOverrides, &'static str
     })
 }
 
+/// The placement the flags ask for; `None` (after a message on `err`) when they are wrong.
+fn placement_of(args: &Args, err: &mut dyn Write) -> Option<nvmod_api::install::Placement> {
+    use nvmod_api::install::Placement;
+    match (args.option("after"), args.option("position")) {
+        (None, None) => Some(Placement::Top),
+        (Some(name), None) => Some(Placement::After(name.to_owned())),
+        (None, Some(n)) => {
+            let parsed = n.parse().ok().map(Placement::Position);
+            if parsed.is_none() {
+                let _ = writeln!(err, "nvmod install: --position wants a number");
+            }
+            parsed
+        }
+        (Some(_), Some(_)) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --after and --position are alternatives"
+            );
+            None
+        }
+    }
+}
+
+/// The `--on-conflict` choice; `None` (after a message on `err`) when it is not a word.
+fn on_conflict_of(args: &Args, err: &mut dyn Write) -> Option<OnConflict> {
+    match args.option("on-conflict").map(OnConflict::parse) {
+        None => Some(OnConflict::Refuse),
+        Some(None) => {
+            let _ = writeln!(
+                err,
+                "nvmod install: --on-conflict wants replace, merge or rename"
+            );
+            None
+        }
+        Some(c) => c,
+    }
+}
+
 pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Write) -> u8 {
     let parsed = Args::parse(
         args,
@@ -177,34 +215,11 @@ pub(crate) fn run_install(args: &[String], out: &mut dyn Write, err: &mut dyn Wr
             return USAGE;
         }
     };
-    let on_conflict = match args.option("on-conflict").map(OnConflict::parse) {
-        None => OnConflict::Refuse,
-        Some(Some(c)) => c,
-        Some(None) => {
-            let _ = writeln!(
-                err,
-                "nvmod install: --on-conflict wants replace, merge or rename"
-            );
-            return USAGE;
-        }
+    let Some(on_conflict) = on_conflict_of(&args, err) else {
+        return USAGE;
     };
-    let placement = match (args.option("after"), args.option("position")) {
-        (None, None) => nvmod_api::install::Placement::Top,
-        (Some(name), None) => nvmod_api::install::Placement::After(name.to_owned()),
-        (None, Some(n)) => match n.parse() {
-            Ok(n) => nvmod_api::install::Placement::Position(n),
-            Err(_) => {
-                let _ = writeln!(err, "nvmod install: --position wants a number");
-                return USAGE;
-            }
-        },
-        (Some(_), Some(_)) => {
-            let _ = writeln!(
-                err,
-                "nvmod install: --after and --position are alternatives"
-            );
-            return USAGE;
-        }
+    let Some(placement) = placement_of(&args, err) else {
+        return USAGE;
     };
     if args.flag("interactive") && args.option("answers").is_some() {
         let _ = writeln!(
