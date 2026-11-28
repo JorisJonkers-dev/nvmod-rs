@@ -335,7 +335,7 @@ pub fn begin_labelled(
     label: &str,
 ) -> Result<Entry, String> {
     let mut entry = begin_kind(instance, profile, name, kind)?;
-    entry.journal.label = label.to_owned();
+    label.clone_into(&mut entry.journal.label);
     save(&journal_root(instance).join(&entry.id), &entry.journal)?;
     Ok(entry)
 }
@@ -648,9 +648,8 @@ pub fn prune(instance: &NvmodInstance, keep_per_profile: usize) -> Result<(), St
     let mut kept: HashMap<String, usize> = HashMap::new();
     for id in ids.into_iter().rev() {
         let path = root.join(&id).join("journal.json");
-        let journal = match read_journal(&path) {
-            Ok(j) => j,
-            Err(_) => continue,
+        let Ok(journal) = read_journal(&path) else {
+            continue;
         };
         let count = kept.entry(journal.profile).or_insert(0);
         if *count < keep_per_profile {
@@ -672,7 +671,7 @@ pub fn restore_to(
     profile: &str,
     id: &str,
 ) -> Result<Vec<RollbackReport>, RollbackError> {
-    let target = load(instance, id).map_err(|e| RollbackError::Refused(e))?;
+    let target = load(instance, id).map_err(RollbackError::Refused)?;
     if target.profile() != profile {
         return Err(RollbackError::Refused(format!(
             "journal `{id}` does not belong to profile `{profile}`"
@@ -692,7 +691,7 @@ pub fn restore_to(
         if journal.profile != profile {
             continue;
         }
-        if journal.status != "complete" || journal.kind == KIND_SWEEP {
+        if !matches!(journal.status.as_str(), "complete" | "redone") || journal.kind == KIND_SWEEP {
             continue;
         }
         let report = RollbackReport {
@@ -701,13 +700,24 @@ pub fn restore_to(
             r#mod: journal.r#mod.clone(),
             profile: journal.profile.clone(),
         };
-        undo(instance, &Entry { id: candidate, journal }).map_err(RollbackError::Failed)?;
+        undo(
+            instance,
+            &Entry {
+                id: candidate,
+                journal,
+            },
+        )
+        .map_err(RollbackError::Failed)?;
         reports.push(report);
     }
     Ok(reports)
 }
 
 /// Mark a previously rolled-back entry as `redone`.
+///
+/// This records that the caller has applied the change again (for example by running the same change once more);
+/// it does not restore any file itself, because the journal keeps only the state before a change. A redone entry
+/// counts as applied again: [`restore_to`] and [`rollback_profile`] can roll it back.
 ///
 /// # Errors
 /// `Refused` when the entry is not rolled back; `Failed` when the journal could not be written.
@@ -775,7 +785,7 @@ mod tests {
         assert_eq!(loaded.status(), "complete");
 
         assert_eq!(list(&instance, "Other").len(), 1);
-        assert!(list(&instance, "Other")[0].id == other.id);
+        assert_eq!(list(&instance, "Other")[0].id, other.id);
     }
 
     #[test]
@@ -821,8 +831,8 @@ mod tests {
         assert_eq!(report.journal, default.id);
         assert_eq!(report.profile, "Default");
 
-        let default_content = fs::read_to_string(instance.profile_dir("Default").join("modlist.txt"))
-            .unwrap();
+        let default_content =
+            fs::read_to_string(instance.profile_dir("Default").join("modlist.txt")).unwrap();
         assert!(!default_content.contains("+Default"));
 
         let other_entry = load(&instance, &other.id).unwrap();
@@ -835,16 +845,23 @@ mod tests {
         let mut default_ids = Vec::new();
         let mut other_ids = Vec::new();
         for i in 0..4 {
-            default_ids.push(complete_mods_entry(&instance, "Default", "", format!("D{i}\n").as_bytes()).id);
+            default_ids.push(
+                complete_mods_entry(&instance, "Default", "", format!("D{i}\n").as_bytes()).id,
+            );
         }
         for i in 0..3 {
-            other_ids.push(complete_mods_entry(&instance, "Other", "", format!("O{i}\n").as_bytes()).id);
+            other_ids
+                .push(complete_mods_entry(&instance, "Other", "", format!("O{i}\n").as_bytes()).id);
         }
 
         prune(&instance, 2).unwrap();
 
-        let default_remaining: Vec<String> = list(&instance, "Default").into_iter().map(|s| s.id).collect();
-        let other_remaining: Vec<String> = list(&instance, "Other").into_iter().map(|s| s.id).collect();
+        let default_remaining: Vec<String> = list(&instance, "Default")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        let other_remaining: Vec<String> =
+            list(&instance, "Other").into_iter().map(|s| s.id).collect();
         assert_eq!(default_remaining.len(), 2);
         assert_eq!(other_remaining.len(), 2);
         assert_eq!(default_remaining, default_ids[2..]);
@@ -864,8 +881,9 @@ mod tests {
         assert_eq!(reports[0].journal, c.id);
         assert_eq!(reports[1].journal, b.id);
 
-        let content = fs::read_to_string(instance.profile_dir("Default").join("modlist.txt")).unwrap();
-        assert!(content.contains("A"));
+        let content =
+            fs::read_to_string(instance.profile_dir("Default").join("modlist.txt")).unwrap();
+        assert!(content.contains('A'));
 
         let other_entry = load(&instance, &other.id).unwrap();
         assert_eq!(other_entry.status(), "complete");
