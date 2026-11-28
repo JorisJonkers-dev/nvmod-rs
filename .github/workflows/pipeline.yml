@@ -253,6 +253,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           JUNIT: ${{ runner.temp }}/junit
           CODE: ${{ steps.changes.outputs.code }}
+          PLATFORMS: ${{ needs.changes.outputs.platforms }}
         run: |
           set -euo pipefail
           # The files the `reports` job commits on main must not be ignored, or its `git add` fails there.
@@ -268,6 +269,10 @@ jobs:
           if [ -f "$JUNIT/junit-linux.xml" ] && [ -f "$JUNIT/junit-windows.xml" ] && [ -f "$JUNIT/junit-macos.xml" ]; then
             "$tally" ingest --junit "$JUNIT/junit-linux.xml" --junit "$JUNIT/junit-windows.xml" --junit "$JUNIT/junit-macos.xml" --out "$RUNNER_TEMP/results.json"
             args=(--results "$RUNNER_TEMP/results.json")
+          elif [ "$CODE" = true ] && [ "$PLATFORMS" = false ]; then
+            # Windows and macOS did not run on this pull request (label `ci:all-os` runs them): the structure checks
+            # still run, the covered count and the ratchet are left to the push to main, which runs all three.
+            echo "::notice title=Feature catalogue::Windows and macOS skipped: no covered count and no ratchet on this pull request"
           elif [ "$GITHUB_EVENT_NAME" = push ] || [ "$CODE" = true ]; then
             # The test jobs ran, so their results must be here: a lost upload must not switch the ratchet off.
             echo "::error title=Feature catalogue::the JUnit results of Linux, Windows and macOS are needed when the tests run"; exit 1
