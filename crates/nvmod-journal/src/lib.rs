@@ -5,6 +5,7 @@
 use nvmod_instance::{INSTANCE_FILE, KIND_MIGRATE, NvmodInstance};
 use nvmod_stage::Options;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -65,6 +66,13 @@ struct Journal {
     r#mod: String,
     profile: String,
     status: String,
+    /// A human-readable label for the change (empty when the journal was written before labels existed).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    label: String,
+    /// The time the entry was created, in milliseconds since the Unix epoch. When absent the time is taken from
+    /// the millisecond prefix of the id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    at_ms: Option<u64>,
     /// `install` (also what a journal without this field is) or `sort`.
     #[serde(default = "install_kind")]
     kind: String,
@@ -106,11 +114,70 @@ fn install_kind() -> String {
 }
 
 /// An install in progress.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entry {
     /// The journal id.
     pub id: String,
     journal: Journal,
+}
+
+impl Entry {
+    /// The profile the entry belongs to.
+    #[must_use]
+    pub fn profile(&self) -> &str {
+        &self.journal.profile
+    }
+
+    /// The kind of change (`install`, `sort`, `mods`, `plugins`, `lifecycle`, `profile` or `migrate`).
+    #[must_use]
+    pub fn kind(&self) -> &str {
+        &self.journal.kind
+    }
+
+    /// The Mod involved (empty for sorts, mods changes and so on).
+    #[must_use]
+    pub fn mod_name(&self) -> &str {
+        &self.journal.r#mod
+    }
+
+    /// The entry status: `in-progress`, `complete`, `rolled-back` or `redone`.
+    #[must_use]
+    pub fn status(&self) -> &str {
+        &self.journal.status
+    }
+
+    /// The human-readable label for the change (empty when none was given).
+    #[must_use]
+    pub fn label(&self) -> &str {
+        &self.journal.label
+    }
+
+    /// The time the entry was created, in milliseconds since the Unix epoch.
+    #[must_use]
+    pub fn at_ms(&self) -> u64 {
+        self.journal
+            .at_ms
+            .unwrap_or_else(|| at_ms_from_id(&self.journal.id))
+    }
+}
+
+/// A summary of a journal entry for listing and loading.
+#[derive(Debug, Clone, Serialize)]
+pub struct EntrySummary {
+    /// The journal id.
+    pub id: String,
+    /// The profile the entry belongs to.
+    pub profile: String,
+    /// The kind of change.
+    pub kind: String,
+    /// The Mod involved (empty when none).
+    pub mod_name: String,
+    /// The entry status.
+    pub status: String,
+    /// The human-readable label for the change.
+    pub label: String,
+    /// The time the entry was created, in milliseconds since the Unix epoch.
+    pub at_ms: u64,
 }
 
 /// Why a rollback did not happen.
@@ -151,6 +218,27 @@ fn next_id() -> String {
     last.0 = last.0.max(now);
     last.1 += 1;
     format!("{:016}-{:06}-{}", last.0, last.1, std::process::id())
+}
+
+/// Extract the millisecond timestamp from the prefix of a journal id.
+fn at_ms_from_id(id: &str) -> u64 {
+    id.split('-')
+        .next()
+        .and_then(|prefix| prefix.parse::<u64>().ok())
+        .unwrap_or(0)
+}
+
+/// Build an [`EntrySummary`] from a loaded [`Journal`].
+fn summarize(journal: &Journal) -> EntrySummary {
+    EntrySummary {
+        id: journal.id.clone(),
+        profile: journal.profile.clone(),
+        kind: journal.kind.clone(),
+        mod_name: journal.r#mod.clone(),
+        status: journal.status.clone(),
+        label: journal.label.clone(),
+        at_ms: journal.at_ms.unwrap_or_else(|| at_ms_from_id(&journal.id)),
+    }
 }
 
 fn journal_root(instance: &NvmodInstance) -> PathBuf {
@@ -224,6 +312,8 @@ pub fn begin_kind(
         r#mod: name.to_owned(),
         profile: profile.to_owned(),
         status: "in-progress".to_owned(),
+        label: String::new(),
+        at_ms: Some(at_ms_from_id(&id)),
         kind: kind.to_owned(),
         existed,
         staging_existed: staging_exists(instance, profile),
@@ -231,6 +321,23 @@ pub fn begin_kind(
     };
     save(&root, &journal)?;
     Ok(Entry { id, journal })
+}
+
+/// Like [`begin_kind`], but stores a human-readable `label` with the entry.
+///
+/// # Errors
+/// A reason, when the journal or a backup could not be written (nothing else was changed).
+pub fn begin_labelled(
+    instance: &NvmodInstance,
+    profile: &str,
+    name: &str,
+    kind: &str,
+    label: &str,
+) -> Result<Entry, String> {
+    let mut entry = begin_kind(instance, profile, name, kind)?;
+    entry.journal.label = label.to_owned();
+    save(&journal_root(instance).join(&entry.id), &entry.journal)?;
+    Ok(entry)
 }
 
 impl Entry {
@@ -448,9 +555,337 @@ pub fn rollback(instance: &NvmodInstance) -> Result<RollbackReport, RollbackErro
     ))
 }
 
+/// Read every journal id under the instance's journal root.
+fn read_ids(instance: &NvmodInstance) -> Vec<String> {
+    fs::read_dir(journal_root(instance))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect()
+}
+
+/// Load and parse one journal file.
+fn read_journal(path: &Path) -> Result<Journal, String> {
+    let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// List the journal entries of one profile, oldest first.
+///
+/// Entries whose journal file cannot be read are skipped.
+#[must_use]
+pub fn list(instance: &NvmodInstance, profile: &str) -> Vec<EntrySummary> {
+    let root = journal_root(instance);
+    let mut ids = read_ids(instance);
+    ids.sort();
+    ids.into_iter()
+        .filter_map(|id| {
+            let journal = read_journal(&root.join(&id).join("journal.json")).ok()?;
+            if journal.profile != profile {
+                return None;
+            }
+            Some(summarize(&journal))
+        })
+        .collect()
+}
+
+/// Load a journal entry by id.
+///
+/// # Errors
+/// A reason, when the journal file is missing or cannot be parsed.
+pub fn load(instance: &NvmodInstance, id: &str) -> Result<Entry, String> {
+    let path = journal_root(instance).join(id).join("journal.json");
+    let journal = read_journal(&path)?;
+    Ok(Entry {
+        id: journal.id.clone(),
+        journal,
+    })
+}
+
+/// Undo the newest not-rolled-back entry of a single profile.
+///
+/// # Errors
+/// `Refused` when the profile has nothing to undo; `Failed` when a restore step fails.
+pub fn rollback_profile(
+    instance: &NvmodInstance,
+    profile: &str,
+) -> Result<RollbackReport, RollbackError> {
+    let mut ids = read_ids(instance);
+    ids.sort();
+    for id in ids.into_iter().rev() {
+        let path = journal_root(instance).join(&id).join("journal.json");
+        let journal = read_journal(&path)
+            .map_err(|e| RollbackError::Failed(format!("{}: {e}", path.display())))?;
+        if journal.profile != profile {
+            continue;
+        }
+        if journal.status == "rolled-back" || journal.kind == KIND_SWEEP {
+            continue;
+        }
+        let report = RollbackReport {
+            journal: journal.id.clone(),
+            kind: journal.kind.clone(),
+            r#mod: journal.r#mod.clone(),
+            profile: journal.profile.clone(),
+        };
+        undo(instance, &Entry { id, journal }).map_err(RollbackError::Failed)?;
+        return Ok(report);
+    }
+    Err(RollbackError::Refused(format!(
+        "there is no entry to roll back for profile `{profile}`"
+    )))
+}
+
+/// Keep the `keep_per_profile` newest entries for each profile and remove the rest.
+///
+/// # Errors
+/// A reason, when a journal directory could not be removed.
+pub fn prune(instance: &NvmodInstance, keep_per_profile: usize) -> Result<(), String> {
+    let root = journal_root(instance);
+    let mut ids = read_ids(instance);
+    ids.sort();
+    let mut kept: HashMap<String, usize> = HashMap::new();
+    for id in ids.into_iter().rev() {
+        let path = root.join(&id).join("journal.json");
+        let journal = match read_journal(&path) {
+            Ok(j) => j,
+            Err(_) => continue,
+        };
+        let count = kept.entry(journal.profile).or_insert(0);
+        if *count < keep_per_profile {
+            *count += 1;
+        } else {
+            fs::remove_dir_all(root.join(&id))
+                .map_err(|e| format!("{}: {e}", root.join(&id).display()))?;
+        }
+    }
+    Ok(())
+}
+
+/// Roll back every completed entry of `profile` that is newer than `id`, newest first.
+///
+/// # Errors
+/// `Refused` when `id` does not exist or does not belong to `profile`; `Failed` when a restore step fails.
+pub fn restore_to(
+    instance: &NvmodInstance,
+    profile: &str,
+    id: &str,
+) -> Result<Vec<RollbackReport>, RollbackError> {
+    let target = load(instance, id).map_err(|e| RollbackError::Refused(e))?;
+    if target.profile() != profile {
+        return Err(RollbackError::Refused(format!(
+            "journal `{id}` does not belong to profile `{profile}`"
+        )));
+    }
+
+    let mut ids = read_ids(instance);
+    ids.sort();
+    let mut reports = Vec::new();
+    for candidate in ids.into_iter().rev() {
+        if candidate.as_str() <= id {
+            break;
+        }
+        let path = journal_root(instance).join(&candidate).join("journal.json");
+        let journal = read_journal(&path)
+            .map_err(|e| RollbackError::Failed(format!("{}: {e}", path.display())))?;
+        if journal.profile != profile {
+            continue;
+        }
+        if journal.status != "complete" || journal.kind == KIND_SWEEP {
+            continue;
+        }
+        let report = RollbackReport {
+            journal: journal.id.clone(),
+            kind: journal.kind.clone(),
+            r#mod: journal.r#mod.clone(),
+            profile: journal.profile.clone(),
+        };
+        undo(instance, &Entry { id: candidate, journal }).map_err(RollbackError::Failed)?;
+        reports.push(report);
+    }
+    Ok(reports)
+}
+
+/// Mark a previously rolled-back entry as `redone`.
+///
+/// # Errors
+/// `Refused` when the entry is not rolled back; `Failed` when the journal could not be written.
+pub fn redo(instance: &NvmodInstance, id: &str) -> Result<(), RollbackError> {
+    let path = journal_root(instance).join(id).join("journal.json");
+    let mut journal = read_journal(&path)
+        .map_err(|e| RollbackError::Failed(format!("{}: {e}", path.display())))?;
+    if journal.status != "rolled-back" {
+        return Err(RollbackError::Refused(format!(
+            "journal `{id}` is not rolled back"
+        )));
+    }
+    "redone".clone_into(&mut journal.status);
+    save(&journal_root(instance).join(id), &journal).map_err(RollbackError::Failed)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::next_id;
+    use super::*;
+    use nvmod_testkit::{BaseBuilder, TempDir, write_file};
+
+    fn steam_instance() -> (TempDir, NvmodInstance) {
+        let base = TempDir::new("jr-base");
+        BaseBuilder::steam().write(base.path());
+        let tmp = TempDir::new("jr-inst");
+        let root = tmp.path().join("fnv");
+        let instance = NvmodInstance::create(&root, base.path()).expect("create the Instance");
+        instance.create_profile("Default").expect("create Default");
+        instance.create_profile("Other").expect("create Other");
+        (tmp, instance)
+    }
+
+    fn complete_mods_entry(
+        instance: &NvmodInstance,
+        profile: &str,
+        label: &str,
+        content: &[u8],
+    ) -> Entry {
+        let entry = if label.is_empty() {
+            begin_kind(instance, profile, "", KIND_MODS).unwrap()
+        } else {
+            begin_labelled(instance, profile, "", KIND_MODS, label).unwrap()
+        };
+        write_file(&instance.profile_dir(profile), "modlist.txt", content);
+        complete(instance, &entry).unwrap();
+        entry
+    }
+
+    #[test]
+    fn list_returns_profile_entries_oldest_first_and_load_reads_one() {
+        let (_tmp, instance) = steam_instance();
+        let a = complete_mods_entry(&instance, "Default", "", b"A\n");
+        let b = complete_mods_entry(&instance, "Default", "", b"B\n");
+        let other = complete_mods_entry(&instance, "Other", "", b"O\n");
+
+        let summaries = list(&instance, "Default");
+        assert_eq!(summaries.len(), 2);
+        assert_eq!(summaries[0].id, a.id);
+        assert_eq!(summaries[1].id, b.id);
+
+        let loaded = load(&instance, &b.id).unwrap();
+        assert_eq!(loaded.id, b.id);
+        assert_eq!(loaded.profile(), "Default");
+        assert_eq!(loaded.kind(), KIND_MODS);
+        assert_eq!(loaded.status(), "complete");
+
+        assert_eq!(list(&instance, "Other").len(), 1);
+        assert!(list(&instance, "Other")[0].id == other.id);
+    }
+
+    #[test]
+    fn label_round_trips_and_at_ms_is_set() {
+        let (_tmp, instance) = steam_instance();
+        let entry = begin_labelled(&instance, "Default", "", KIND_MODS, "Enable foo").unwrap();
+        complete(&instance, &entry).unwrap();
+
+        let summary = list(&instance, "Default").pop().unwrap();
+        assert_eq!(summary.label, "Enable foo");
+        assert!(summary.at_ms > 0);
+
+        let loaded = load(&instance, &entry.id).unwrap();
+        assert_eq!(loaded.label(), "Enable foo");
+        assert_eq!(loaded.at_ms(), summary.at_ms);
+    }
+
+    #[test]
+    fn old_journal_without_label_or_at_ms_loads_with_fallbacks() {
+        let (_tmp, instance) = steam_instance();
+        let id = "0000000000123456-000001-12345";
+        let dir = journal_root(&instance).join(id);
+        let journal = format!(
+            r#"{{"schema":1,"id":"{id}","mod":"Old","profile":"Default","status":"complete","existed":[true,false,false],"staging_existed":false}}"#
+        );
+        write_file(&dir, "journal.json", journal.as_bytes());
+
+        let entry = load(&instance, id).unwrap();
+        assert_eq!(entry.label(), "");
+        assert_eq!(entry.at_ms(), 12_3456);
+        let summary = list(&instance, "Default").pop().unwrap();
+        assert_eq!(summary.label, "");
+        assert_eq!(summary.at_ms, 12_3456);
+    }
+
+    #[test]
+    fn rollback_profile_only_affects_its_profile() {
+        let (_tmp, instance) = steam_instance();
+        let default = complete_mods_entry(&instance, "Default", "", b"+Default\n");
+        let other = complete_mods_entry(&instance, "Other", "", b"+Other\n");
+
+        let report = rollback_profile(&instance, "Default").unwrap();
+        assert_eq!(report.journal, default.id);
+        assert_eq!(report.profile, "Default");
+
+        let default_content = fs::read_to_string(instance.profile_dir("Default").join("modlist.txt"))
+            .unwrap();
+        assert!(!default_content.contains("+Default"));
+
+        let other_entry = load(&instance, &other.id).unwrap();
+        assert_eq!(other_entry.status(), "complete");
+    }
+
+    #[test]
+    fn prune_keeps_the_newest_n_per_profile() {
+        let (_tmp, instance) = steam_instance();
+        let mut default_ids = Vec::new();
+        let mut other_ids = Vec::new();
+        for i in 0..4 {
+            default_ids.push(complete_mods_entry(&instance, "Default", "", format!("D{i}\n").as_bytes()).id);
+        }
+        for i in 0..3 {
+            other_ids.push(complete_mods_entry(&instance, "Other", "", format!("O{i}\n").as_bytes()).id);
+        }
+
+        prune(&instance, 2).unwrap();
+
+        let default_remaining: Vec<String> = list(&instance, "Default").into_iter().map(|s| s.id).collect();
+        let other_remaining: Vec<String> = list(&instance, "Other").into_iter().map(|s| s.id).collect();
+        assert_eq!(default_remaining.len(), 2);
+        assert_eq!(other_remaining.len(), 2);
+        assert_eq!(default_remaining, default_ids[2..]);
+        assert_eq!(other_remaining, other_ids[1..]);
+    }
+
+    #[test]
+    fn restore_to_rolls_back_only_newer_completed_entries_of_the_profile() {
+        let (_tmp, instance) = steam_instance();
+        let a = complete_mods_entry(&instance, "Default", "", b"A\n");
+        let b = complete_mods_entry(&instance, "Default", "", b"B\n");
+        let c = complete_mods_entry(&instance, "Default", "", b"C\n");
+        let other = complete_mods_entry(&instance, "Other", "", b"O\n");
+
+        let reports = restore_to(&instance, "Default", &a.id).unwrap();
+        assert_eq!(reports.len(), 2);
+        assert_eq!(reports[0].journal, c.id);
+        assert_eq!(reports[1].journal, b.id);
+
+        let content = fs::read_to_string(instance.profile_dir("Default").join("modlist.txt")).unwrap();
+        assert!(content.contains("A"));
+
+        let other_entry = load(&instance, &other.id).unwrap();
+        assert_eq!(other_entry.status(), "complete");
+    }
+
+    #[test]
+    fn redo_marks_a_rolled_back_entry_redone() {
+        let (_tmp, instance) = steam_instance();
+        let entry = complete_mods_entry(&instance, "Default", "", b"X\n");
+        rollback_profile(&instance, "Default").unwrap();
+
+        redo(&instance, &entry.id).unwrap();
+        let loaded = load(&instance, &entry.id).unwrap();
+        assert_eq!(loaded.status(), "redone");
+
+        assert!(matches!(
+            redo(&instance, &entry.id),
+            Err(RollbackError::Refused(_))
+        ));
+    }
 
     #[test]
     fn ids_made_in_one_process_are_unique_and_sort_in_creation_order() {
