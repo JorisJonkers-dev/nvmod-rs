@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.20.0...v0.21.0) (2026-11-28)
+
+
+### Features
+
+* **journal:** list, load, labels, per-profile rollback, prune, restore and redo ([#302](https://github.com/JorisJonkers-dev/nvmod-rs/issues/302)) ([64458dc](https://github.com/JorisJonkers-dev/nvmod-rs/commit/64458dc1c60e2e5b782b2d8f68854aa0428d1d39))
+
 ## [0.20.0](https://github.com/JorisJonkers-dev/nvmod-rs/compare/v0.19.0...v0.20.0) (2026-11-27)
 
 
